@@ -43,7 +43,9 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 3. **影片彈窗的 watchdog 不要拿掉**。`START_WAIT` 逾時未開始播放就會關閉彈窗並中止下載，
    這是避免多人同時進站時整群卡在黑畫面的保險絲。
 
-目前單次進站傳輸量（桌機、含影片）約 8.6 MB；略過影片後約 1.5 MB。
+4. **頁面中段的防護網影片維持 `preload="none"` + IntersectionObserver**，捲到附近才載入。
+
+單次進站傳輸量（桌機實測）：首屏 0.25 MB，看完進站影片約 7.3 MB，捲到底約 8.9 MB。
 
 ## 注意事項
 

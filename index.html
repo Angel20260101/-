@@ -985,10 +985,8 @@
     <p class="sn-sub">每多一家支柱企業加入，防護網就多一根支柱、多一層連結——企業越多，網越密、越堅韌。</p>
 
     <div class="sn-video-frame">
-      <video autoplay muted loop playsinline poster="assets/safetynet-poster.jpg">
-        <source src="assets/safetynet.webm" type="video/webm">
-        <source src="assets/safetynet.mp4" type="video/mp4">
-      </video>
+      <video id="safetynetVideo" muted loop playsinline preload="none" poster="assets/safetynet-poster.jpg"
+             data-src-webm="assets/safetynet.webm" data-src-mp4="assets/safetynet.mp4"></video>
     </div>
     <p class="sn-caption"><strong>金色節點＝支柱企業</strong>，每多一家企業加入，就多一根撐起防護網的支柱，網子也隨之更緊密交織。</p>
   </div>
@@ -1240,6 +1238,36 @@
       var bump = Math.floor(Math.random() * 3);
       el.textContent = (base + bump).toLocaleString('en-US');
     }, 3200);
+  })();
+
+  // ====== 防護網影片：捲到畫面附近才載入，避免一進站就佔用頻寬 ======
+  (function(){
+    var v = document.getElementById('safetynetVideo');
+    if (!v) return;
+
+    var loaded = false;
+    function load(){
+      if (loaded) return;
+      loaded = true;
+      [['data-src-webm','video/webm'], ['data-src-mp4','video/mp4']].forEach(function(pair){
+        var url = v.getAttribute(pair[0]);
+        if (!url) return;
+        var src = document.createElement('source');
+        src.src = url; src.type = pair[1];
+        v.appendChild(src);
+      });
+      v.load();
+      var p = v.play();
+      if (p && p.catch) p.catch(function(){});
+    }
+
+    if (!('IntersectionObserver' in window)) { load(); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting){ load(); io.disconnect(); }
+      });
+    }, { rootMargin: '300px 0px' });   // 提前 300px 開始載入，捲到時已經在播
+    io.observe(v);
   })();
 
   // ====== 表單送出：POST 到 Google Apps Script 網頁應用程式 ======
