@@ -29,8 +29,17 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
    `送出時間 / 姓名 / 職稱 / 公司名稱 / 員工人數規模 / 聯絡電話 / 聯絡信箱 / 需求說明 / 處理狀態`
 2. 「擴充功能 → Apps Script」貼上 `apps-script/Code.gs`，修改 `OWNER_EMAIL`
 3. 「部署 → 新增部署作業 → 網頁應用程式」，執行身分「我」、存取權「任何人」，取得 `/exec` 網址
-4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`
+4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`（已設定）
 5. 在 GitHub 開啟 Pages（Settings → Pages → Branch）
+
+## 送出的可靠性
+
+- 前端每次送出會帶一組 `sid`，後端以 `CacheService` 記住 6 小時並據此去重。
+  使用者連點兩下、或第一次請求讀不到回應而自動重送，都只會寫入一筆名單。
+- 寫入試算表包在 `LockService` 裡，多人同時送出不會互相覆蓋；寄信刻意放在鎖外，
+  避免寄信變慢時拖住其他人的送出。
+- 若 `fetch` 讀不到回應（通常是跨網域限制），前端會以 `mode: 'no-cors'` 重送一次，
+  靠 `sid` 保證不重複。
 
 ## 效能注意事項
 

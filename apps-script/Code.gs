@@ -20,6 +20,7 @@ function doPost(e) {
     // 蜜罐欄位：機器人才會填，有值就直接當成功回應，不寫入資料
     if (p['bot-field']) return jsonOut({ ok: true });
 
+    const sid     = clean(p.sid,     64);
     const name    = clean(p.name,    100);
     const title   = clean(p.title,   100);
     const company = clean(p.company, 200);
@@ -36,14 +37,35 @@ function doPost(e) {
       return jsonOut({ ok: false, error: 'Email 格式不正確' });
     }
 
+    // 去重：同一次送出（含前端連線失敗後的自動重送、使用者連點兩下）只會寫入一筆
+    const cache   = CacheService.getScriptCache();
+    const sidKey  = sid ? 'sid_' + sid : null;
+    if (sidKey && cache.get(sidKey)) return jsonOut({ ok: true, duplicate: true });
+
     const now = new Date();
 
-    // ---- 1. 寫入試算表 ----
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
-    sheet.appendRow([now, name, title, company, size, phone, email, note, '未聯繫']);
+    // ---- 1. 寫入試算表（加鎖，避免多人同時送出時互相覆蓋）----
+    const lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(20000);
+    } catch (err) {
+      return jsonOut({ ok: false, error: '系統忙碌中，請稍後再送出一次' });
+    }
+    try {
+      if (sidKey && cache.get(sidKey)) return jsonOut({ ok: true, duplicate: true });
 
-    // ---- 2. 寄通知信給後台（表單擁有者） ----
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+      sheet.appendRow([now, name, title, company, size, phone, email, note, '未聯繫']);
+
+      if (sidKey) cache.put(sidKey, '1', 21600);   // 記住 6 小時
+      var sheetUrl = ss.getUrl();
+    } finally {
+      lock.releaseLock();
+    }
+
+    // ---- 2. 寄通知信給後台（表單擁有者）----
+    // 寄信放在鎖外面，避免寄信變慢時拖住其他人的送出
     try {
       MailApp.sendEmail({
         to: OWNER_EMAIL,
@@ -52,7 +74,7 @@ function doPost(e) {
           name: name, title: title, company: company, size: size,
           phone: phone, email: email, note: note,
           time: Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss'),
-          sheetUrl: ss.getUrl()
+          sheetUrl: sheetUrl
         })
       });
     } catch (err) {

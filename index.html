@@ -1272,7 +1272,7 @@
 
   // ====== 表單送出：POST 到 Google Apps Script 網頁應用程式 ======
   // 部署 Apps Script 後，把 /exec 結尾的網址貼到下面這一行
-  const FORM_ENDPOINT = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+  const FORM_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzU9W_5D2Ag-EYY0zEl_WRY-2li98Vv-DYium9d7swppqM14Aptoy1IqpgKH6Suddt4/exec';
 
   function encodeFormData(data){
     return Object.keys(data)
@@ -1303,7 +1303,13 @@
       return false;
     }
 
+    // 每次送出給一組唯一 ID，後端據此去重，避免重送造成兩筆名單
+    if (!form.dataset.sid) {
+      form.dataset.sid = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+    }
+
     const data = {
+      sid:     form.dataset.sid,
       name:    form.querySelector('#f-name').value,
       title:   form.querySelector('#f-title').value,
       company: form.querySelector('#f-company').value,
@@ -1331,6 +1337,7 @@
       .then(function(res){ return res.json(); })
       .then(function(result){
         if(result && result.ok){
+          delete form.dataset.sid;
           form.reset();
           showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
         } else {
@@ -1339,9 +1346,26 @@
         restore();
       })
       .catch(function(err){
-        console.error(err);
-        showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。');
-        restore();
+        // 讀不到回應（多半是跨網域限制）不代表沒送到。
+        // 用 no-cors 再送一次，後端會用 sid 去重，不會重複寫入名單。
+        console.warn('第一次送出未能讀取回應，改以 no-cors 重送：', err);
+        fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: encodeFormData(data)
+        })
+          .then(function(){
+            delete form.dataset.sid;
+            form.reset();
+            showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
+            restore();
+          })
+          .catch(function(err2){
+            console.error(err2);
+            showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。');
+            restore();
+          });
       });
 
     return false;
