@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>訂單查詢系統 | Order Query Hub</title>
+  <meta name="description" content="快捷、安全的線上訂單與審核狀態查詢系統">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header Navbar -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-boxes-packing"></i>
+        </div>
+        <div class="brand-text">
+          <h1>訂單查詢系統</h1>
+          <p>Order Query Hub & Status Tracker</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="themeToggle" class="icon-btn" title="切換深淺模式">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <button id="settingsBtn" class="icon-btn" title="API Webhook 設定">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Search Card -->
+    <main>
+      <div class="search-card">
+        <!-- Mode Tabs -->
+        <div class="search-mode-tabs">
+          <button class="tab-btn active" data-mode="single">
+            <i class="fa-solid fa-magnifying-glass"></i> 關鍵字搜尋
+          </button>
+          <button class="tab-btn" data-mode="dual">
+            <i class="fa-solid fa-shield-halved"></i> 雙重精準驗證
+          </button>
+        </div>
+
+        <form id="searchForm" class="search-form">
+          <!-- Single Mode Row -->
+          <div id="singleSearchRow" class="form-row">
+            <div class="input-group">
+              <label for="searchQuery">
+                <i class="fa-solid fa-key"></i> 請輸入查詢關鍵字
+              </label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-magnifying-glass input-icon"></i>
+                <input type="text" id="searchQuery" class="custom-input" placeholder="可輸入：訂單編號 (ORD...)、姓名、手機或 Email" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dual Mode Row (Hidden by default) -->
+          <div id="dualSearchRow" class="form-row dual" style="display: none;">
+            <div class="input-group">
+              <label for="orderIdQuery">
+                <i class="fa-solid fa-receipt"></i> 訂單編號
+              </label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-hashtag input-icon"></i>
+                <input type="text" id="orderIdQuery" class="custom-input" placeholder="例如：ORD20260010">
+              </div>
+            </div>
+            <div class="input-group">
+              <label for="phoneQuery">
+                <i class="fa-solid fa-mobile-screen-button"></i> 手機號碼 / Email
+              </label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-user-shield input-icon"></i>
+                <input type="text" id="phoneQuery" class="custom-input" placeholder="例如：0921-489-199">
+              </div>
+            </div>
+          </div>
+
+          <!-- Search Options & Action -->
+          <div class="search-actions">
+            <label class="privacy-toggle">
+              <input type="checkbox" id="maskPrivacyToggle" checked>
+              <span>遮罩個人敏感資訊 (隱私保護)</span>
+            </label>
+
+            <button type="submit" class="submit-btn" id="searchSubmitBtn">
+              <i class="fa-solid fa-magnifying-glass"></i> 立即查詢訂單
+            </button>
+          </div>
+
+          <!-- Quick Test Badges -->
+          <div class="quick-tags">
+            <span class="quick-tag-label">快速測試示範：</span>
+            <button type="button" class="tag-btn" data-query="ORD20260010">ORD20260010</button>
+            <button type="button" class="tag-btn" data-query="許冠宇">許冠宇</button>
+            <button type="button" class="tag-btn" data-query="M10007">會員 M10007</button>
+            <button type="button" class="tag-btn" data-query="27吋顯示器">27吋顯示器</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Results Display Section -->
+      <section class="results-section" id="resultsSection">
+        <div class="section-header">
+          <h2 class="section-title">
+            <i class="fa-solid fa-list-check"></i> 查詢結果 
+            <span id="resultBadge" class="result-count-badge" style="display: none;">0 筆資料</span>
+          </h2>
+        </div>
+
+        <!-- Initial Empty State -->
+        <div id="initialState" class="empty-state">
+          <i class="fa-solid fa-magnifying-glass-location empty-icon"></i>
+          <div class="empty-title">準備好查詢您的訂單</div>
+          <div class="empty-desc">請在上方搜尋框輸入您的訂單編號、姓名或聯絡電話，點擊「立即查詢訂單」查看最新處理狀態。</div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingState" class="loading-state" style="display: none;">
+          <div class="spinner"></div>
+          <div class="empty-title">正在連線查詢訂單資料...</div>
+          <div class="empty-desc">系統正在向後端 API 或 n8n Webhook 取得最新進度。</div>
+        </div>
+
+        <!-- No Data Found State -->
+        <div id="noDataState" class="empty-state" style="display: none;">
+          <i class="fa-solid fa-folder-open empty-icon"></i>
+          <div class="empty-title">查無符合條件的訂單</div>
+          <div class="empty-desc">請確認您輸入的訂單編號或聯絡資訊是否正確，或嘗試切換關鍵字重新查詢。</div>
+        </div>
+
+        <!-- Container for Rendered Cards -->
+        <div id="cardsContainer" style="display: flex; flex-direction: column; gap: 1.25rem;"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- API Webhook Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-gear"></i> 後端 API 與 Webhook 設定</h3>
+        <button id="closeModalBtn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div class="input-group">
+          <label for="apiModeSelect"><i class="fa-solid fa-network-wired"></i> 資料來源模式</label>
+          <select id="apiModeSelect" class="custom-input" style="padding-left: 1rem;">
+            <option value="webhook" selected>n8n Webhook API 實時連線</option>
+            <option value="mock">Demo 模擬模式 (內建 4 筆測試資料)</option>
+          </select>
+        </div>
+
+        <div class="input-group" id="webhookUrlGroup">
+          <label for="webhookUrlInput"><i class="fa-solid fa-link"></i> n8n Webhook URL 端點</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-globe input-icon"></i>
+            <input type="url" id="webhookUrlInput" class="custom-input" placeholder="https://your-n8n-instance.com/webhook/dad372c5-3f67-432d-a39f-5662a54495fe" value="https://n8n-4ga9o4sx.roamerhost.com/webhook/dad372c5-3f67-432d-a39f-5662a54495fe">
+          </div>
+          <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.25rem;">
+            預設呼叫邏輯：GET 傳遞關鍵字 <code>?q=關鍵字</code>
+          </small>
+        </div>
+
+        <button id="saveSettingsBtn" class="submit-btn" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+          <i class="fa-solid fa-floppy-disk"></i> 儲存設定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

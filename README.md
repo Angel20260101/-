@@ -1,0 +1,39 @@
+# 心情AED Landing Page
+
+企業員工心理健康即時預警平台的行銷落地頁，前台表單直接串 Google 試算表後台。
+
+## 架構
+
+```
+index.html (GitHub Pages)
+      │  fetch POST (application/x-www-form-urlencoded)
+      ▼
+Google Apps Script 網頁應用程式 (apps-script/Code.gs)
+      ├──► 寫入 Google 試算表（後台名單）
+      ├──► 寄自動回覆信給填單者
+      └──► 寄新名單通知信給表單擁有者
+```
+
+## 檔案
+
+| 路徑 | 說明 |
+|---|---|
+| `index.html` | 落地頁本體 |
+| `assets/` | 圖片與影片（原本內嵌為 base64，已抽出以加快載入） |
+| `apps-script/Code.gs` | 後端程式碼，貼到 Google 試算表的 Apps Script 編輯器 |
+| `order-query.html` | 先前的訂單查詢頁，暫存保留 |
+
+## 上線設定
+
+1. 建立 Google 試算表，第一列欄位依序為：
+   `送出時間 / 姓名 / 職稱 / 公司名稱 / 員工人數規模 / 聯絡電話 / 聯絡信箱 / 需求說明 / 處理狀態`
+2. 「擴充功能 → Apps Script」貼上 `apps-script/Code.gs`，修改 `OWNER_EMAIL`
+3. 「部署 → 新增部署作業 → 網頁應用程式」，執行身分「我」、存取權「任何人」，取得 `/exec` 網址
+4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`
+5. 在 GitHub 開啟 Pages（Settings → Pages → Branch）
+
+## 注意事項
+
+- 一般 Gmail 帳號透過 Apps Script 每日寄信上限 100 封，Workspace 為 1500 封
+- 優惠倒數截止時間寫死在 `index.html` 的 `deadline` 變數
+- 表單含 honeypot 欄位 `bot-field`，後端偵測到有值即略過寫入
