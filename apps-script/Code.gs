@@ -8,7 +8,7 @@
  */
 
 // ↓↓↓ 這一行改成你要收通知的信箱 ↓↓↓
-const OWNER_EMAIL = '請改成你的通知信箱@example.com';
+const OWNER_EMAIL = 'may2003mary@gmail.com';
 
 const BRAND_NAME  = '心情AED';
 const SHEET_NAME  = '工作表1';   // 如果你把分頁改名了，這裡要跟著改

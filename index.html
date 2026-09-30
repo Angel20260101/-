@@ -645,8 +645,7 @@
 <div id="introVideoModal" class="video-modal-overlay">
   <div class="video-modal-inner">
     <button type="button" class="video-modal-close" aria-label="關閉影片">✕</button>
-    <video id="introVideo" controls autoplay muted playsinline>
-      <source src="https://firebasestorage.googleapis.com/v0/b/moodaed-6bbfc.firebasestorage.app/o/%E5%BF%83%E6%83%85AED%E5%BD%A2%E8%B1%A1%E5%BD%B1%E7%89%87_v1.mp4?alt=media&token=46dad6dc-3856-4aa1-9b35-6469c87fdbfc" type="video/mp4">
+    <video id="introVideo" controls autoplay muted playsinline preload="auto" poster="assets/intro-poster.jpg">
       您的瀏覽器不支援播放此影片。
     </video>
     <div class="video-modal-hint">🔇 已靜音自動播放，點擊影片右下角喇叭圖示可開啟聲音</div>
@@ -660,9 +659,41 @@
     var modal = document.getElementById('introVideoModal');
     var video = document.getElementById('introVideo');
     if (!modal) return;
-    var SEEN_KEY = 'moodaed_intro_seen';
+
+    var SEEN_KEY   = 'moodaed_intro_seen';
+    var START_WAIT = 6000;   // 影片幾毫秒內沒開始播就放棄，直接讓使用者看頁面
+    var closed     = false;
+    var watchdog   = null;
+
+    // 依網路狀況與螢幕大小挑畫質，避免慢速網路被大檔卡死
+    function pickSources(){
+      var sd = false;
+      try {
+        var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (c && (c.saveData === true || /^(slow-)?2g$/.test(c.effectiveType || '') || c.effectiveType === '3g')) sd = true;
+      } catch(e){}
+      if (Math.min(screen.width, screen.height) <= 480) sd = true;
+
+      return sd
+        ? [['assets/intro-720p.mp4',   'video/mp4']]
+        : [['assets/intro-1080p.webm', 'video/webm'],
+           ['assets/intro-1080p.mp4',  'video/mp4']];
+    }
+
     function closeIntroVideo(){
-      try { if (video) { video.pause(); video.removeAttribute('autoplay'); } } catch(e){}
+      if (closed) return;
+      closed = true;
+      if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+      // 暫停並清掉來源，讓瀏覽器「中止」尚未完成的下載，不再佔用頻寬
+      try {
+        if (video) {
+          video.pause();
+          video.removeAttribute('autoplay');
+          while (video.firstChild) video.removeChild(video.firstChild);
+          video.removeAttribute('src');
+          video.load();
+        }
+      } catch(e){}
       modal.classList.add('is-hidden');
       modal.style.display = 'none';
       document.body.style.overflow = '';
@@ -670,11 +701,14 @@
       try { sessionStorage.setItem(SEEN_KEY, '1'); } catch(e){}
     }
     window.closeIntroVideo = closeIntroVideo;
+
     // 同一次瀏覽已看過就不再跳出
     var seen = false;
     try { seen = sessionStorage.getItem(SEEN_KEY) === '1'; } catch(e){}
     if (seen) { closeIntroVideo(); return; }
+
     document.body.style.overflow = 'hidden';
+
     var btns = modal.querySelectorAll('.video-modal-close, .video-skip-btn');
     for (var i = 0; i < btns.length; i++) {
       btns[i].addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); closeIntroVideo(); });
@@ -682,12 +716,36 @@
     }
     modal.addEventListener('click', function(e){ if (e.target === modal || e.target.classList.contains('video-modal-inner')) closeIntroVideo(); });
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeIntroVideo(); });
-    if (video) {
-      video.addEventListener('ended', closeIntroVideo);           // 播完自動關閉
-      video.addEventListener('error', closeIntroVideo, true);     // 影片載入失敗自動關閉，不讓畫面卡黑
-      var src = video.querySelector('source');
-      if (src) src.addEventListener('error', closeIntroVideo);
-    }
+
+    if (!video) return;
+
+    video.addEventListener('ended', closeIntroVideo);          // 播完自動關閉
+    video.addEventListener('error', closeIntroVideo, true);    // 載入失敗自動關閉，不讓畫面卡黑
+
+    // 保險絲：影片開始播放前，最多只讓使用者等 START_WAIT
+    // 逾時就關掉彈窗（並中止下載），頁面照常可用，不會整群人卡在黑畫面
+    watchdog = setTimeout(function(){
+      if (!closed && video.readyState < 3) closeIntroVideo();
+    }, START_WAIT);
+
+    function cancelWatchdog(){ if (watchdog) { clearTimeout(watchdog); watchdog = null; } }
+    video.addEventListener('playing', cancelWatchdog);
+    video.addEventListener('canplaythrough', cancelWatchdog);
+
+    // 注入來源並開始載入
+    pickSources().forEach(function(pair){
+      var el = document.createElement('source');
+      el.src = pair[0];
+      el.type = pair[1];
+      el.addEventListener('error', function(){
+        // 最後一個來源也失敗才關閉，讓瀏覽器有機會退回下一個格式
+        if (el === video.lastElementChild) closeIntroVideo();
+      });
+      video.appendChild(el);
+    });
+    video.load();
+    var play = video.play();
+    if (play && play.catch) play.catch(function(){ /* 瀏覽器擋自動播放時，使用者仍可手動按播放 */ });
   })();
 </script>
 
@@ -731,7 +789,10 @@
 
 <!-- ============ 痛點放大（滿版圖） ============ -->
 <section class="agitation-full">
-  <img loading="lazy" decoding="async" src="assets/agitation-banner.png" alt="你已經看到徵兆，只是還沒有工具接住它">
+  <picture>
+    <source type="image/webp" srcset="assets/agitation-banner.webp">
+    <img loading="lazy" decoding="async" src="assets/agitation-banner.jpg" alt="你已經看到徵兆，只是還沒有工具接住它">
+  </picture>
 </section>
 
 <svg class="pulse-divider wrap" viewBox="0 0 1080 34" preserveAspectRatio="none"><path d="M0 17 L440 17 L460 4 L480 30 L500 17 L1080 17"/></svg>
@@ -936,7 +997,10 @@
 <!-- ============ 健康職場企業健行動（滿版圖） ============ -->
 <section class="hike-full">
   <span class="hf-badge"><span class="dot"></span>即將推出</span>
-  <img loading="lazy" decoding="async" src="assets/hike-banner.png" alt="企業健康職場健行 × ESG 永續行動">
+  <picture>
+    <source type="image/webp" srcset="assets/hike-banner.webp">
+    <img loading="lazy" decoding="async" src="assets/hike-banner.jpg" alt="企業健康職場健行 × ESG 永續行動">
+  </picture>
 </section>
 
 <!-- ============ 客戶見證 ============ -->

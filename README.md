@@ -19,7 +19,7 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 | 路徑 | 說明 |
 |---|---|
 | `index.html` | 落地頁本體 |
-| `assets/` | 圖片與影片（原本內嵌為 base64，已抽出以加快載入） |
+| `assets/` | 圖片與影片（原本內嵌為 base64，已抽出並壓縮） |
 | `apps-script/Code.gs` | 後端程式碼，貼到 Google 試算表的 Apps Script 編輯器 |
 | `order-query.html` | 先前的訂單查詢頁，暫存保留 |
 
@@ -31,6 +31,19 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 3. 「部署 → 新增部署作業 → 網頁應用程式」，執行身分「我」、存取權「任何人」，取得 `/exec` 網址
 4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`
 5. 在 GitHub 開啟 Pages（Settings → Pages → Branch）
+
+## 效能注意事項
+
+進站影片彈窗是整頁最重的資源，維護時請守住三件事：
+
+1. **所有 mp4 必須開啟 faststart**（`moov` atom 置於 `mdat` 之前），否則瀏覽器要下載完整支影片才能播出第一格。
+   檢查：`ffprobe -v trace -i file.mp4 2>&1 | grep -n 'type:.moov\|type:.mdat'`
+   修正：`ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`
+2. **不要把照片存成 PNG**。滿版圖一律 WebP + JPEG fallback，用 `<picture>` 包起來。
+3. **影片彈窗的 watchdog 不要拿掉**。`START_WAIT` 逾時未開始播放就會關閉彈窗並中止下載，
+   這是避免多人同時進站時整群卡在黑畫面的保險絲。
+
+目前單次進站傳輸量（桌機、含影片）約 8.6 MB；略過影片後約 1.5 MB。
 
 ## 注意事項
 
