@@ -53,32 +53,38 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 
 ## 表單如何運作
 
-落地頁**不自己送出表單**。`#contact-form` 是一個 CTA 面板，按鈕連到 Google 表單：
+落地頁有自己的表單，訪客在頁面上填寫、送出，看不到任何 Google 介面：
 
 ```
-訪客 ──► Google 表單頁（Google 自己的網域，沒有跨網域問題）
-            │ 送出
-            ▼
-      回覆寫入「心情AED-名單後台」
-            │
-            ▼
-   onFormSubmit 觸發器（Google 伺服器端）──► 寄兩封信
+訪客在 index.html 的表單填寫
+      │ 原生 form POST（target 指向隱藏 iframe）
+      ▼
+Google 表單 /formResponse
+      │
+      ▼
+回覆寫入「心情AED-名單後台」
+      │
+      ▼
+onFormSubmit 觸發器（Google 伺服器端）──► 寄兩封信
 ```
 
-這個形狀是踩過坑之後的結果。先前落地頁用自己的表單直接打 Apps Script 網頁應用程式，
-在 iOS Safari 上**四種送出方式全部失敗**（fetch POST、iframe 表單 POST、JSONP、整頁導向），
-而同一支手機直接開 `/exec` 卻正常。從自己的網域送到 `script.google.com` 這件事，
-受瀏覽器政策管轄，而該政策因瀏覽器、版本、使用者設定而異，落地頁賭不起。
+**關鍵是 POST 的對象是 `docs.google.com/.../formResponse`，不是 Apps Script 的 `/exec`。**
+先前落地頁直接打 Apps Script 網頁應用程式，在 iOS Safari 上四種送出方式全部失敗
+（fetch POST、iframe 表單 POST、JSONP、整頁導向），而同一支手機直接開 `/exec` 卻正常。
+`formResponse` 是另一個端點，而且這裡用的是瀏覽器原生的表單送出，不是腳本發起的跨域請求。
 
-**不要把送出邏輯搬回頁面裡。** 相關程式碼保留在 git 歷史（`apps-script/Code.gs`
-與 index.html 的 JSONP/iframe 版本），要考古再去翻。
+### 維護時要注意
 
-| 要改什麼 | 改哪裡 |
-|---|---|
-| 表單題目 | Google 表單本身。題目文字可微調，`FN_FIELD_MATCHERS` 用關鍵字比對 |
-| 信件內容 | `apps-script/FormNotify.gs` 的 `fnLeadMailHtml` / `fnOwnerMailHtml` |
-| 通知收件人 | `FN_OWNER_EMAIL` |
-| 落地頁按鈕連結 | `index.html` 裡 `.form-cta` 的 `href` |
+| 要改什麼 | 改哪裡 | 注意 |
+|---|---|---|
+| 表單欄位 | Google 表單 + `index.html` 的 `name="entry.NNN"` | 兩邊都要改，`entry` 編號用 `getEntryIds()` 取得 |
+| 下拉選項文字 | Google 表單 + `index.html` 的 `<option>` | **必須逐字相同**，否則 Google 會拒收該筆 |
+| 必填／驗證 | `FN_QUESTIONS` → 執行 `updateFormRules()` | 前端的 `required` 也要同步改 |
+| 信件內容 | `fnLeadMailHtml` / `fnOwnerMailHtml` | |
+| 通知收件人 | `FN_OWNER_EMAIL` | |
+
+表單開了「收集電子郵件地址」，所以要額外送一個固定名稱的 `emailAddress` 欄位，
+前端在送出時從聯絡信箱同步過去。
 
 `FormNotify.gs` 的全域名稱都有 `FN_` / `fn` 前綴。Apps Script 所有 `.gs` 共用同一個
 全域範圍，同名 `const` 會讓整個專案跑不起來。
