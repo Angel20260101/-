@@ -19,7 +19,7 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 | 路徑 | 說明 |
 |---|---|
 | `index.html` | 落地頁本體 |
-| `assets/` | 圖片與影片（原本內嵌為 base64，已抽出並壓縮） |
+| `assets/` | 圖片與防護網影片（原本內嵌為 base64，已抽出並壓縮） |
 | `apps-script/Code.gs` | 後端程式碼，貼到 Google 試算表的 Apps Script 編輯器 |
 | `order-query.html` | 先前的訂單查詢頁，暫存保留 |
 
