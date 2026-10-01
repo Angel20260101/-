@@ -288,6 +288,12 @@ function testNotify() {
 }
 
 /* ---------- 工具 ---------- */
+// 信件樣板專用：跳脫 HTML，空值顯示破折號，避免信裡出現空白格
+function v(x) {
+  var t = String(x == null ? '' : x).trim();
+  return t ? esc(t) : '—';
+}
+
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -296,46 +302,162 @@ function esc(s) {
 
 /* ---------- 信件版型 ---------- */
 function ownerMailHtml(d) {
-  const row = function (k, v) {
+  const row = function (label, value) {
     return '<tr>' +
-      '<td style="padding:8px 12px;background:#f6f7f9;border:1px solid #e3e6ea;width:120px;font-weight:600;color:#333;">' + esc(k) + '</td>' +
-      '<td style="padding:8px 12px;border:1px solid #e3e6ea;color:#111;">' + (esc(v) || '—') + '</td>' +
+      '<td style="padding:0 0 16px;width:38%;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">' + esc(label) + '</td>' +
+      '<td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(value) + '</td>' +
       '</tr>';
   };
   return '' +
-    '<div style="font-family:-apple-system,\'Noto Sans TC\',sans-serif;max-width:600px;">' +
-      '<h2 style="margin:0 0 4px;color:#111;">收到一筆新的諮詢名單</h2>' +
-      '<p style="margin:0 0 16px;color:#666;font-size:13px;">送出時間：' + esc(d.time) + '</p>' +
-      '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
-        row('姓名', d.name) + row('職稱', d.title) +
-        row('公司名稱', d.company) + row('員工人數', d.size) +
-        row('聯絡電話', d.phone) + row('聯絡信箱', d.email) +
-        row('需求說明', d.note) +
-      '</table>' +
-      (d.sheetUrl ? '<p style="margin:20px 0 0;">' +
-        '<a href="' + d.sheetUrl + '" style="display:inline-block;padding:10px 18px;background:#111;color:#fff;text-decoration:none;border-radius:6px;font-size:14px;">開啟名單試算表</a>' +
-      '</p>' : '') +
-    '</div>';
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EFE1;padding:32px 0;font-family:\'Noto Sans TC\',\'Microsoft JhengHei\',Arial,sans-serif;">' +
+    '  <tr><td align="center">' +
+    '    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#FFFEFB;border-radius:18px;overflow:hidden;border:1px solid #E6DDCB;">' +
+    '      <tr>' +
+    '        <td style="background-color:#3E4A32;padding:32px 40px;text-align:center;">' +
+    '          <p style="margin:0 0 6px;color:#A6D695;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;">NEW LEAD</p>' +
+    '          <h1 style="margin:0;color:#FFFEFB;font-size:22px;font-weight:900;">收到一筆新的諮詢名單</h1>' +
+    '          <p style="margin:8px 0 0;color:#E2EAB6;font-size:13px;">' + esc(d.time) + '</p>' +
+    '        </td>' +
+    '      </tr>' +
+    '      <tr>' +
+    '        <td style="padding:32px 40px 0;">' +
+    '          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EFE1;border-radius:14px;">' +
+    '            <tr><td style="padding:26px 28px;">' +
+    '              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+                     row('姓名', d.name) +
+                     row('職稱', d.title) +
+                     row('公司名稱', d.company) +
+                     row('員工人數規模', d.size) +
+                     row('聯絡電話', d.phone) +
+                     row('聯絡信箱', d.email) +
+    '                <tr>' +
+    '                  <td style="padding:0;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">遇到的狀況／需求</td>' +
+    '                  <td style="padding:0;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.note) + '</td>' +
+    '                </tr>' +
+    '              </table>' +
+    '            </td></tr>' +
+    '          </table>' +
+    '        </td>' +
+    '      </tr>' +
+    (d.sheetUrl ?
+    '      <tr><td style="padding:24px 40px 0;text-align:center;">' +
+    '        <a href="' + d.sheetUrl + '" style="display:inline-block;padding:13px 28px;background-color:#C97B5B;color:#FFFEFB;text-decoration:none;border-radius:999px;font-size:15px;font-weight:800;">開啟名單試算表</a>' +
+    '      </td></tr>' : '') +
+    '      <tr><td style="padding:24px 40px 32px;">' +
+    '        <p style="margin:0;color:#79705D;font-size:13px;line-height:1.7;">直接回覆這封信即可聯繫填單者（回覆地址已設為對方信箱）。</p>' +
+    '      </td></tr>' +
+    '      <tr>' +
+    '        <td style="background-color:#2A3320;padding:20px 40px;text-align:center;">' +
+    '          <p style="margin:0;color:#E2EAB6;font-size:13px;font-weight:700;">心情AED｜Mood AED</p>' +
+    '        </td>' +
+    '      </tr>' +
+    '    </table>' +
+    '  </td></tr>' +
+    '</table>';
 }
 
 function leadMailHtml(d) {
   return '' +
-    '<div style="font-family:-apple-system,\'Noto Sans TC\',sans-serif;max-width:600px;line-height:1.75;color:#222;">' +
-      '<p>' + (esc(d.name) || '您') + ' 您好，</p>' +
-      '<p>感謝您對 <strong>' + BRAND_NAME + '</strong> 的關注，我們已收到您的諮詢需求。</p>' +
-      '<p>我們的顧問將於 <strong>1 個工作日內</strong>主動與您聯繫，' +
-         '為您安排一次<strong>免費的組織心理健康健檢諮詢</strong>。' +
-         '諮詢過程不會有任何推銷，也不需要簽約。</p>' +
-      '<div style="margin:20px 0;padding:14px 18px;background:#f6f7f9;border-left:3px solid #111;border-radius:4px;font-size:14px;">' +
-        '<div style="font-weight:600;margin-bottom:8px;">您這次填寫的內容</div>' +
-        '<div>公司名稱：' + (esc(d.company) || '—') + '</div>' +
-        '<div>員工人數：' + (esc(d.size) || '—') + '</div>' +
-        '<div>需求說明：' + (esc(d.note) || '—') + '</div>' +
-      '</div>' +
-      '<p>在優惠期限內送出的表單，已自動為您保留折扣資格，請安心等待我們的聯繫。</p>' +
-      '<p style="margin-top:24px;color:#666;font-size:13px;">' +
-        BRAND_NAME + '．企業員工心理健康即時預警與介入平台<br>' +
-        '（此信為系統自動發送，如需補充說明可直接回覆本信）' +
-      '</p>' +
-    '</div>';
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EFE1;padding:32px 0;">' +
+    '  <tr>' +
+    '    <td align="center">' +
+    '      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#FFFEFB;border-radius:18px;overflow:hidden;border:1px solid #E6DDCB;">' +
+    '' +
+    '        <!-- 品牌頭 -->' +
+    '        <tr>' +
+    '          <td style="background-color:#3E4A32;padding:40px 40px 32px;text-align:center;">' +
+    '            <p style="margin:0 0 6px;color:#A6D695;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;">MOOD AED</p>' +
+    '            <h1 style="margin:0 0 10px;color:#FFFEFB;font-size:26px;font-weight:900;letter-spacing:.02em;">心情AED</h1>' +
+    '            <p style="margin:0;color:#E2EAB6;font-size:14px;">企業員工心理健康即時預警與介入平台</p>' +
+    '          </td>' +
+    '        </tr>' +
+    '' +
+    '        <!-- 內文 -->' +
+    '        <tr>' +
+    '          <td style="padding:36px 40px 8px;">' +
+    '            <h2 style="margin:0 0 18px;color:#3A3428;font-size:20px;font-weight:800;">您的諮詢申請已收到</h2>' +
+    '            <p style="margin:0 0 8px;color:#3A3428;font-size:16px;line-height:1.8;">' + v(d.name) + ' 您好，</p>' +
+    '            <p style="margin:0 0 24px;color:#79705D;font-size:15px;line-height:1.9;">' +
+    '              謝謝您填寫「索取方案報價／預約免費諮詢」表單，我們已收到您的資料，以下為本次申請內容。顧問將於 <strong style="color:#C97B5B;">1 個工作日內</strong> 主動與您聯繫，說明最適合貴公司規模的方案。' +
+    '            </p>' +
+    '          </td>' +
+    '        </tr>' +
+    '' +
+    '        <!-- 資料卡片 -->' +
+    '        <tr>' +
+    '          <td style="padding:0 40px;">' +
+    '            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EFE1;border-radius:14px;">' +
+    '              <tr>' +
+    '                <td style="padding:26px 28px;">' +
+    '                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+    '                    <tr>' +
+    '                      <td style="padding:0 0 16px;width:38%;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">姓名</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.name) + '</td>' +
+    '                    </tr>' +
+    '                    <tr>' +
+    '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">職稱</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.title) + '</td>' +
+    '                    </tr>' +
+    '                    <tr>' +
+    '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">公司名稱</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.company) + '</td>' +
+    '                    </tr>' +
+    '                    <tr>' +
+    '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">員工人數規模</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.size) + '</td>' +
+    '                    </tr>' +
+    '                    <tr>' +
+    '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">聯絡電話</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.phone) + '</td>' +
+    '                    </tr>' +
+    '                    <tr>' +
+    '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">聯絡信箱</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.email) + '</td>' +
+    '                    </tr>' +
+    '                    <tr>' +
+    '                      <td style="padding:0;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">遇到的狀況／需求</td>' +
+    '                      <td style="padding:0;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.note) + '</td>' +
+    '                    </tr>' +
+    '                  </table>' +
+    '                </td>' +
+    '              </tr>' +
+    '            </table>' +
+    '          </td>' +
+    '        </tr>' +
+    '' +
+    '        <!-- 狀態提示 -->' +
+    '        <tr>' +
+    '          <td style="padding:24px 40px 0;">' +
+    '            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:4px solid #C97B5B;background-color:#FBF3EC;border-radius:0 10px 10px 0;">' +
+    '              <tr>' +
+    '                <td style="padding:16px 20px;">' +
+    '                  <p style="margin:0 0 4px;color:#A85F42;font-size:14px;font-weight:800;">目前狀態：已收件，待顧問聯繫</p>' +
+    '                  <p style="margin:0;color:#79705D;font-size:13px;line-height:1.7;">本表單僅為諮詢與報價需求，不涉及任何付款。若 1 個工作日內未收到我們的聯繫，歡迎直接回覆這封信與我們聯繫。</p>' +
+    '                </td>' +
+    '              </tr>' +
+    '            </table>' +
+    '          </td>' +
+    '        </tr>' +
+    '' +
+    '        <!-- 結語 -->' +
+    '        <tr>' +
+    '          <td style="padding:28px 40px 40px;">' +
+    '            <p style="margin:0;color:#3A3428;font-size:15px;line-height:1.9;">' +
+    '              期待成為貴公司員工身邊，那一份「被接住」的安全感。' +
+    '            </p>' +
+    '          </td>' +
+    '        </tr>' +
+    '' +
+    '        <!-- Footer -->' +
+    '        <tr>' +
+    '          <td style="background-color:#2A3320;padding:24px 40px;text-align:center;">' +
+    '            <p style="margin:0;color:#E2EAB6;font-size:13px;font-weight:700;">心情AED｜Mood AED</p>' +
+    '            <p style="margin:6px 0 0;color:#9AA688;font-size:12px;">企業員工心理健康即時預警與介入平台</p>' +
+    '          </td>' +
+    '        </tr>' +
+    '' +
+    '      </table>' +
+    '    </td>' +
+    '  </tr>' +
+    '</table>';
 }
