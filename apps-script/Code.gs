@@ -15,7 +15,7 @@ const SHEET_NAME  = '工作表1';   // 如果你把分頁改名了，這裡要�
 
 // 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
 // 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
-const CODE_VERSION = '2026-10-01c';
+const CODE_VERSION = '2026-10-01d';
 
 // selftest 用的通行碼。網址帶上 ?selftest=<這組字串> 會實際寫入一列並寄信，
 // 用來驗證「匿名訪客」走完整條路徑是否暢通。驗完可以改掉這組字串。
@@ -25,8 +25,17 @@ function doPost(e) {
   try {
     const p = (e && e.parameter) || {};
 
-    // 蜜罐欄位：機器人才會填，有值就直接當成功回應，不寫入資料
-    if (p['bot-field']) return jsonOut({ ok: true });
+    // 收不到任何欄位：請求的 body 沒送達，不是使用者漏填
+    if (Object.keys(p).length === 0) {
+      return jsonOut({ ok: false, error: '伺服器未收到任何表單欄位', reason: 'empty-body' });
+    }
+
+    // 蜜罐欄位：機器人才會填，有值就當成功回應但不寫入。
+    // 回報 skipped，否則真人被自動填入誤擋時，從外面完全看不出來。
+    if (p['bot-field']) {
+      console.warn('honeypot 命中，值為：' + p['bot-field']);
+      return jsonOut({ ok: true, skipped: 'honeypot', got: String(p['bot-field']).slice(0, 40) });
+    }
 
     const sid     = clean(p.sid,     64);
     const name    = clean(p.name,    100);

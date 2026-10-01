@@ -978,8 +978,11 @@
     </div>
 
     <form class="form-panel" id="contact-form" name="contact" method="POST" onsubmit="return handleSubmit(event)">
-      <p class="hp-field" style="position:absolute;left:-9999px;">
-        <label>如果您是人類請勿填寫此欄位 <input name="bot-field"></label>
+      <p class="hp-field" aria-hidden="true" style="position:absolute;left:-9999px;">
+        <label>如果您是人類請勿填寫此欄位
+          <input name="bot-field" type="text" tabindex="-1" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false">
+        </label>
       </p>
       <div class="form-head">
         <p class="offer-line">本表單僅為諮詢與報價需求，不涉及任何付款</p>
@@ -1173,9 +1176,12 @@
       size:    form.querySelector('#f-size').value,
       phone:   form.querySelector('#f-phone').value,
       email:   form.querySelector('#f-email').value,
-      note:    form.querySelector('#f-note').value,
-      'bot-field': form.querySelector('[name="bot-field"]') ? form.querySelector('[name="bot-field"]').value : ''
+      note:    form.querySelector('#f-note').value
     };
+
+    // 蜜罐只在真的有值時才送出。空的就不送，免得後端誤判。
+    var hp = form.querySelector('[name="bot-field"]');
+    if (hp && hp.value.trim()) data['bot-field'] = hp.value.trim();
 
     btn.disabled = true;
     btn.textContent = '送出中...';
