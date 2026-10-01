@@ -20,26 +20,28 @@ const SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
 
 // 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
 // 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
-const CODE_VERSION = '2026-10-01e';
+const CODE_VERSION = '2026-10-01f';
 
 // selftest 用的通行碼。網址帶上 ?selftest=<這組字串> 會實際寫入一列並寄信，
 // 用來驗證「匿名訪客」走完整條路徑是否暢通。驗完可以改掉這組字串。
 const SELFTEST_KEY = 'aed-check-9471';
 
 function doPost(e) {
-  try {
-    const p = (e && e.parameter) || {};
+  return respond(processSubmission((e && e.parameter) || {}), (e && e.parameter) || {});
+}
 
-    // 收不到任何欄位：請求的 body 沒送達，不是使用者漏填
+// 送出處理：doPost 與 doGet(?action=submit) 共用同一套邏輯。
+// 之所以兩邊都支援，是因為有些瀏覽器／網路環境送不出跨網域 POST，
+// 但同一個端點的 GET 是通的。
+function processSubmission(p) {
+  try {
     if (Object.keys(p).length === 0) {
-      return jsonOut({ ok: false, error: '伺服器未收到任何表單欄位', reason: 'empty-body' });
+      return { ok: false, error: '伺服器未收到任何表單欄位', reason: 'empty-body' };
     }
 
-    // 蜜罐欄位：機器人才會填，有值就當成功回應但不寫入。
-    // 回報 skipped，否則真人被自動填入誤擋時，從外面完全看不出來。
     if (p['bot-field']) {
       console.warn('honeypot 命中，值為：' + p['bot-field']);
-      return jsonOut({ ok: true, skipped: 'honeypot', got: String(p['bot-field']).slice(0, 40) });
+      return { ok: true, skipped: 'honeypot', got: String(p['bot-field']).slice(0, 40) };
     }
 
     const sid     = clean(p.sid,     64);
@@ -51,45 +53,36 @@ function doPost(e) {
     const email   = clean(p.email,   200);
     const note    = clean(p.note,    2000);
 
-    // 必填驗證
     if (!name || !company || !phone || !email) {
-      return jsonOut({ ok: false, error: '必填欄位未填寫完整' });
+      return { ok: false, error: '必填欄位未填寫完整' };
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      return jsonOut({ ok: false, error: 'Email 格式不正確' });
+      return { ok: false, error: 'Email 格式不正確' };
     }
 
-    // 去重：同一次送出（含前端連線失敗後的自動重送、使用者連點兩下）只會寫入一筆
-    const cache   = CacheService.getScriptCache();
-    const sidKey  = sid ? 'sid_' + sid : null;
-    if (sidKey && cache.get(sidKey)) return jsonOut({ ok: true, duplicate: true });
+    const cache  = CacheService.getScriptCache();
+    const sidKey = sid ? 'sid_' + sid : null;
+    if (sidKey && cache.get(sidKey)) return { ok: true, duplicate: true };
 
     const now = new Date();
 
-    // ---- 1. 寫入試算表（加鎖，避免多人同時送出時互相覆蓋）----
     const lock = LockService.getScriptLock();
     try {
       lock.waitLock(20000);
     } catch (err) {
-      return jsonOut({ ok: false, error: '系統忙碌中，請稍後再送出一次' });
+      return { ok: false, error: '系統忙碌中，請稍後再送出一次' };
     }
     try {
-      if (sidKey && cache.get(sidKey)) return jsonOut({ ok: true, duplicate: true });
-
+      if (sidKey && cache.get(sidKey)) return { ok: true, duplicate: true };
       const target = getSheet();
-      const sheet = target.sheet;
-      const ss = target.ss;
-      sheet.appendRow([now, name, title, company, size, phone, email, note, '未聯繫']);
-
-      if (sidKey) cache.put(sidKey, '1', 21600);   // 記住 6 小時
-      var lastRow = sheet.getLastRow();
-      var sheetUrl = ss.getUrl();
+      target.sheet.appendRow([now, name, title, company, size, phone, email, note, '未聯繫']);
+      if (sidKey) cache.put(sidKey, '1', 21600);
+      var lastRow  = target.sheet.getLastRow();
+      var sheetUrl = target.ss.getUrl();
     } finally {
       lock.releaseLock();
     }
 
-    // ---- 2. 寄通知信給後台（表單擁有者）----
-    // 寄信放在鎖外面，避免寄信變慢時拖住其他人的送出
     var mailOwner = false, mailLead = false, mailError = '';
     try {
       MailApp.sendEmail({
@@ -108,7 +101,6 @@ function doPost(e) {
       console.error('通知信寄送失敗：' + err);
     }
 
-    // ---- 3. 寄自動回覆信給填單者 ----
     try {
       MailApp.sendEmail({
         to: email,
@@ -121,20 +113,39 @@ function doPost(e) {
       console.error('自動回覆信寄送失敗：' + err);
     }
 
-    // 名單已寫入就回 ok，但把寄信結果一併回報，前端 ?debug=1 看得到
-    return jsonOut({
+    return {
       ok: true,
       row: lastRow,
       mailOwner: mailOwner,
       mailLead: mailLead,
       mailError: mailError || undefined,
-      quotaRemaining: mailQuota()
-    });
+      quotaRemaining: mailQuota(),
+      version: CODE_VERSION
+    };
 
   } catch (err) {
     console.error(err);
-    return jsonOut({ ok: false, error: '伺服器處理失敗', detail: String(err) });
+    return { ok: false, error: '伺服器處理失敗', detail: String(err) };
   }
+}
+
+// 回應格式：iframe 送出時回一個會用 postMessage 把結果傳回母頁面的 HTML，
+// 這樣即使跨網域，前端也讀得到伺服器真正的回應。其餘情況回 JSON。
+function respond(result, p) {
+  if (p && p.mode === 'iframe') {
+    var payload = JSON.stringify(result).replace(/</g, '\\u003c');
+    var html =
+      '<!doctype html><meta charset="utf-8"><body>' +
+      '<script>' +
+      'var r = ' + payload + ';' +
+      'try { parent.postMessage({ source: "aed-form", result: r }, "*"); } catch (e) {}' +
+      '</scr' + 'ipt>' +
+      '<pre>' + payload.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</pre>' +
+      '</body>';
+    return HtmlService.createHtmlOutput(html)
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  return jsonOut(result);
 }
 
 // 讓你可以直接用瀏覽器打開網址確認服務有活著
@@ -169,6 +180,12 @@ function doGet(e) {
     }
     steps.quotaRemaining = mailQuota();
     return jsonOut({ ok: true, selftest: steps, version: CODE_VERSION });
+  }
+
+  // ?action=submit：用 GET 送出表單。
+  // 有些環境送不出跨網域 POST，但 GET 可以，這條路保證填單不會石沉大海。
+  if (p.action === 'submit') {
+    return respond(processSubmission(p), p);
   }
 
   return jsonOut({

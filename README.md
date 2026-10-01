@@ -63,9 +63,14 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
   使用者連點兩下、或第一次請求讀不到回應而自動重送，都只會寫入一筆名單。
 - 寫入試算表包在 `LockService` 裡，多人同時送出不會互相覆蓋；寄信刻意放在鎖外，
   避免寄信變慢時拖住其他人的送出。
-- 若 `fetch` 失敗（跨網域限制，或請求根本沒送出去），前端會改用隱藏 iframe 做一次
-  真正的表單 POST。那是瀏覽器原生的表單送出，不受跨網域規則限制，代價是讀不到回應，
-  只能由 iframe 的 load 事件判斷「有沒有送達」。重送帶同一組 `sid`，不會寫入第二筆。
+- 送出走兩條路。先試 `fetch` POST；失敗就用隱藏 iframe 以 GET 開啟
+  `?action=submit&mode=iframe&...`。這個端點的匿名 GET 已實測可以寫入與寄信，而跨網域
+  POST 在部分瀏覽器／網路環境下送不出去。
+- `doPost` 與 `doGet(?action=submit)` 共用 `processSubmission()`，兩條路行為完全一致。
+- `mode=iframe` 時後端回傳一個會 `postMessage` 的頁面，所以跨網域也讀得到伺服器真正的
+  回應；收不到時退回以 iframe 的 load 事件判斷送達。
+- 兩條路都帶同一組 `sid`，後端去重，不會寫入第二筆。
+- GET 路徑會把 `note` 截到 1500 字以控制網址長度。
 
 ## 效能注意事項
 

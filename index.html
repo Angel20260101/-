@@ -1151,52 +1151,54 @@
     el.textContent = msg;
   }
 
-  // 用隱藏 iframe 做一次真正的表單 POST。
-  // 瀏覽器把它當成一般的表單送出（就像按下 <form action> 的送出鈕），
-  // 因此不會被跨網域規則擋下。代價是讀不到回應，只能知道「有沒有送達」。
+  // 備援送出：用隱藏 iframe 以 GET 開啟端點。
+  // 已實測這個端點的匿名 GET 可以正常寫入與寄信，而跨網域 POST 在某些
+  // 瀏覽器／網路環境下送不出去，所以備援走 GET。
+  // 後端收到 mode=iframe 會回一個用 postMessage 傳結果的頁面，
+  // 因此即使跨網域，這裡仍讀得到伺服器真正的回應。
   function submitViaIframe(data, done){
-    var NAME = 'aed_form_sink_' + Date.now();
     var finished = false;
 
-    var iframe = document.createElement('iframe');
-    iframe.name = NAME;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    var hidden = document.createElement('form');
-    hidden.method = 'POST';
-    hidden.action = FORM_ENDPOINT;
-    hidden.target = NAME;
-    hidden.style.display = 'none';
-    Object.keys(data).forEach(function(k){
-      var input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = k;
-      input.value = data[k];
-      hidden.appendChild(input);
+    var params = Object.keys(data).map(function(k){
+      var v = String(data[k] == null ? '' : data[k]);
+      if (k === 'note' && v.length > 1500) v = v.slice(0, 1500);   // 控制網址長度
+      return encodeURIComponent(k) + '=' + encodeURIComponent(v);
     });
-    document.body.appendChild(hidden);
+    params.push('action=submit', 'mode=iframe', '_t=' + Date.now());
+
+    var iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = FORM_ENDPOINT + '?' + params.join('&');
 
     function cleanup(){
-      try { document.body.removeChild(hidden); } catch(e){}
+      window.removeEventListener('message', onMessage);
       setTimeout(function(){ try { document.body.removeChild(iframe); } catch(e){} }, 1000);
     }
-
-    function finish(ok, detail){
+    function finish(ok, detail, result){
       if (finished) return;
       finished = true;
       clearTimeout(timer);
       cleanup();
-      done(ok, detail);
+      done(ok, detail, result);
     }
 
-    // iframe 載入完成 = 伺服器已回應（內容跨網域讀不到，但送達了）
-    iframe.addEventListener('load', function(){ finish(true, '伺服器已回應'); });
+    // 伺服器回傳的頁面會把結果 postMessage 回來，這是最可信的訊號
+    function onMessage(ev){
+      var d = ev.data;
+      if (!d || d.source !== 'aed-form') return;
+      var r = d.result || {};
+      finish(!!r.ok, '伺服器回應: ' + JSON.stringify(r), r);
+    }
+    window.addEventListener('message', onMessage);
+
+    // 收不到 postMessage 時，退而求其次用 load 事件判斷「有送達」
+    iframe.addEventListener('load', function(){
+      setTimeout(function(){ finish(true, '已送達（未收到伺服器回報內容）'); }, 2500);
+    });
     iframe.addEventListener('error', function(){ finish(false, 'iframe 載入失敗'); });
 
-    var timer = setTimeout(function(){ finish(false, '逾時 20 秒未收到回應'); }, 20000);
-
-    hidden.submit();
+    var timer = setTimeout(function(){ finish(false, '逾時 25 秒未收到回應'); }, 25000);
+    document.body.appendChild(iframe);
   }
 
   function handleSubmit(e){
@@ -1271,13 +1273,18 @@
         // 不受跨網域規則限制，後端再靠 sid 去重，不會寫入第二筆。
         console.warn('fetch 失敗，改用 iframe 表單送出：', err);
         var firstErr = (err && (err.name + ': ' + err.message)) || String(err);
-        submitViaIframe(data, function(okSent, detail){
+        submitViaIframe(data, function(okSent, detail, result){
           if (okSent) {
+            delete form.dataset.sid;
             form.reset();
-            showFormStatus('ok', '已送出您的資料，我們的顧問將於 1 個工作日內與您聯繫。',
-              'fetch 失敗(' + firstErr + ')，已改用 iframe 表單送出：' + detail);
+            var m = (result && result.mailLead === false)
+              ? '已收到您的填寫！我們的顧問將於 1 個工作日內與您聯繫。'
+              : '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
+            showFormStatus('ok', m, 'fetch 失敗(' + firstErr + ')，改用 iframe GET 送出。' + detail);
           } else {
-            showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。',
+            showFormStatus('err',
+              (result && result.error) ? result.error + '，請確認後再試一次。'
+                                       : '送出時發生問題，請稍後再試，或直接與我們聯繫。',
               'fetch: ' + firstErr + ' | iframe: ' + detail);
           }
           restore();
