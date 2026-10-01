@@ -52,7 +52,12 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 3. **影片彈窗的 watchdog 不要拿掉**。`START_WAIT` 逾時未開始播放就會關閉彈窗並中止下載，
    這是避免多人同時進站時整群卡在黑畫面的保險絲。
 
-4. **頁面中段的防護網影片維持 `preload="none"` + IntersectionObserver**，捲到附近才載入。
+4. **每個畫質分支都要同時提供 WebM 與 MP4**。只給單一格式時，碰上不支援該編碼的
+   瀏覽器就沒有退路（開源版 Chromium 不含 H.264 即為一例）。
+5. **頁面中段的防護網影片維持 `preload="none"` + IntersectionObserver**，捲到附近才載入。
+
+自動播放採用 `muted` + `playsinline`，這是各家瀏覽器都允許的組合。被擋下時
+（iOS 低耗電模式、使用者自行關閉自動播放）彈窗會留著並改顯示提示，由使用者自行點擊播放。
 
 單次進站傳輸量（桌機實測）：首屏 0.25 MB，看完進站影片約 7.3 MB，捲到底約 8.9 MB。
 

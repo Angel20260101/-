@@ -674,8 +674,11 @@
       } catch(e){}
       if (Math.min(screen.width, screen.height) <= 480) sd = true;
 
+      // 兩種格式都要給：webm 省頻寬，mp4 保相容。
+      // 只給單一格式的話，碰到不支援該編碼的瀏覽器就沒有退路。
       return sd
-        ? [['assets/intro-720p.mp4',   'video/mp4']]
+        ? [['assets/intro-720p.webm',  'video/webm'],
+           ['assets/intro-720p.mp4',   'video/mp4']]
         : [['assets/intro-1080p.webm', 'video/webm'],
            ['assets/intro-1080p.mp4',  'video/mp4']];
     }
@@ -725,12 +728,14 @@
     // 保險絲：影片開始播放前，最多只讓使用者等 START_WAIT
     // 逾時就關掉彈窗（並中止下載），頁面照常可用，不會整群人卡在黑畫面
     watchdog = setTimeout(function(){
-      if (!closed && video.readyState < 3) closeIntroVideo();
+      if (closed) return;
+      // 已經在播（哪怕只播了一點點）就讓它繼續，否則關掉彈窗把頁面還給使用者
+      if (video.currentTime > 0 && !video.paused) return;
+      closeIntroVideo();
     }, START_WAIT);
 
     function cancelWatchdog(){ if (watchdog) { clearTimeout(watchdog); watchdog = null; } }
     video.addEventListener('playing', cancelWatchdog);
-    video.addEventListener('canplaythrough', cancelWatchdog);
 
     // 注入來源並開始載入
     pickSources().forEach(function(pair){
@@ -745,7 +750,14 @@
     });
     video.load();
     var play = video.play();
-    if (play && play.catch) play.catch(function(){ /* 瀏覽器擋自動播放時，使用者仍可手動按播放 */ });
+    if (play && play.catch) play.catch(function(err){
+      // 自動播放被擋（例如 iOS 低耗電模式、使用者關閉了自動播放）。
+      // 影片已載入且有播放控制列，把彈窗留著讓使用者自己按，並取消 watchdog 以免被關掉。
+      if (err && err.name === 'AbortError') return;   // 這是我們自己關閉彈窗造成的，忽略
+      cancelWatchdog();
+      var hint = modal.querySelector('.video-modal-hint');
+      if (hint) hint.textContent = '▶️ 點擊影片開始播放，或按下方「略過影片」直接瀏覽內容';
+    });
   })();
 </script>
 
