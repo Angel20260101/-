@@ -201,6 +201,23 @@ function attachExistingForm() {
   return out;
 }
 
+// 把泛型 Item 轉成具體型別，才能呼叫 setRequired() 等方法
+function fnAsTyped(item) {
+  var T = FormApp.ItemType;
+  switch (item.getType()) {
+    case T.TEXT:            return item.asTextItem();
+    case T.PARAGRAPH_TEXT:  return item.asParagraphTextItem();
+    case T.LIST:            return item.asListItem();
+    case T.MULTIPLE_CHOICE: return item.asMultipleChoiceItem();
+    case T.CHECKBOX:        return item.asCheckboxItem();
+    case T.DROPDOWN:        return item.asListItem();
+    case T.SCALE:           return item.asScaleItem();
+    case T.DATE:            return item.asDateItem();
+    case T.TIME:            return item.asTimeItem();
+    default:                return null;   // 圖片、區段標題等沒有必填概念
+  }
+}
+
 /* ======================================================================
    把 FN_QUESTIONS 的必填與驗證規則，套用到已經建好的表單
    用法：函式下拉選單選 updateFormRules → 執行
@@ -222,7 +239,7 @@ function updateFormRules() {
     console.log(hint);
     return hint;
   }
-  report.push('✅ 已開啟表單「' + form.getTitle() + '」');
+  report.push('✅ 已開啟表單「' + (form.getTitle() || '(未命名)') + '」');
 
   form.getItems().forEach(function (item) {
     const title = item.getTitle();
@@ -242,8 +259,13 @@ function updateFormRules() {
     }
     if (!spec) { report.push('・' + title + '　（沒有對應設定，略過）'); return; }
 
+    // form.getItems() 回傳的是泛型 Item，沒有 setRequired()。
+    // 必須依題型轉成具體型別才能設定。
+    var typed = fnAsTyped(item);
+    if (!typed) { report.push('・' + title + '　（這個題型不支援必填設定，略過）'); return; }
+
     try {
-      item.setRequired(!!spec.required);
+      typed.setRequired(!!spec.required);
     } catch (err) {
       report.push('⚠️ ' + title + ' 設定必填失敗：' + err);
       return;
