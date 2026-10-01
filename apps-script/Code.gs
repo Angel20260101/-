@@ -15,7 +15,7 @@ const SHEET_NAME  = '工作表1';   // 如果你把分頁改名了，這裡要�
 
 // 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
 // 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
-const CODE_VERSION = '2026-10-01';
+const CODE_VERSION = '2026-10-01b';
 
 function doPost(e) {
   try {
@@ -63,6 +63,7 @@ function doPost(e) {
       sheet.appendRow([now, name, title, company, size, phone, email, note, '未聯繫']);
 
       if (sidKey) cache.put(sidKey, '1', 21600);   // 記住 6 小時
+      var lastRow = sheet.getLastRow();
       var sheetUrl = ss.getUrl();
     } finally {
       lock.releaseLock();
@@ -70,6 +71,7 @@ function doPost(e) {
 
     // ---- 2. 寄通知信給後台（表單擁有者）----
     // 寄信放在鎖外面，避免寄信變慢時拖住其他人的送出
+    var mailOwner = false, mailLead = false, mailError = '';
     try {
       MailApp.sendEmail({
         to: OWNER_EMAIL,
@@ -81,7 +83,9 @@ function doPost(e) {
           sheetUrl: sheetUrl
         })
       });
+      mailOwner = true;
     } catch (err) {
+      mailError += 'owner: ' + err + '; ';
       console.error('通知信寄送失敗：' + err);
     }
 
@@ -92,11 +96,21 @@ function doPost(e) {
         subject: '【' + BRAND_NAME + '】已收到您的諮詢需求，我們將於 1 個工作日內與您聯繫',
         htmlBody: leadMailHtml({ name: name, company: company, size: size, note: note })
       });
+      mailLead = true;
     } catch (err) {
+      mailError += 'lead: ' + err + '; ';
       console.error('自動回覆信寄送失敗：' + err);
     }
 
-    return jsonOut({ ok: true });
+    // 名單已寫入就回 ok，但把寄信結果一併回報，前端 ?debug=1 看得到
+    return jsonOut({
+      ok: true,
+      row: lastRow,
+      mailOwner: mailOwner,
+      mailLead: mailLead,
+      mailError: mailError || undefined,
+      quotaRemaining: mailQuota()
+    });
 
   } catch (err) {
     console.error(err);
@@ -130,6 +144,45 @@ function jsonOut(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function mailQuota() {
+  try { return MailApp.getRemainingDailyQuota(); } catch (err) { return -1; }
+}
+
+/* ---------- 在編輯器裡手動執行這一支，可一次驗證所有權限 ---------- */
+/* 用法：上方函式下拉選單選 testSetup → 按「執行」→ 看下方執行紀錄             */
+function testSetup() {
+  var report = [];
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+    report.push('✅ 試算表：' + ss.getName() + ' / 分頁「' + sheet.getName() + '」，目前 ' + sheet.getLastRow() + ' 列');
+  } catch (err) {
+    report.push('❌ 試算表讀取失敗：' + err);
+  }
+
+  try {
+    report.push('✅ 今日剩餘寄信額度：' + MailApp.getRemainingDailyQuota() + ' 封');
+  } catch (err) {
+    report.push('❌ 讀不到寄信額度（多半是尚未授權 Gmail 權限）：' + err);
+  }
+
+  try {
+    MailApp.sendEmail({
+      to: OWNER_EMAIL,
+      subject: '【' + BRAND_NAME + '】testSetup 測試信（版本 ' + CODE_VERSION + '）',
+      htmlBody: '<p>看到這封信，代表寄信功能與權限都正常。</p>'
+    });
+    report.push('✅ 測試信已寄往 ' + OWNER_EMAIL + '（請到收件匣與垃圾郵件確認）');
+  } catch (err) {
+    report.push('❌ 寄信失敗：' + err);
+  }
+
+  var out = report.join('\n');
+  console.log(out);
+  return out;
 }
 
 /* ---------- 信件版型 ---------- */

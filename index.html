@@ -1201,7 +1201,10 @@
         if(result && result.ok){
           delete form.dataset.sid;
           form.reset();
-          showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
+          var msg = (result.mailLead === false)
+            ? '已收到您的填寫！我們的顧問將於 1 個工作日內與您聯繫。'
+            : '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
+          showFormStatus('ok', msg, httpInfo + ' | ' + JSON.stringify(result));
         } else {
           showFormStatus('err', (result && result.error ? result.error : '送出時發生問題') + '，請確認欄位後再試一次。',
             httpInfo + ' | 回應: ' + JSON.stringify(result));
@@ -1220,10 +1223,12 @@
           body: encodeFormData(data)
         })
           .then(function(){
-            delete form.dataset.sid;
+            // no-cors 讀不到回應，無法確認伺服器是否真的收下，
+            // 所以這裡的說法保守一些，不保證信已寄出。
             form.reset();
-            showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。',
-              '第一次失敗(' + firstErr + ')，no-cors 重送已送達');
+            showFormStatus('ok', '已送出您的資料，我們的顧問將於 1 個工作日內與您聯繫。',
+              '⚠️ 無法讀取伺服器回應（第一次: ' + firstErr + '），已用 no-cors 重送但無法確認結果。'
+              + '請確認 Apps Script 部署的存取權是否設為「任何人」。');
             restore();
           })
           .catch(function(err2){
