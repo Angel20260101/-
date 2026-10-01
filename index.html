@@ -487,42 +487,18 @@
   textarea{resize:vertical;min-height:80px;}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--mint);outline-offset:1px;}
   .form-panel .btn-primary{width:100%;margin-top:22px;}
-  .form-preview{
-    list-style:none;margin:22px 0 0;padding:0;
-    display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;
+  .form-embed{
+    margin-top:22px;border-radius:14px;overflow:hidden;
+    background:var(--white);border:1px solid var(--line);
   }
-  @media (max-width:560px){ .form-preview{grid-template-columns:1fr;} }
-  .form-preview li{
-    position:relative;padding:11px 14px 11px 34px;border-radius:10px;
-    background:var(--cream);border:1px solid var(--line);
-    font-size:16px;font-weight:600;color:var(--navy);
+  .form-embed iframe{
+    display:block;width:100%;border:0;
+    height:1250px;                       /* 夠高，讓訪客不用在框裡面捲 */
+    background:var(--white);
   }
-  .form-preview li::before{
-    /* 對齊第一行文字，而不是整個區塊的垂直中心，換行時才不會偏低 */
-    content:'';position:absolute;left:14px;top:19px;width:8px;height:8px;
-    border-radius:50%;background:var(--mint);
-  }
-  .form-preview li.full{grid-column:1 / -1;}
-  .form-preview li span{
-    margin-left:8px;font-size:13px;font-weight:700;color:var(--coral-dark);
-    background:rgba(201,123,91,.14);padding:2px 8px;border-radius:999px;
-  }
-  /* 按鈕是膠囊形，四個角在視覺矩形內卻在形狀外，點那裡會穿透過去。
-     外層這塊是方的，把那些角落補起來，順便留一圈邊界容錯。 */
-  .form-cta-hit{
-    margin-top:26px;padding:8px;cursor:pointer;
-    border-radius:12px;                 /* 方角，不要跟著按鈕變膠囊 */
-    -webkit-tap-highlight-color:transparent;
-    touch-action:manipulation;
-  }
-  .form-panel .form-cta{
-    width:100%;margin-top:0;text-align:center;
-    position:relative;z-index:1;          /* 確保不被任何裝飾元素蓋住 */
-    min-height:56px;                      /* 手機上好按 */
-    -webkit-tap-highlight-color:rgba(0,0,0,.08);
-    touch-action:manipulation;            /* 去掉 iOS 點擊 300ms 延遲 */
-  }
-  .form-note{font-size:16px;color:var(--navy);text-align:center;margin-top:14px;font-weight:600;}
+  @media (max-width:560px){ .form-embed iframe{height:1500px;} }
+  .form-note{font-size:15px;color:var(--muted);text-align:center;margin-top:14px;}
+  .form-note a{color:var(--coral-dark);font-weight:700;}
   .form-disclaimer{font-size:15px;color:var(--muted);text-align:center;margin-top:8px;}
 
   footer{background:var(--navy-deep);color:#C7C0A7;text-align:center;padding:32px 0;font-size:16px;}    #gradient-wrap{
@@ -1020,24 +996,17 @@
         <p class="sub">留下您的資料，顧問將主動與您聯繫，優惠期限內送出即自動保留折扣資格。</p>
       </div>
 
-      <ul class="form-preview">
-        <li>姓名<span>必填</span></li>
-        <li>職稱</li>
-        <li>公司名稱</li>
-        <li>員工人數規模</li>
-        <li>聯絡電話<span>必填</span></li>
-        <li>聯絡信箱<span>必填</span></li>
-        <li class="full">目前遇到的狀況或需求（選填）</li>
-      </ul>
-
-      <!-- 刻意不用 target="_blank"：iOS Safari 的彈出視窗封鎖會擋掉開新分頁，
-           而且毫無提示，使用者只會覺得「按了沒反應」。同分頁開啟，返回用上一頁。 -->
-      <div class="form-cta-hit">
-      <a class="btn btn-primary form-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform">
-        前往填寫，索取報價並保留優惠 ›
-      </a>
+      <!-- 直接嵌入 Google 表單：訪客在本頁填寫、在本頁送出。
+           送出動作發生在 Google 自己的網域內，不是從本站發出的跨網域請求，
+           所以不會重蹈先前 fetch / iframe POST / JSONP 全被 iOS Safari 擋掉的覆轍。 -->
+      <div class="form-embed">
+        <iframe
+          src="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform?embedded=true"
+          title="索取方案報價 / 預約免費諮詢"
+          loading="lazy">載入中…</iframe>
       </div>
-      <p class="form-note">約 1 分鐘填完，送出後會立即收到確認信。</p>
+
+      <p class="form-note">表單沒有顯示出來？<a href="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform">點此另開填寫 ›</a></p>
       <p class="form-disclaimer">送出即表示您同意我們透過留下的聯絡方式與您聯繫，本頁不會產生任何付款行為。</p>
     </div>
   </div>
@@ -1048,43 +1017,6 @@
 </footer>
 
 <script>
-  // ====== 表單 CTA：多一層保險 ======
-  // 落地頁在某些手機上回報「按鈕點不到」，但頁面結構查不出遮蔽。
-  // 這裡不靠單一機制：除了 <a> 本身，再綁 click 與 touchend，
-  // 並把按鈕外圍的整塊區域也變成可點，任何一條路通就能前往表單。
-  (function(){
-    var cta = document.querySelector('.form-cta');
-    if (!cta) return;
-    var url = cta.getAttribute('href');
-    if (!url) return;
-
-    var going = false;
-    function go(e){
-      if (going) return;
-      going = true;
-      if (e) { e.preventDefault(); e.stopPropagation(); }
-      location.href = url;
-      // 萬一 location 指派被擋，再用 window.open 補一次
-      setTimeout(function(){
-        if (document.visibilityState === 'visible') {
-          try { window.open(url, '_self'); } catch (err) {}
-        }
-        going = false;
-      }, 400);
-    }
-
-    cta.addEventListener('click', go);
-    cta.addEventListener('touchend', go, { passive: false });
-
-    // 按鈕外圍一圈也可點，避免手指落在膠囊圓角外。
-    // .form-cta-hit 是 cta 的父層，要用 closest 往上找，不是往裡面找。
-    var hit = cta.closest('.form-cta-hit');
-    if (hit) {
-      hit.addEventListener('click', go);
-      hit.addEventListener('touchend', go, { passive: false });
-    }
-  })();
-
   // ====== 倒數計時器：截止時間以固定日期設定，方便上線後調整 ======
   // 請將下方日期改成你實際要下架優惠的日期與時間
   const deadline = new Date("2026-10-30T23:59:59+08:00").getTime();
