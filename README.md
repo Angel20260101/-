@@ -51,33 +51,37 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 改完程式碼要讓線上生效，是「部署 → **管理部署作業** → ✏️ → 版本選**新版本** → 部署」。
 按「新增部署作業」會產生另一個網址，`index.html` 的 `FORM_ENDPOINT` 就會指到舊的那個。
 
-## 回報送出問題
+## 表單如何運作
 
-在網址後面加上 `?debug=1`（例如 `https://angel20260101.github.io/-/?debug=1`）再送出表單，
-表單下方的訊息會附上技術細節：HTTP 狀態、回應內容，以及兩次嘗試各自的錯誤。
-截圖那段訊息即可定位問題，不需要開開發者工具。
+落地頁**不自己送出表單**。`#contact-form` 是一個 CTA 面板，按鈕連到 Google 表單：
 
-## 送出的可靠性
+```
+訪客 ──► Google 表單頁（Google 自己的網域，沒有跨網域問題）
+            │ 送出
+            ▼
+      回覆寫入「心情AED-名單後台」
+            │
+            ▼
+   onFormSubmit 觸發器（Google 伺服器端）──► 寄兩封信
+```
 
-- 前端每次送出會帶一組 `sid`，後端以 `CacheService` 記住 6 小時並據此去重。
-  使用者連點兩下、或第一次請求讀不到回應而自動重送，都只會寫入一筆名單。
-- 寫入試算表包在 `LockService` 裡，多人同時送出不會互相覆蓋；寄信刻意放在鎖外，
-  避免寄信變慢時拖住其他人的送出。
-送出依序嘗試三種方式，全部帶同一組 `sid`，後端去重，不會寫入第二筆：
+這個形狀是踩過坑之後的結果。先前落地頁用自己的表單直接打 Apps Script 網頁應用程式，
+在 iOS Safari 上**四種送出方式全部失敗**（fetch POST、iframe 表單 POST、JSONP、整頁導向），
+而同一支手機直接開 `/exec` 卻正常。從自己的網域送到 `script.google.com` 這件事，
+受瀏覽器政策管轄，而該政策因瀏覽器、版本、使用者設定而異，落地頁賭不起。
 
-1. **`fetch` POST** — 可用時最直接，拿得到完整回應。
-2. **JSONP**（`<script src="...?action=submit&callback=...">`）— 主力備援。
-   script 是子資源而非第三方框架，iOS Safari 的追蹤防護不會擋，也不受 CORS 規範，
-   而且前端仍讀得到伺服器真正的回應。
-3. **整頁導向**（`?action=submit&redirect=<落地頁網址>`）— 前兩者都失敗時，畫面會出現
-   一個「點此完成送出」連結。伺服器處理完用 meta refresh 把瀏覽器送回落地頁並附上
-   `?sent=1`，頁面據此顯示成功訊息。這就是一般的網頁瀏覽，沒有跨網域限制擋得住。
+**不要把送出邏輯搬回頁面裡。** 相關程式碼保留在 git 歷史（`apps-script/Code.gs`
+與 index.html 的 JSONP/iframe 版本），要考古再去翻。
 
-`doPost` 與 `doGet(?action=submit)` 共用 `processSubmission()`，行為完全一致。
-GET 路徑會把 `note` 截到 1200 字以控制網址長度。
+| 要改什麼 | 改哪裡 |
+|---|---|
+| 表單題目 | Google 表單本身。題目文字可微調，`FN_FIELD_MATCHERS` 用關鍵字比對 |
+| 信件內容 | `apps-script/FormNotify.gs` 的 `fnLeadMailHtml` / `fnOwnerMailHtml` |
+| 通知收件人 | `FN_OWNER_EMAIL` |
+| 落地頁按鈕連結 | `index.html` 裡 `.form-cta` 的 `href` |
 
-**不要改回用 iframe 送出。** 實測 iOS Safari 會擋掉跨網站 iframe 的請求，
-而且 `load` 事件照樣觸發，會造成「顯示成功但什麼都沒發生」。
+`FormNotify.gs` 的全域名稱都有 `FN_` / `fn` 前綴。Apps Script 所有 `.gs` 共用同一個
+全域範圍，同名 `const` 會讓整個專案跑不起來。
 
 ## 效能注意事項
 

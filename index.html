@@ -487,7 +487,29 @@
   textarea{resize:vertical;min-height:80px;}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--mint);outline-offset:1px;}
   .form-panel .btn-primary{width:100%;margin-top:22px;}
-  .form-disclaimer{font-size:15px;color:var(--muted);text-align:center;margin-top:14px;}
+  .form-preview{
+    list-style:none;margin:22px 0 0;padding:0;
+    display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;
+  }
+  @media (max-width:560px){ .form-preview{grid-template-columns:1fr;} }
+  .form-preview li{
+    position:relative;padding:11px 14px 11px 34px;border-radius:10px;
+    background:var(--cream);border:1px solid var(--line);
+    font-size:16px;font-weight:600;color:var(--navy);
+  }
+  .form-preview li::before{
+    /* 對齊第一行文字，而不是整個區塊的垂直中心，換行時才不會偏低 */
+    content:'';position:absolute;left:14px;top:19px;width:8px;height:8px;
+    border-radius:50%;background:var(--mint);
+  }
+  .form-preview li.full{grid-column:1 / -1;}
+  .form-preview li span{
+    margin-left:8px;font-size:13px;font-weight:700;color:var(--coral-dark);
+    background:rgba(201,123,91,.14);padding:2px 8px;border-radius:999px;
+  }
+  .form-panel .form-cta{width:100%;margin-top:26px;text-align:center;}
+  .form-note{font-size:16px;color:var(--navy);text-align:center;margin-top:14px;font-weight:600;}
+  .form-disclaimer{font-size:15px;color:var(--muted);text-align:center;margin-top:8px;}
 
   footer{background:var(--navy-deep);color:#C7C0A7;text-align:center;padding:32px 0;font-size:16px;}    #gradient-wrap{
     background:linear-gradient(180deg,#dbeafe 0%,#fef3c7 33%,#d1fae5 66%,#f3e8ff 100%);
@@ -977,57 +999,29 @@
       <a href="#contact-form" class="btn btn-ghost">預約諮詢，加碼 15 天免費試用</a>
     </div>
 
-    <form class="form-panel" id="contact-form" name="contact" method="POST" onsubmit="return handleSubmit(event)">
-      <p class="hp-field" aria-hidden="true" style="position:absolute;left:-9999px;">
-        <label>如果您是人類請勿填寫此欄位
-          <input name="bot-field" type="text" tabindex="-1" autocomplete="off"
-                 autocapitalize="off" autocorrect="off" spellcheck="false">
-        </label>
-      </p>
+    <div class="form-panel" id="contact-form">
       <div class="form-head">
         <p class="offer-line">本表單僅為諮詢與報價需求，不涉及任何付款</p>
         <h3>索取方案報價 / 預約免費諮詢</h3>
         <p class="sub">留下您的資料，顧問將主動與您聯繫，優惠期限內送出即自動保留折扣資格。</p>
       </div>
-      <div class="form-grid">
-        <div>
-          <label for="f-name">姓名</label>
-          <input type="text" id="f-name" name="name" placeholder="請輸入您的姓名" required>
-        </div>
-        <div>
-          <label for="f-title">職稱</label>
-          <input type="text" id="f-title" name="title" placeholder="例如：人資主管">
-        </div>
-        <div>
-          <label for="f-company">公司名稱</label>
-          <input type="text" id="f-company" name="company" placeholder="請輸入公司名稱" required>
-        </div>
-        <div>
-          <label for="f-size">員工人數規模</label>
-          <select id="f-size" name="size">
-            <option>50 人以下</option>
-            <option>50 – 200 人</option>
-            <option>200 – 500 人</option>
-            <option>500 人以上</option>
-          </select>
-        </div>
-        <div>
-          <label for="f-phone">聯絡電話</label>
-          <input type="tel" id="f-phone" name="phone" placeholder="方便聯繫的電話" required>
-        </div>
-        <div>
-          <label for="f-email">聯絡信箱</label>
-          <input type="email" id="f-email" name="email" placeholder="you@company.com" required>
-        </div>
-        <div class="full">
-          <label for="f-note">目前遇到的狀況或需求（選填）</label>
-          <textarea id="f-note" name="note" placeholder="例如：近期離職率偏高、想先了解方案內容..."></textarea>
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary">送出，索取報價並保留優惠</button>
-      <p id="form-status" role="status" aria-live="polite" style="display:none;margin:14px 0 0;padding:12px 16px;border-radius:8px;font-size:14px;line-height:1.6;"></p>
+
+      <ul class="form-preview">
+        <li>姓名<span>必填</span></li>
+        <li>職稱</li>
+        <li>公司名稱<span>必填</span></li>
+        <li>員工人數規模</li>
+        <li>聯絡電話<span>必填</span></li>
+        <li>聯絡信箱<span>必填</span></li>
+        <li class="full">目前遇到的狀況或需求（選填）</li>
+      </ul>
+
+      <a class="btn btn-primary form-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform" target="_blank" rel="noopener">
+        前往填寫，索取報價並保留優惠 ›
+      </a>
+      <p class="form-note">約 1 分鐘填完，送出後會立即收到確認信。</p>
       <p class="form-disclaimer">送出即表示您同意我們透過留下的聯絡方式與您聯繫，本頁不會產生任何付款行為。</p>
-    </form>
+    </div>
   </div>
 </section>
 
@@ -1125,219 +1119,6 @@
     io.observe(v);
   })();
 
-  // ====== 表單送出：POST 到 Google Apps Script 網頁應用程式 ======
-  // 部署 Apps Script 後，把 /exec 結尾的網址貼到下面這一行
-  const FORM_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzU9W_5D2Ag-EYY0zEl_WRY-2li98Vv-DYium9d7swppqM14Aptoy1IqpgKH6Suddt4/exec';
-
-  function encodeFormData(data){
-    return Object.keys(data)
-      .map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); })
-      .join('&');
-  }
-
-  // 網址加上 ?debug=1 時，錯誤訊息會附上技術細節，方便回報問題
-  const FORM_DEBUG = /[?&]debug=1/.test(location.search);
-
-  function showFormStatus(type, msg, detail){
-    if (FORM_DEBUG && detail) msg = msg + '\n\n[debug] ' + detail;
-    var el = document.getElementById('form-status');
-    if(!el){ alert(msg); return; }
-    el.style.whiteSpace = 'pre-wrap';
-    var ok = (type === 'ok');
-    el.style.display = 'block';
-    el.style.background = ok ? 'rgba(45,196,160,.12)' : 'rgba(255,107,107,.12)';
-    el.style.color      = ok ? 'var(--mint, #2dc4a0)' : 'var(--coral, #ff6b6b)';
-    el.style.border     = '1px solid ' + (ok ? 'rgba(45,196,160,.35)' : 'rgba(255,107,107,.35)');
-    el.textContent = msg;
-  }
-
-  // 備援送出：JSONP。
-  // <script src="..."> 是子資源載入，不是第三方 iframe，所以 iOS Safari 的
-  // 追蹤防護不會擋，也完全不受 CORS 規範，而且拿得到伺服器真正的回應。
-  function buildQuery(data, extra){
-    var parts = Object.keys(data).map(function(k){
-      var v = String(data[k] == null ? '' : data[k]);
-      if (k === 'note' && v.length > 1200) v = v.slice(0, 1200);   // 控制網址長度
-      return encodeURIComponent(k) + '=' + encodeURIComponent(v);
-    });
-    Object.keys(extra || {}).forEach(function(k){
-      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(extra[k]));
-    });
-    return parts.join('&');
-  }
-
-  function submitViaJsonp(data, done){
-    var cb = 'aedcb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-    var script = document.createElement('script');
-    var finished = false;
-
-    function cleanup(){
-      try { delete window[cb]; } catch(e){ window[cb] = undefined; }
-      try { script.parentNode.removeChild(script); } catch(e){}
-    }
-    function finish(ok, detail, result){
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      cleanup();
-      done(ok, detail, result);
-    }
-
-    window[cb] = function(result){
-      finish(!!(result && result.ok), '伺服器回應: ' + JSON.stringify(result), result);
-    };
-
-    script.onerror = function(){ finish(false, 'JSONP 載入失敗（請求被擋或網路不通）'); };
-    var timer = setTimeout(function(){ finish(false, 'JSONP 逾時 25 秒'); }, 25000);
-
-    script.src = FORM_ENDPOINT + '?' + buildQuery(data, {
-      action: 'submit', callback: cb, _t: Date.now()
-    });
-    document.head.appendChild(script);
-  }
-
-  // 最後手段：整頁導向到端點，處理完由伺服器把瀏覽器送回本頁並帶上 ?sent=1。
-  // 這就是一般的網頁瀏覽，沒有任何跨網域限制擋得住它。
-  function manualSubmitUrl(data){
-    return FORM_ENDPOINT + '?' + buildQuery(data, {
-      action: 'submit',
-      redirect: location.origin + location.pathname,
-      _t: Date.now()
-    });
-  }
-
-  function showManualFallback(data, detail){
-    var el = document.getElementById('form-status');
-    if (!el) return;
-    el.style.display = 'block';
-    el.style.whiteSpace = 'pre-wrap';
-    el.style.background = 'rgba(201,123,91,.12)';
-    el.style.color      = 'var(--coral, #C97B5B)';
-    el.style.border     = '1px solid rgba(201,123,91,.35)';
-    el.textContent = '您的瀏覽器阻擋了自動送出，請點下方連結完成送出（只需一次）：\n';
-    var a = document.createElement('a');
-    a.href = manualSubmitUrl(data);
-    a.textContent = '👉 點此完成送出';
-    a.style.cssText = 'display:inline-block;margin-top:10px;font-weight:800;text-decoration:underline;color:inherit;';
-    el.appendChild(a);
-    if (FORM_DEBUG && detail) {
-      var d = document.createElement('div');
-      d.style.cssText = 'margin-top:10px;font-size:12px;opacity:.8;';
-      d.textContent = '[debug] ' + detail;
-      el.appendChild(d);
-    }
-  }
-
-  // 走過整頁導向送出後，伺服器會把使用者帶回本頁並附上 ?sent=1
-  (function(){
-    var m = /[?&]sent=([01])/.exec(location.search);
-    if (!m) return;
-    document.addEventListener('DOMContentLoaded', function(){
-      if (m[1] === '1') {
-        showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
-      } else {
-        showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。');
-      }
-      var f = document.getElementById('contact-form');
-      if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  })();
-
-  function handleSubmit(e){
-    e.preventDefault();
-    const form = e.target;
-    const btn = form.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-
-    if(!FORM_ENDPOINT || FORM_ENDPOINT.indexOf('PASTE_YOUR') === 0){
-      showFormStatus('err', '表單尚未完成設定，請稍後再試，或直接與我們聯繫。');
-      console.error('FORM_ENDPOINT 尚未填入 Apps Script 的 /exec 網址');
-      return false;
-    }
-
-    // 每次送出給一組唯一 ID，後端據此去重，避免重送造成兩筆名單
-    if (!form.dataset.sid) {
-      form.dataset.sid = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
-    }
-
-    const data = {
-      sid:     form.dataset.sid,
-      name:    form.querySelector('#f-name').value,
-      title:   form.querySelector('#f-title').value,
-      company: form.querySelector('#f-company').value,
-      size:    form.querySelector('#f-size').value,
-      phone:   form.querySelector('#f-phone').value,
-      email:   form.querySelector('#f-email').value,
-      note:    form.querySelector('#f-note').value
-    };
-
-    // 蜜罐只在真的有值時才送出。空的就不送，免得後端誤判。
-    var hp = form.querySelector('[name="bot-field"]');
-    if (hp && hp.value.trim()) data['bot-field'] = hp.value.trim();
-
-    btn.disabled = true;
-    btn.textContent = '送出中...';
-    showFormStatus('ok', '資料傳送中，請稍候…');
-
-    var httpInfo = '(無回應)';
-
-    function restore(){
-      btn.disabled = false;
-      btn.textContent = originalText;
-    }
-
-    fetch(FORM_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: encodeFormData(data)
-    })
-      .then(function(res){
-        httpInfo = 'HTTP ' + res.status + ' type=' + res.type + ' url=' + (res.url || '').slice(0, 60);
-        return res.json();
-      })
-      .then(function(result){
-        if(result && result.ok){
-          delete form.dataset.sid;
-          form.reset();
-          var msg = (result.mailLead === false)
-            ? '已收到您的填寫！我們的顧問將於 1 個工作日內與您聯繫。'
-            : '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
-          showFormStatus('ok', msg, httpInfo + ' | ' + JSON.stringify(result));
-        } else {
-          showFormStatus('err', (result && result.error ? result.error : '送出時發生問題') + '，請確認欄位後再試一次。',
-            httpInfo + ' | 回應: ' + JSON.stringify(result));
-        }
-        restore();
-      })
-      .catch(function(err){
-        // fetch 讀不到回應，甚至請求可能根本沒送出去。
-        // 改用「隱藏 iframe + 真表單 POST」重送：這是瀏覽器原生的表單送出，
-        // 不受跨網域規則限制，後端再靠 sid 去重，不會寫入第二筆。
-        console.warn('fetch 失敗，改用 iframe 表單送出：', err);
-        var firstErr = (err && (err.name + ': ' + err.message)) || String(err);
-        submitViaJsonp(data, function(okSent, detail, result){
-          if (okSent) {
-            delete form.dataset.sid;
-            form.reset();
-            var m = (result && result.mailLead === false)
-              ? '已收到您的填寫！我們的顧問將於 1 個工作日內與您聯繫。'
-              : '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
-            showFormStatus('ok', m, 'fetch 失敗(' + firstErr + ')，改用 JSONP 送出。' + detail);
-          } else if (result && result.error) {
-            showFormStatus('err', result.error + '，請確認後再試一次。',
-              'fetch: ' + firstErr + ' | jsonp: ' + detail);
-            restore();
-            return;
-          } else {
-            // 兩條路都沒成功，給使用者一個一定可行的出口：整頁導向送出
-            showManualFallback(data, 'fetch: ' + firstErr + ' | jsonp: ' + detail);
-          }
-          restore();
-        });
-      });
-
-    return false;
-  }
 </script>
 </body>
 </html>
