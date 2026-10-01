@@ -310,6 +310,80 @@ function updateFormRules() {
 }
 
 /* ======================================================================
+   取得每個題目的 entry 編號，讓落地頁的自訂表單可以直接送到這張 Google 表單
+   用法：函式下拉選單選 getEntryIds → 執行 → 把執行記錄整段貼給 Claude
+   ====================================================================== */
+function getEntryIds() {
+  const report = [];
+
+  if (!FN_FORM_EDIT_URL) {
+    const hint = '❌ 請先把表單的「編輯用網址」填進程式最上方的 FN_FORM_EDIT_URL。';
+    console.log(hint);
+    return hint;
+  }
+
+  let form;
+  try {
+    form = FormApp.openByUrl(FN_FORM_EDIT_URL);
+  } catch (err) {
+    const hint = '❌ 打不開表單：' + err;
+    console.log(hint);
+    return hint;
+  }
+
+  // 做一份填了假值的回覆，轉成「預先填入網址」，
+  // 網址裡的 entry.xxxxx 就是每一題真正的欄位名稱。
+  const resp = form.createResponse();
+  const items = form.getItems();
+  items.forEach(function (item) {
+    const typed = fnAsTyped(item);
+    if (!typed || !typed.createResponse) return;
+    try {
+      var t = item.getType();
+      if (t === FormApp.ItemType.LIST || t === FormApp.ItemType.MULTIPLE_CHOICE) {
+        var choices = typed.getChoices();
+        if (choices && choices.length) resp.withItemResponse(typed.createResponse(choices[0].getValue()));
+      } else if (t === FormApp.ItemType.CHECKBOX) {
+        var cs = typed.getChoices();
+        if (cs && cs.length) resp.withItemResponse(typed.createResponse([cs[0].getValue()]));
+      } else {
+        resp.withItemResponse(typed.createResponse('x'));
+      }
+    } catch (err) { /* 某些題型不能預填，略過 */ }
+  });
+
+  const prefilled = resp.toPrefilledUrl();
+  const entries = {};
+  prefilled.replace(/[?&](entry\.[0-9_]+)=/g, function (m, name) { entries[name] = true; return m; });
+  const names = Object.keys(entries);
+
+  // 把 entry 編號依題目順序對回題目標題
+  report.push('表單標題：' + form.getTitle());
+  report.push('');
+  report.push('──────── 請把以下整段貼給 Claude ────────');
+  report.push('FORM_RESPONSE_URL = ' + form.getPublishedUrl().replace(/\/viewform.*$/, '/formResponse'));
+  report.push('COLLECT_EMAIL = ' + (form.collectsEmail() ? 'true' : 'false'));
+  report.push('');
+
+  var idx = 0;
+  items.forEach(function (item) {
+    const typed = fnAsTyped(item);
+    if (!typed || !typed.createResponse) { report.push('(略過) ' + item.getTitle()); return; }
+    const name = names[idx++];
+    report.push((name || '(取不到)') + '    ←  ' + item.getTitle());
+  });
+
+  report.push('─────────────────────────────────────────');
+  report.push('');
+  report.push('（參考用，完整預填網址）');
+  report.push(prefilled);
+
+  const out = report.join('\n');
+  console.log(out);
+  return out;
+}
+
+/* ======================================================================
    表單送出時自動執行
    ====================================================================== */
 function onFormSubmit(e) {
