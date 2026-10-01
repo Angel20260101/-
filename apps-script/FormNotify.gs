@@ -1,5 +1,11 @@
 /*** 心情AED － Google 表單：自動建立 + 收單通知 ***/
 /*
+ * 註：本檔所有全域名稱都加了 FN_ / fn 前綴。
+ *     Apps Script 的所有 .gs 檔共用同一個全域範圍，不是各自獨立的模組，
+ *     同名的 const 會造成 "Identifier has already been declared" 而整個專案跑不動。
+ *     加前綴之後，這個檔案可以和專案裡任何既有檔案並存。
+ */
+/*
  * 這一個檔案做兩件事：
  *   setupForm()   一次性安裝。自動建立 Google 表單、接上試算表、裝好寄信觸發器。
  *   onFormSubmit() 每次有人送出表單時，由 Google 伺服器自動呼叫，寄兩封信。
@@ -14,23 +20,23 @@
  * 跟訪客用什麼瀏覽器、什麼手機完全無關。
  */
 
-const OWNER_EMAIL = 'may2003mary@gmail.com';
-const BRAND_NAME  = '心情AED';
+const FN_OWNER_EMAIL = 'may2003mary@gmail.com';
+const FN_BRAND_NAME  = '心情AED';
 
 // 回覆要寫進哪張試算表（網址 /spreadsheets/d/<這一段>/edit）
-const SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
+const FN_SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
 
 // 若表單已經建好（例如在別的地方建的），把它的「編輯用網址」貼在這裡，
 // 然後執行 attachExistingForm()。網址長這樣（結尾是 /edit，不是 /viewform）：
 // https://docs.google.com/forms/d/1AbC.../edit
-const EXISTING_FORM_URL = '';
+const FN_FORM_EDIT_URL = '';
 
-const FORM_TITLE = '心情AED － 索取方案報價 / 預約免費諮詢';
-const FORM_DESC  = '留下您的資料，顧問將主動與您聯繫。本表單僅為諮詢與報價需求，不涉及任何付款。';
-const FORM_THANKS = '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
+const FN_FORM_TITLE = '心情AED － 索取方案報價 / 預約免費諮詢';
+const FN_FORM_DESC  = '留下您的資料，顧問將主動與您聯繫。本表單僅為諮詢與報價需求，不涉及任何付款。';
+const FN_FORM_THANKS = '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
 
 // 題目定義。type: text（簡答）/ list（下拉）/ paragraph（段落）
-const QUESTIONS = [
+const FN_QUESTIONS = [
   { key: 'name',    title: '姓名',             type: 'text',      required: true  },
   { key: 'title',   title: '職稱',             type: 'text',      required: false, help: '例如：人資主管' },
   { key: 'company', title: '公司名稱',         type: 'text',      required: true  },
@@ -43,7 +49,7 @@ const QUESTIONS = [
 ];
 
 // 題目關鍵字 → 內部欄位。用「包含」比對，所以題目文字微調不會讓程式失效。
-const FIELD_MATCHERS = [
+const FN_FIELD_MATCHERS = [
   ['name',    ['姓名']],
   ['title',   ['職稱']],
   ['company', ['公司']],
@@ -60,16 +66,16 @@ function setupForm() {
   const report = [];
 
   // 1. 建立表單
-  const form = FormApp.create(FORM_TITLE);
-  form.setDescription(FORM_DESC);
-  form.setConfirmationMessage(FORM_THANKS);
+  const form = FormApp.create(FN_FORM_TITLE);
+  form.setDescription(FN_FORM_DESC);
+  form.setConfirmationMessage(FN_FORM_THANKS);
   form.setAllowResponseEdits(false);
   form.setLimitOneResponsePerUser(false);   // 訪客不需登入 Google
   try { form.setCollectEmail(true); } catch (err) { report.push('⚠️ 收集電子郵件地址設定失敗：' + err); }
-  report.push('✅ 已建立表單「' + FORM_TITLE + '」');
+  report.push('✅ 已建立表單「' + FN_FORM_TITLE + '」');
 
   // 2. 加題目
-  QUESTIONS.forEach(function (q) {
+  FN_QUESTIONS.forEach(function (q) {
     var item;
     if (q.type === 'list') {
       item = form.addListItem().setChoiceValues(q.choices);
@@ -82,12 +88,12 @@ function setupForm() {
     if (q.help) item.setHelpText(q.help);
     item.setRequired(!!q.required);
   });
-  report.push('✅ 已加入 ' + QUESTIONS.length + ' 個題目');
+  report.push('✅ 已加入 ' + FN_QUESTIONS.length + ' 個題目');
 
   // 3. 回覆寫進指定試算表（會在該檔案新增一個「表單回應」分頁）
   try {
-    form.setDestination(FormApp.DestinationType.SPREADSHEET, SHEET_ID);
-    report.push('✅ 回覆已接到試算表：' + SpreadsheetApp.openById(SHEET_ID).getName());
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, FN_SHEET_ID);
+    report.push('✅ 回覆已接到試算表：' + SpreadsheetApp.openById(FN_SHEET_ID).getName());
   } catch (err) {
     report.push('⚠️ 接試算表失敗（表單仍可用，回覆存在表單內）：' + err);
   }
@@ -118,13 +124,13 @@ function setupForm() {
 
 /* ======================================================================
    接上「已經建好的」表單：設定回覆去向 + 裝觸發器
-   用法：把表單的編輯用網址填進上面的 EXISTING_FORM_URL，執行這支函式。
+   用法：把表單的編輯用網址填進上面的 FN_FORM_EDIT_URL，執行這支函式。
    ====================================================================== */
 function attachExistingForm() {
   const report = [];
 
-  if (!EXISTING_FORM_URL) {
-    const hint = '❌ 請先把表單的「編輯用網址」填進程式最上方的 EXISTING_FORM_URL。\n'
+  if (!FN_FORM_EDIT_URL) {
+    const hint = '❌ 請先把表單的「編輯用網址」填進程式最上方的 FN_FORM_EDIT_URL。\n'
                + '   要的是結尾 /edit 的那個，不是 /viewform。';
     console.log(hint);
     return hint;
@@ -132,25 +138,25 @@ function attachExistingForm() {
 
   let form;
   try {
-    form = FormApp.openByUrl(EXISTING_FORM_URL);
+    form = FormApp.openByUrl(FN_FORM_EDIT_URL);
   } catch (err) {
     const hint = '❌ 打不開這個表單：' + err + '\n'
-               + '   請確認 EXISTING_FORM_URL 是「編輯用網址」（結尾 /edit），而且是同一個 Google 帳號建立的。';
+               + '   請確認 FN_FORM_EDIT_URL 是「編輯用網址」（結尾 /edit），而且是同一個 Google 帳號建立的。';
     console.log(hint);
     return hint;
   }
   report.push('✅ 已開啟表單「' + form.getTitle() + '」');
 
   // 確認訊息與收集信箱，照落地頁的設定補上（已經設過也不會出錯）
-  try { form.setConfirmationMessage(FORM_THANKS); report.push('✅ 已設定確認訊息'); }
+  try { form.setConfirmationMessage(FN_FORM_THANKS); report.push('✅ 已設定確認訊息'); }
   catch (err) { report.push('⚠️ 確認訊息設定失敗：' + err); }
   try { form.setCollectEmail(true); report.push('✅ 已開啟「收集電子郵件地址」'); }
   catch (err) { report.push('⚠️ 收集電子郵件地址設定失敗：' + err); }
 
   // 回覆寫進指定試算表
   try {
-    form.setDestination(FormApp.DestinationType.SPREADSHEET, SHEET_ID);
-    report.push('✅ 回覆已接到試算表：' + SpreadsheetApp.openById(SHEET_ID).getName());
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, FN_SHEET_ID);
+    report.push('✅ 回覆已接到試算表：' + SpreadsheetApp.openById(FN_SHEET_ID).getName());
   } catch (err) {
     report.push('⚠️ 接試算表失敗（表單仍可用，回覆存在表單內）：' + err);
   }
@@ -168,9 +174,9 @@ function attachExistingForm() {
   form.getItems().forEach(function (item) {
     var t = item.getTitle();
     var matched = '（對不到，這題不會進信件內容）';
-    for (var i = 0; i < FIELD_MATCHERS.length; i++) {
-      for (var j = 0; j < FIELD_MATCHERS[i][1].length; j++) {
-        if (t.indexOf(FIELD_MATCHERS[i][1][j]) >= 0) { matched = '→ ' + FIELD_MATCHERS[i][0]; break; }
+    for (var i = 0; i < FN_FIELD_MATCHERS.length; i++) {
+      for (var j = 0; j < FN_FIELD_MATCHERS[i][1].length; j++) {
+        if (t.indexOf(FN_FIELD_MATCHERS[i][1][j]) >= 0) { matched = '→ ' + FN_FIELD_MATCHERS[i][0]; break; }
       }
       if (matched.charAt(0) === '→') break;
     }
@@ -192,7 +198,7 @@ function attachExistingForm() {
    ====================================================================== */
 function onFormSubmit(e) {
   try {
-    const data = extractFields(e);
+    const data = fnExtractFields(e);
 
     if (!data.email) {
       console.warn('這筆沒有取到填單者信箱，只寄通知信。event=' + JSON.stringify(e && e.namedValues));
@@ -200,10 +206,10 @@ function onFormSubmit(e) {
 
     try {
       MailApp.sendEmail({
-        to: OWNER_EMAIL,
-        replyTo: data.email || OWNER_EMAIL,
-        subject: '【' + BRAND_NAME + '】新名單：' + (data.company || '未填公司') + ' / ' + (data.name || '未填姓名'),
-        htmlBody: ownerMailHtml(data)
+        to: FN_OWNER_EMAIL,
+        replyTo: data.email || FN_OWNER_EMAIL,
+        subject: '【' + FN_BRAND_NAME + '】新名單：' + (data.company || '未填公司') + ' / ' + (data.name || '未填姓名'),
+        htmlBody: fnOwnerMailHtml(data)
       });
     } catch (err) {
       console.error('通知信寄送失敗：' + err);
@@ -213,8 +219,8 @@ function onFormSubmit(e) {
       try {
         MailApp.sendEmail({
           to: data.email,
-          subject: '【' + BRAND_NAME + '】已收到您的諮詢需求，我們將於 1 個工作日內與您聯繫',
-          htmlBody: leadMailHtml(data)
+          subject: '【' + FN_BRAND_NAME + '】已收到您的諮詢需求，我們將於 1 個工作日內與您聯繫',
+          htmlBody: fnLeadMailHtml(data)
         });
       } catch (err) {
         console.error('自動回覆信寄送失敗：' + err);
@@ -229,7 +235,7 @@ function onFormSubmit(e) {
    取出欄位。表單觸發器給的是 e.response，試算表觸發器給的是 e.namedValues，
    兩種都支援，之後改綁法也不會壞。
    ---------------------------------------------------------------------- */
-function extractFields(e) {
+function fnExtractFields(e) {
   const out = { name: '', title: '', company: '', size: '', phone: '', email: '', note: '' };
   const pairs = [];
 
@@ -255,8 +261,8 @@ function extractFields(e) {
       if (!out.email) out.email = answer;
       return;
     }
-    for (var i = 0; i < FIELD_MATCHERS.length; i++) {
-      var key = FIELD_MATCHERS[i][0], words = FIELD_MATCHERS[i][1];
+    for (var i = 0; i < FN_FIELD_MATCHERS.length; i++) {
+      var key = FN_FIELD_MATCHERS[i][0], words = FN_FIELD_MATCHERS[i][1];
       if (out[key]) continue;
       for (var j = 0; j < words.length; j++) {
         if (question.indexOf(words[j]) >= 0) { out[key] = answer; return; }
@@ -265,7 +271,7 @@ function extractFields(e) {
   });
 
   out.time = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss');
-  try { out.sheetUrl = SpreadsheetApp.openById(SHEET_ID).getUrl(); } catch (err) { out.sheetUrl = ''; }
+  try { out.sheetUrl = SpreadsheetApp.openById(FN_SHEET_ID).getUrl(); } catch (err) { out.sheetUrl = ''; }
   return out;
 }
 
@@ -278,34 +284,34 @@ function testNotify() {
       '公司名稱': ['測試股份有限公司'],
       '員工人數規模': ['50 – 200 人'],
       '聯絡電話': ['0912345678'],
-      '聯絡信箱': [OWNER_EMAIL],
+      '聯絡信箱': [FN_OWNER_EMAIL],
       '目前遇到的狀況或需求（選填）': ['這是 testNotify 送出的測試內容']
     }
   });
-  const msg = '已送出測試信，請到 ' + OWNER_EMAIL + ' 的收件匣與垃圾郵件確認（應收到兩封）。';
+  const msg = '已送出測試信，請到 ' + FN_OWNER_EMAIL + ' 的收件匣與垃圾郵件確認（應收到兩封）。';
   console.log(msg);
   return msg;
 }
 
 /* ---------- 工具 ---------- */
 // 信件樣板專用：跳脫 HTML，空值顯示破折號，避免信裡出現空白格
-function v(x) {
+function fnVal(x) {
   var t = String(x == null ? '' : x).trim();
-  return t ? esc(t) : '—';
+  return t ? fnEsc(t) : '—';
 }
 
-function esc(s) {
+function fnEsc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /* ---------- 信件版型 ---------- */
-function ownerMailHtml(d) {
+function fnOwnerMailHtml(d) {
   const row = function (label, value) {
     return '<tr>' +
-      '<td style="padding:0 0 16px;width:38%;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">' + esc(label) + '</td>' +
-      '<td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(value) + '</td>' +
+      '<td style="padding:0 0 16px;width:38%;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">' + fnEsc(label) + '</td>' +
+      '<td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(value) + '</td>' +
       '</tr>';
   };
   return '' +
@@ -316,7 +322,7 @@ function ownerMailHtml(d) {
     '        <td style="background-color:#3E4A32;padding:32px 40px;text-align:center;">' +
     '          <p style="margin:0 0 6px;color:#A6D695;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;">NEW LEAD</p>' +
     '          <h1 style="margin:0;color:#FFFEFB;font-size:22px;font-weight:900;">收到一筆新的諮詢名單</h1>' +
-    '          <p style="margin:8px 0 0;color:#E2EAB6;font-size:13px;">' + esc(d.time) + '</p>' +
+    '          <p style="margin:8px 0 0;color:#E2EAB6;font-size:13px;">' + fnEsc(d.time) + '</p>' +
     '        </td>' +
     '      </tr>' +
     '      <tr>' +
@@ -332,7 +338,7 @@ function ownerMailHtml(d) {
                      row('聯絡信箱', d.email) +
     '                <tr>' +
     '                  <td style="padding:0;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">遇到的狀況／需求</td>' +
-    '                  <td style="padding:0;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.note) + '</td>' +
+    '                  <td style="padding:0;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.note) + '</td>' +
     '                </tr>' +
     '              </table>' +
     '            </td></tr>' +
@@ -356,7 +362,7 @@ function ownerMailHtml(d) {
     '</table>';
 }
 
-function leadMailHtml(d) {
+function fnLeadMailHtml(d) {
   return '' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EFE1;padding:32px 0;">' +
     '  <tr>' +
@@ -376,7 +382,7 @@ function leadMailHtml(d) {
     '        <tr>' +
     '          <td style="padding:36px 40px 8px;">' +
     '            <h2 style="margin:0 0 18px;color:#3A3428;font-size:20px;font-weight:800;">您的諮詢申請已收到</h2>' +
-    '            <p style="margin:0 0 8px;color:#3A3428;font-size:16px;line-height:1.8;">' + v(d.name) + ' 您好，</p>' +
+    '            <p style="margin:0 0 8px;color:#3A3428;font-size:16px;line-height:1.8;">' + fnVal(d.name) + ' 您好，</p>' +
     '            <p style="margin:0 0 24px;color:#79705D;font-size:15px;line-height:1.9;">' +
     '              謝謝您填寫「索取方案報價／預約免費諮詢」表單，我們已收到您的資料，以下為本次申請內容。顧問將於 <strong style="color:#C97B5B;">1 個工作日內</strong> 主動與您聯繫，說明最適合貴公司規模的方案。' +
     '            </p>' +
@@ -392,31 +398,31 @@ function leadMailHtml(d) {
     '                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
     '                    <tr>' +
     '                      <td style="padding:0 0 16px;width:38%;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">姓名</td>' +
-    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.name) + '</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.name) + '</td>' +
     '                    </tr>' +
     '                    <tr>' +
     '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">職稱</td>' +
-    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.title) + '</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.title) + '</td>' +
     '                    </tr>' +
     '                    <tr>' +
     '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">公司名稱</td>' +
-    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.company) + '</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.company) + '</td>' +
     '                    </tr>' +
     '                    <tr>' +
     '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">員工人數規模</td>' +
-    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.size) + '</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.size) + '</td>' +
     '                    </tr>' +
     '                    <tr>' +
     '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">聯絡電話</td>' +
-    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.phone) + '</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.phone) + '</td>' +
     '                    </tr>' +
     '                    <tr>' +
     '                      <td style="padding:0 0 16px;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">聯絡信箱</td>' +
-    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.email) + '</td>' +
+    '                      <td style="padding:0 0 16px;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.email) + '</td>' +
     '                    </tr>' +
     '                    <tr>' +
     '                      <td style="padding:0;color:#79705D;font-size:13px;font-weight:700;vertical-align:top;">遇到的狀況／需求</td>' +
-    '                      <td style="padding:0;color:#3A3428;font-size:15px;vertical-align:top;">' + v(d.note) + '</td>' +
+    '                      <td style="padding:0;color:#3A3428;font-size:15px;vertical-align:top;">' + fnVal(d.note) + '</td>' +
     '                    </tr>' +
     '                  </table>' +
     '                </td>' +
