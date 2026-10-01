@@ -32,6 +32,14 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`（已設定）
 5. 在 GitHub 開啟 Pages（Settings → Pages → Branch）
 
+## 試算表的取得方式
+
+`Code.gs` 用 `SHEET_ID` 以 `openById` 開啟試算表，而不是只靠 `getActiveSpreadsheet()`。
+獨立建立（非從試算表「擴充功能」進入）的 Apps Script 專案，`getActiveSpreadsheet()` 會回傳
+`null`，寫入就會在 `doPost` 裡丟例外而從外面看不出來。換試算表時改 `SHEET_ID` 這一行。
+
+`testSetup()` 的輸出會一併回報目前是哪一種（綁定式／獨立式）。
+
 ## 確認線上跑的是哪一版
 
 `Code.gs` 裡有 `CODE_VERSION`，`doGet` 會把它回傳。用瀏覽器打開部署的 `/exec` 網址即可看到：

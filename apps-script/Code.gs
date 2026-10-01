@@ -13,9 +13,14 @@ const OWNER_EMAIL = 'may2003mary@gmail.com';
 const BRAND_NAME  = '心情AED';
 const SHEET_NAME  = '工作表1';   // 如果你把分頁改名了，這裡要跟著改
 
+// 試算表 ID（網址 /spreadsheets/d/<這一段>/edit）。
+// 指定 ID 之後，不論這支腳本是綁在試算表上還是獨立建立的都能運作；
+// 只靠 getActiveSpreadsheet() 的話，獨立式腳本會拿到 null。
+const SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
+
 // 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
 // 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
-const CODE_VERSION = '2026-10-01d';
+const CODE_VERSION = '2026-10-01e';
 
 // selftest 用的通行碼。網址帶上 ?selftest=<這組字串> 會實際寫入一列並寄信，
 // 用來驗證「匿名訪客」走完整條路徑是否暢通。驗完可以改掉這組字串。
@@ -71,8 +76,9 @@ function doPost(e) {
     try {
       if (sidKey && cache.get(sidKey)) return jsonOut({ ok: true, duplicate: true });
 
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+      const target = getSheet();
+      const sheet = target.sheet;
+      const ss = target.ss;
       sheet.appendRow([now, name, title, company, size, phone, email, note, '未聯繫']);
 
       if (sidKey) cache.put(sidKey, '1', 21600);   // 記住 6 小時
@@ -127,7 +133,7 @@ function doPost(e) {
 
   } catch (err) {
     console.error(err);
-    return jsonOut({ ok: false, error: '伺服器處理失敗' });
+    return jsonOut({ ok: false, error: '伺服器處理失敗', detail: String(err) });
   }
 }
 
@@ -144,11 +150,10 @@ function doGet(e) {
     var steps = {};
     var row = -1;
     try {
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
-      sheet.appendRow([new Date(), 'SELFTEST', '', '自我測試（可刪除）', '', '', OWNER_EMAIL, '由 selftest 寫入', '待刪除']);
-      row = sheet.getLastRow();
-      steps.sheet = 'ok (row ' + row + ')';
+      var t = getSheet();
+      t.sheet.appendRow([new Date(), 'SELFTEST', '', '自我測試（可刪除）', '', '', OWNER_EMAIL, '由 selftest 寫入', '待刪除']);
+      row = t.sheet.getLastRow();
+      steps.sheet = 'ok (row ' + row + ', via ' + t.how + ', 檔名「' + t.ss.getName() + '」)';
     } catch (err) {
       steps.sheet = 'FAILED: ' + err;
     }
@@ -192,6 +197,25 @@ function jsonOut(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// 取得試算表：優先用 ID，拿不到再退回「目前綁定的試算表」
+function getSheet() {
+  var ss = null, how = '';
+  if (SHEET_ID) {
+    try { ss = SpreadsheetApp.openById(SHEET_ID); how = 'openById'; }
+    catch (err) { console.error('openById 失敗：' + err); }
+  }
+  if (!ss) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+    how = 'active';
+  }
+  if (!ss) {
+    throw new Error('取不到試算表。這支腳本可能是獨立建立的，且 SHEET_ID 未設定或無權限。');
+  }
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  if (!sheet) throw new Error('試算表裡找不到分頁「' + SHEET_NAME + '」');
+  return { ss: ss, sheet: sheet, how: how };
+}
+
 function mailQuota() {
   try { return MailApp.getRemainingDailyQuota(); } catch (err) { return -1; }
 }
@@ -202,9 +226,11 @@ function testSetup() {
   var report = [];
 
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
-    report.push('✅ 試算表：' + ss.getName() + ' / 分頁「' + sheet.getName() + '」，目前 ' + sheet.getLastRow() + ' 列');
+    var t = getSheet();
+    report.push('✅ 試算表：' + t.ss.getName() + ' / 分頁「' + t.sheet.getName() + '」，目前 '
+                + t.sheet.getLastRow() + ' 列（取得方式：' + t.how + '）');
+    report.push('   綁定式檢查：getActiveSpreadsheet() = '
+                + (SpreadsheetApp.getActiveSpreadsheet() ? '有值（綁定式腳本）' : 'null（獨立式腳本）'));
   } catch (err) {
     report.push('❌ 試算表讀取失敗：' + err);
   }
