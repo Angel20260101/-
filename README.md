@@ -1,116 +1,92 @@
 # 心情AED Landing Page
 
-企業員工心理健康即時預警平台的行銷落地頁，前台表單直接串 Google 試算表後台。
+企業員工心理健康即時預警平台的行銷落地頁。訪客在頁面上直接填表，資料進 Google
+試算表，系統自動寄出兩封信 —— 全程看不到 Google 介面。
+
+**線上網址：** https://angel20260101.github.io/-/
 
 ## 架構
 
 ```
-index.html (GitHub Pages)
-      │  fetch POST (application/x-www-form-urlencoded)
+訪客在 index.html 的表單填寫
+      │ 原生 form POST（target 指向隱藏 iframe，頁面不跳走）
       ▼
-Google Apps Script 網頁應用程式 (apps-script/Code.gs)
-      ├──► 寫入 Google 試算表（後台名單）
-      ├──► 寄自動回覆信給填單者
-      └──► 寄新名單通知信給表單擁有者
+Google 表單 /formResponse
+      │
+      ▼
+「心情AED-名單後台」試算表 →「表單回覆 1」分頁
+      │ onFormSubmit 觸發器（在 Google 伺服器端執行）
+      ├──► 填單者收到確認信
+      └──► 表單擁有者收到新名單通知信
 ```
+
+寄信由伺服器端觸發器負責，不經過訪客的瀏覽器 —— 訪客送出後立刻關掉分頁也會寄。
 
 ## 檔案
 
 | 路徑 | 說明 |
 |---|---|
-| `index.html` | 落地頁本體 |
-| `assets/` | 圖片與防護網影片（原本內嵌為 base64，已抽出並壓縮） |
-| `apps-script/Code.gs` | 後端程式碼，貼到 Google 試算表的 Apps Script 編輯器 |
-| `order-query.html` | 先前的訂單查詢頁，暫存保留 |
+| `index.html` | 落地頁本體，含表單 |
+| `assets/` | 圖片與影片（原本內嵌為 base64，已抽出並壓縮） |
+| `apps-script/FormNotify.gs` | 貼到試算表的 Apps Script：建立／維護表單、表單送出時寄信 |
+| `docs/email-template-lead.html` | 確認信的原始版型，供日後改版參考 |
+| `order-query.html` | 先前的訂單查詢頁，與本專案無關，暫存保留 |
 
-## 上線設定
+## Apps Script 的函式
 
-1. 建立 Google 試算表，第一列欄位依序為：
-   `送出時間 / 姓名 / 職稱 / 公司名稱 / 員工人數規模 / 聯絡電話 / 聯絡信箱 / 需求說明 / 處理狀態`
-2. 「擴充功能 → Apps Script」貼上 `apps-script/Code.gs`，修改 `OWNER_EMAIL`
-3. 「部署 → 新增部署作業 → 網頁應用程式」，執行身分「我」、存取權「任何人」，取得 `/exec` 網址
-4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`（已設定）
-5. 在 GitHub 開啟 Pages（Settings → Pages → Branch）
+貼在「心情AED-名單後台」試算表的 Apps Script 專案裡。**不需要部署，也沒有網址** ——
+`onFormSubmit` 由 Google 的觸發器呼叫。
 
-## 試算表的取得方式
+| 函式 | 什麼時候跑 |
+|---|---|
+| `setupForm()` | 從零建立一張新表單（已建好，不要再跑，會多出一張） |
+| `attachExistingForm()` | 把既有表單接上試算表與觸發器 |
+| `updateFormRules()` | 把 `FN_QUESTIONS` 的必填／驗證規則套到表單 |
+| `getEntryIds()` | 取得每題的 `entry.NNN`，前端表單的欄位名稱要用它 |
+| `testNotify()` | 不用真的填表單，直接測兩封信 |
+| `onFormSubmit(e)` | 觸發器自動呼叫，不要手動執行 |
 
-`Code.gs` 用 `SHEET_ID` 以 `openById` 開啟試算表，而不是只靠 `getActiveSpreadsheet()`。
-獨立建立（非從試算表「擴充功能」進入）的 Apps Script 專案，`getActiveSpreadsheet()` 會回傳
-`null`，寫入就會在 `doPost` 裡丟例外而從外面看不出來。換試算表時改 `SHEET_ID` 這一行。
+`FormNotify.gs` 的全域名稱都有 `FN_` / `fn` 前綴。**Apps Script 所有 `.gs` 共用同一個
+全域範圍**，不是各自獨立的模組，同名 `const` 會讓整個專案跑不起來。
 
-`testSetup()` 的輸出會一併回報目前是哪一種（綁定式／獨立式）。
-
-## 確認線上跑的是哪一版
-
-`Code.gs` 裡有 `CODE_VERSION`，`doGet` 會把它回傳。用瀏覽器打開部署的 `/exec` 網址即可看到：
-
-```json
-{"ok":true,"service":"心情AED form endpoint","version":"2026-10-01","features":["dedupe","lock","mail"]}
-```
-
-改完程式碼要讓線上生效，是「部署 → **管理部署作業** → ✏️ → 版本選**新版本** → 部署」。
-按「新增部署作業」會產生另一個網址，`index.html` 的 `FORM_ENDPOINT` 就會指到舊的那個。
-
-## 表單如何運作
-
-落地頁有自己的表單，訪客在頁面上填寫、送出，看不到任何 Google 介面：
-
-```
-訪客在 index.html 的表單填寫
-      │ 原生 form POST（target 指向隱藏 iframe）
-      ▼
-Google 表單 /formResponse
-      │
-      ▼
-回覆寫入「心情AED-名單後台」
-      │
-      ▼
-onFormSubmit 觸發器（Google 伺服器端）──► 寄兩封信
-```
-
-**關鍵是 POST 的對象是 `docs.google.com/.../formResponse`，不是 Apps Script 的 `/exec`。**
-先前落地頁直接打 Apps Script 網頁應用程式，在 iOS Safari 上四種送出方式全部失敗
-（fetch POST、iframe 表單 POST、JSONP、整頁導向），而同一支手機直接開 `/exec` 卻正常。
-`formResponse` 是另一個端點，而且這裡用的是瀏覽器原生的表單送出，不是腳本發起的跨域請求。
-
-### 維護時要注意
+## 維護時要注意
 
 | 要改什麼 | 改哪裡 | 注意 |
 |---|---|---|
-| 表單欄位 | Google 表單 + `index.html` 的 `name="entry.NNN"` | 兩邊都要改，`entry` 編號用 `getEntryIds()` 取得 |
-| 下拉選項文字 | Google 表單 + `index.html` 的 `<option>` | **必須逐字相同**，否則 Google 會拒收該筆 |
-| 必填／驗證 | `FN_QUESTIONS` → 執行 `updateFormRules()` | 前端的 `required` 也要同步改 |
+| 表單欄位 | Google 表單 **和** `index.html` 的 `name="entry.NNN"` | 兩邊都要改；編號用 `getEntryIds()` 取得 |
+| 下拉選項文字 | Google 表單 **和** `index.html` 的 `<option>` | **必須逐字相同**，否則 Google 會默默拒收那一筆 |
+| 必填／驗證 | `FN_QUESTIONS` → 執行 `updateFormRules()` | 前端的 `required` 也要同步 |
 | 信件內容 | `fnLeadMailHtml` / `fnOwnerMailHtml` | |
 | 通知收件人 | `FN_OWNER_EMAIL` | |
+| 優惠截止日 | `index.html` 的 `deadline` | 倒數與兩處「剩 N 天」都會自動跟著算 |
 
 表單開了「收集電子郵件地址」，所以要額外送一個固定名稱的 `emailAddress` 欄位，
 前端在送出時從聯絡信箱同步過去。
 
-`FormNotify.gs` 的全域名稱都有 `FN_` / `fn` 前綴。Apps Script 所有 `.gs` 共用同一個
-全域範圍，同名 `const` 會讓整個專案跑不起來。
+## 送出方式：不要改回 JavaScript 跨域請求
 
-## 效能注意事項
+落地頁曾經用自己的表單直接打 Apps Script 網頁應用程式的 `/exec`，在 iOS Safari 上
+**四種送出方式全部失敗**：`fetch` POST、iframe 表單 POST、JSONP、整頁導向。
+同一支手機直接在網址列開 `/exec` 卻完全正常，而試算表一筆都沒進。
 
-進站影片彈窗是整頁最重的資源，維護時請守住三件事：
+兩個關鍵差異讓現在這版可行：
 
-1. **所有 mp4 必須開啟 faststart**（`moov` atom 置於 `mdat` 之前），否則瀏覽器要下載完整支影片才能播出第一格。
-   檢查：`ffprobe -v trace -i file.mp4 2>&1 | grep -n 'type:.moov\|type:.mdat'`
-   修正：`ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`
-2. **不要把照片存成 PNG**。滿版圖一律 WebP + JPEG fallback，用 `<picture>` 包起來。
-3. **影片彈窗的 watchdog 不要拿掉**。`START_WAIT` 逾時未開始播放就會關閉彈窗並中止下載，
-   這是避免多人同時進站時整群卡在黑畫面的保險絲。
+1. **POST 的對象是 `docs.google.com/.../formResponse`**，不是 Apps Script 的 `/exec`
+2. **用瀏覽器原生的表單送出**，不是腳本發起的跨域請求
 
-4. **每個畫質分支都要同時提供 WebM 與 MP4**。只給單一格式時，碰上不支援該編碼的
-   瀏覽器就沒有退路（開源版 Chromium 不含 H.264 即為一例）。
-5. **頁面中段的防護網影片維持 `preload="none"` + IntersectionObserver**，捲到附近才載入。
+另外，無法讀取回應時不要假設成功。先前的 `no-cors` 重送在讀不到回應時顯示「確認信已
+寄出」，但實際上一筆都沒寫進去 —— 畫面綠燈、後台全空，比直接報錯更難查。
 
-自動播放採用 `muted` + `playsinline`，這是各家瀏覽器都允許的組合。被擋下時
-（iOS 低耗電模式、使用者自行關閉自動播放）彈窗會留著並改顯示提示，由使用者自行點擊播放。
+## 效能
 
-單次進站傳輸量（桌機實測）：首屏 0.25 MB，看完進站影片約 7.3 MB，捲到底約 8.9 MB。
+這頁曾經在約 20 人同時進站時整群卡住，所以加任何資源前請先算一次進站成本。
 
-## 注意事項
+1. **不要再把自動播放的影片放進首屏**。原本的進站全螢幕影片彈窗就是那次事故的主因，已移除。
+2. **所有 mp4 必須開啟 faststart**（`moov` atom 置於 `mdat` 之前），否則瀏覽器要下載
+   完整支影片才能播出第一格。修正：`ffmpeg -i in.mp4 -c copy -movflags +faststart out.mp4`
+3. **不要把照片存成 PNG**。滿版圖一律 WebP + JPEG fallback，用 `<picture>` 包起來。
+4. **每個影片都要同時提供 WebM 與 MP4**。只給單一格式時，碰上不支援該編碼的瀏覽器就沒有退路。
+5. **頁面中段的防護網影片維持 `preload="none"` + IntersectionObserver**，捲到才載入。
 
-- 一般 Gmail 帳號透過 Apps Script 每日寄信上限 100 封，Workspace 為 1500 封
-- 優惠倒數截止時間寫死在 `index.html` 的 `deadline` 變數
-- 表單含 honeypot 欄位 `bot-field`，後端偵測到有值即略過寫入
+實測（行動版、20 個分頁同時開）：每人 0.34 MB，單頁 load 中位數 0.69 秒，
+20 人合計 6.9 MB，表單 20/20 正常出現。
