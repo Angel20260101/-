@@ -20,7 +20,7 @@ const SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
 
 // 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
 // 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
-const CODE_VERSION = '2026-10-01f';
+const CODE_VERSION = '2026-10-01g';
 
 // selftest 用的通行碼。網址帶上 ?selftest=<這組字串> 會實際寫入一列並寄信，
 // 用來驗證「匿名訪客」走完整條路徑是否暢通。驗完可以改掉這組字串。
@@ -132,7 +132,36 @@ function processSubmission(p) {
 // 回應格式：iframe 送出時回一個會用 postMessage 把結果傳回母頁面的 HTML，
 // 這樣即使跨網域，前端也讀得到伺服器真正的回應。其餘情況回 JSON。
 function respond(result, p) {
-  if (p && p.mode === 'iframe') {
+  p = p || {};
+
+  // JSONP：<script src="..."> 載入，瀏覽器直接執行回傳的 JavaScript。
+  // script 是子資源而非第三方框架，Safari 的追蹤防護不會擋，也不受 CORS 規範，
+  // 而且前端拿得到伺服器真正的回應。這是最可靠的一條路。
+  if (p.callback) {
+    var cb = String(p.callback).replace(/[^A-Za-z0-9_$]/g, '');   // 只允許安全的識別字
+    if (!cb) cb = 'aedCallback';
+    return ContentService
+      .createTextOutput(cb + '(' + JSON.stringify(result) + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  // 整頁導向送出：處理完直接把瀏覽器送回落地頁，並帶上結果。
+  // 這是最後手段，但保證可用 —— 它就是一般的網頁瀏覽。
+  if (p.redirect) {
+    var back = String(p.redirect);
+    if (!/^https:\/\/[A-Za-z0-9.-]+\//.test(back)) {
+      return jsonOut({ ok: false, error: 'redirect 網址格式不正確' });
+    }
+    var sep  = back.indexOf('?') >= 0 ? '&' : '?';
+    var dest = back + sep + 'sent=' + (result.ok ? '1' : '0') + '#contact-form';
+    return HtmlService
+      .createHtmlOutput('<!doctype html><meta charset="utf-8">'
+        + '<meta http-equiv="refresh" content="0;url=' + dest.replace(/"/g, '&quot;') + '">'
+        + '<p>處理完成，正在返回…　<a href="' + dest.replace(/"/g, '&quot;') + '">若未自動返回請點此</a></p>')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (p.mode === 'iframe') {
     var payload = JSON.stringify(result).replace(/</g, '\\u003c');
     var html =
       '<!doctype html><meta charset="utf-8"><body>' +

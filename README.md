@@ -63,14 +63,21 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
   使用者連點兩下、或第一次請求讀不到回應而自動重送，都只會寫入一筆名單。
 - 寫入試算表包在 `LockService` 裡，多人同時送出不會互相覆蓋；寄信刻意放在鎖外，
   避免寄信變慢時拖住其他人的送出。
-- 送出走兩條路。先試 `fetch` POST；失敗就用隱藏 iframe 以 GET 開啟
-  `?action=submit&mode=iframe&...`。這個端點的匿名 GET 已實測可以寫入與寄信，而跨網域
-  POST 在部分瀏覽器／網路環境下送不出去。
-- `doPost` 與 `doGet(?action=submit)` 共用 `processSubmission()`，兩條路行為完全一致。
-- `mode=iframe` 時後端回傳一個會 `postMessage` 的頁面，所以跨網域也讀得到伺服器真正的
-  回應；收不到時退回以 iframe 的 load 事件判斷送達。
-- 兩條路都帶同一組 `sid`，後端去重，不會寫入第二筆。
-- GET 路徑會把 `note` 截到 1500 字以控制網址長度。
+送出依序嘗試三種方式，全部帶同一組 `sid`，後端去重，不會寫入第二筆：
+
+1. **`fetch` POST** — 可用時最直接，拿得到完整回應。
+2. **JSONP**（`<script src="...?action=submit&callback=...">`）— 主力備援。
+   script 是子資源而非第三方框架，iOS Safari 的追蹤防護不會擋，也不受 CORS 規範，
+   而且前端仍讀得到伺服器真正的回應。
+3. **整頁導向**（`?action=submit&redirect=<落地頁網址>`）— 前兩者都失敗時，畫面會出現
+   一個「點此完成送出」連結。伺服器處理完用 meta refresh 把瀏覽器送回落地頁並附上
+   `?sent=1`，頁面據此顯示成功訊息。這就是一般的網頁瀏覽，沒有跨網域限制擋得住。
+
+`doPost` 與 `doGet(?action=submit)` 共用 `processSubmission()`，行為完全一致。
+GET 路徑會把 `note` 截到 1200 字以控制網址長度。
+
+**不要改回用 iframe 送出。** 實測 iOS Safari 會擋掉跨網站 iframe 的請求，
+而且 `load` 事件照樣觸發，會造成「顯示成功但什麼都沒發生」。
 
 ## 效能注意事項
 

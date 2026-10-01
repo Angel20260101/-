@@ -1151,28 +1151,29 @@
     el.textContent = msg;
   }
 
-  // 備援送出：用隱藏 iframe 以 GET 開啟端點。
-  // 已實測這個端點的匿名 GET 可以正常寫入與寄信，而跨網域 POST 在某些
-  // 瀏覽器／網路環境下送不出去，所以備援走 GET。
-  // 後端收到 mode=iframe 會回一個用 postMessage 傳結果的頁面，
-  // 因此即使跨網域，這裡仍讀得到伺服器真正的回應。
-  function submitViaIframe(data, done){
-    var finished = false;
-
-    var params = Object.keys(data).map(function(k){
+  // 備援送出：JSONP。
+  // <script src="..."> 是子資源載入，不是第三方 iframe，所以 iOS Safari 的
+  // 追蹤防護不會擋，也完全不受 CORS 規範，而且拿得到伺服器真正的回應。
+  function buildQuery(data, extra){
+    var parts = Object.keys(data).map(function(k){
       var v = String(data[k] == null ? '' : data[k]);
-      if (k === 'note' && v.length > 1500) v = v.slice(0, 1500);   // 控制網址長度
+      if (k === 'note' && v.length > 1200) v = v.slice(0, 1200);   // 控制網址長度
       return encodeURIComponent(k) + '=' + encodeURIComponent(v);
     });
-    params.push('action=submit', 'mode=iframe', '_t=' + Date.now());
+    Object.keys(extra || {}).forEach(function(k){
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(extra[k]));
+    });
+    return parts.join('&');
+  }
 
-    var iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = FORM_ENDPOINT + '?' + params.join('&');
+  function submitViaJsonp(data, done){
+    var cb = 'aedcb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+    var script = document.createElement('script');
+    var finished = false;
 
     function cleanup(){
-      window.removeEventListener('message', onMessage);
-      setTimeout(function(){ try { document.body.removeChild(iframe); } catch(e){} }, 1000);
+      try { delete window[cb]; } catch(e){ window[cb] = undefined; }
+      try { script.parentNode.removeChild(script); } catch(e){}
     }
     function finish(ok, detail, result){
       if (finished) return;
@@ -1182,24 +1183,65 @@
       done(ok, detail, result);
     }
 
-    // 伺服器回傳的頁面會把結果 postMessage 回來，這是最可信的訊號
-    function onMessage(ev){
-      var d = ev.data;
-      if (!d || d.source !== 'aed-form') return;
-      var r = d.result || {};
-      finish(!!r.ok, '伺服器回應: ' + JSON.stringify(r), r);
-    }
-    window.addEventListener('message', onMessage);
+    window[cb] = function(result){
+      finish(!!(result && result.ok), '伺服器回應: ' + JSON.stringify(result), result);
+    };
 
-    // 收不到 postMessage 時，退而求其次用 load 事件判斷「有送達」
-    iframe.addEventListener('load', function(){
-      setTimeout(function(){ finish(true, '已送達（未收到伺服器回報內容）'); }, 2500);
+    script.onerror = function(){ finish(false, 'JSONP 載入失敗（請求被擋或網路不通）'); };
+    var timer = setTimeout(function(){ finish(false, 'JSONP 逾時 25 秒'); }, 25000);
+
+    script.src = FORM_ENDPOINT + '?' + buildQuery(data, {
+      action: 'submit', callback: cb, _t: Date.now()
     });
-    iframe.addEventListener('error', function(){ finish(false, 'iframe 載入失敗'); });
-
-    var timer = setTimeout(function(){ finish(false, '逾時 25 秒未收到回應'); }, 25000);
-    document.body.appendChild(iframe);
+    document.head.appendChild(script);
   }
+
+  // 最後手段：整頁導向到端點，處理完由伺服器把瀏覽器送回本頁並帶上 ?sent=1。
+  // 這就是一般的網頁瀏覽，沒有任何跨網域限制擋得住它。
+  function manualSubmitUrl(data){
+    return FORM_ENDPOINT + '?' + buildQuery(data, {
+      action: 'submit',
+      redirect: location.origin + location.pathname,
+      _t: Date.now()
+    });
+  }
+
+  function showManualFallback(data, detail){
+    var el = document.getElementById('form-status');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.whiteSpace = 'pre-wrap';
+    el.style.background = 'rgba(201,123,91,.12)';
+    el.style.color      = 'var(--coral, #C97B5B)';
+    el.style.border     = '1px solid rgba(201,123,91,.35)';
+    el.textContent = '您的瀏覽器阻擋了自動送出，請點下方連結完成送出（只需一次）：\n';
+    var a = document.createElement('a');
+    a.href = manualSubmitUrl(data);
+    a.textContent = '👉 點此完成送出';
+    a.style.cssText = 'display:inline-block;margin-top:10px;font-weight:800;text-decoration:underline;color:inherit;';
+    el.appendChild(a);
+    if (FORM_DEBUG && detail) {
+      var d = document.createElement('div');
+      d.style.cssText = 'margin-top:10px;font-size:12px;opacity:.8;';
+      d.textContent = '[debug] ' + detail;
+      el.appendChild(d);
+    }
+  }
+
+  // 走過整頁導向送出後，伺服器會把使用者帶回本頁並附上 ?sent=1
+  (function(){
+    var m = /[?&]sent=([01])/.exec(location.search);
+    if (!m) return;
+    document.addEventListener('DOMContentLoaded', function(){
+      if (m[1] === '1') {
+        showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
+      } else {
+        showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。');
+      }
+      var f = document.getElementById('contact-form');
+      if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  })();
 
   function handleSubmit(e){
     e.preventDefault();
@@ -1273,19 +1315,22 @@
         // 不受跨網域規則限制，後端再靠 sid 去重，不會寫入第二筆。
         console.warn('fetch 失敗，改用 iframe 表單送出：', err);
         var firstErr = (err && (err.name + ': ' + err.message)) || String(err);
-        submitViaIframe(data, function(okSent, detail, result){
+        submitViaJsonp(data, function(okSent, detail, result){
           if (okSent) {
             delete form.dataset.sid;
             form.reset();
             var m = (result && result.mailLead === false)
               ? '已收到您的填寫！我們的顧問將於 1 個工作日內與您聯繫。'
               : '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
-            showFormStatus('ok', m, 'fetch 失敗(' + firstErr + ')，改用 iframe GET 送出。' + detail);
+            showFormStatus('ok', m, 'fetch 失敗(' + firstErr + ')，改用 JSONP 送出。' + detail);
+          } else if (result && result.error) {
+            showFormStatus('err', result.error + '，請確認後再試一次。',
+              'fetch: ' + firstErr + ' | jsonp: ' + detail);
+            restore();
+            return;
           } else {
-            showFormStatus('err',
-              (result && result.error) ? result.error + '，請確認後再試一次。'
-                                       : '送出時發生問題，請稍後再試，或直接與我們聯繫。',
-              'fetch: ' + firstErr + ' | iframe: ' + detail);
+            // 兩條路都沒成功，給使用者一個一定可行的出口：整頁導向送出
+            showManualFallback(data, 'fetch: ' + firstErr + ' | jsonp: ' + detail);
           }
           restore();
         });
