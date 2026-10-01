@@ -1132,9 +1132,14 @@
       .join('&');
   }
 
-  function showFormStatus(type, msg){
+  // 網址加上 ?debug=1 時，錯誤訊息會附上技術細節，方便回報問題
+  const FORM_DEBUG = /[?&]debug=1/.test(location.search);
+
+  function showFormStatus(type, msg, detail){
+    if (FORM_DEBUG && detail) msg = msg + '\n\n[debug] ' + detail;
     var el = document.getElementById('form-status');
     if(!el){ alert(msg); return; }
+    el.style.whiteSpace = 'pre-wrap';
     var ok = (type === 'ok');
     el.style.display = 'block';
     el.style.background = ok ? 'rgba(45,196,160,.12)' : 'rgba(255,107,107,.12)';
@@ -1176,6 +1181,8 @@
     btn.textContent = '送出中...';
     showFormStatus('ok', '資料傳送中，請稍候…');
 
+    var httpInfo = '(無回應)';
+
     function restore(){
       btn.disabled = false;
       btn.textContent = originalText;
@@ -1186,14 +1193,18 @@
       headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
       body: encodeFormData(data)
     })
-      .then(function(res){ return res.json(); })
+      .then(function(res){
+        httpInfo = 'HTTP ' + res.status + ' type=' + res.type + ' url=' + (res.url || '').slice(0, 60);
+        return res.json();
+      })
       .then(function(result){
         if(result && result.ok){
           delete form.dataset.sid;
           form.reset();
           showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
         } else {
-          showFormStatus('err', (result && result.error ? result.error : '送出時發生問題') + '，請確認欄位後再試一次。');
+          showFormStatus('err', (result && result.error ? result.error : '送出時發生問題') + '，請確認欄位後再試一次。',
+            httpInfo + ' | 回應: ' + JSON.stringify(result));
         }
         restore();
       })
@@ -1201,6 +1212,7 @@
         // 讀不到回應（多半是跨網域限制）不代表沒送到。
         // 用 no-cors 再送一次，後端會用 sid 去重，不會重複寫入名單。
         console.warn('第一次送出未能讀取回應，改以 no-cors 重送：', err);
+        var firstErr = (err && (err.name + ': ' + err.message)) || String(err);
         fetch(FORM_ENDPOINT, {
           method: 'POST',
           mode: 'no-cors',
@@ -1210,12 +1222,14 @@
           .then(function(){
             delete form.dataset.sid;
             form.reset();
-            showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
+            showFormStatus('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。',
+              '第一次失敗(' + firstErr + ')，no-cors 重送已送達');
             restore();
           })
           .catch(function(err2){
             console.error(err2);
-            showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。');
+            showFormStatus('err', '送出時發生問題，請稍後再試，或直接與我們聯繫。',
+              '第一次: ' + firstErr + ' | 重送: ' + (err2 && (err2.name + ': ' + err2.message)));
             restore();
           });
       });
