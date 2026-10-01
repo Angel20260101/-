@@ -1,27 +1,43 @@
-/*** 心情AED － Google 表單收單通知 ***/
+/*** 心情AED － Google 表單：自動建立 + 收單通知 ***/
 /*
- * 用途：Google 表單有人送出時，自動寄兩封信
- *       1. 通知信給表單擁有者
- *       2. 自動回覆信給填單者
+ * 這一個檔案做兩件事：
+ *   setupForm()   一次性安裝。自動建立 Google 表單、接上試算表、裝好寄信觸發器。
+ *   onFormSubmit() 每次有人送出表單時，由 Google 伺服器自動呼叫，寄兩封信。
  *
- * 安裝位置：Google 表單「自動產生的回覆試算表」→ 擴充功能 → Apps Script
- *           （不是表單本身，是那張試算表）
- *
- * 安裝步驟：
- *   1. 貼上本檔內容，存檔
- *   2. 函式下拉選單選 createTrigger，按「執行」，完成授權
- *      → 這會建立「表單提交時」的觸發器
- *   3. 選 testNotify 執行一次，確認兩封信都收得到
+ * ── 怎麼用 ────────────────────────────────────────────────
+ * 1. 打開「心情AED-名單後台」試算表 →「擴充功能 → Apps Script」
+ * 2. 左側「檔案」旁的 + → 指令碼 → 命名為 FormNotify，把本檔內容整段貼上，存檔
+ * 3. 上方函式下拉選單選 setupForm → 按「執行」→ 完成授權
+ * 4. 看下方「執行記錄」，裡面會印出表單網址
  *
  * 這支程式不需要「部署」，也沒有網址。觸發器由 Google 伺服器端呼叫，
- * 跟訪客用什麼瀏覽器完全無關。
+ * 跟訪客用什麼瀏覽器、什麼手機完全無關。
  */
 
 const OWNER_EMAIL = 'may2003mary@gmail.com';
 const BRAND_NAME  = '心情AED';
 
-// 表單題目關鍵字 → 內部欄位。只要題目「包含」關鍵字就會對上，
-// 所以題目文字微調（例如加上「（選填）」）不會讓程式失效。
+// 回覆要寫進哪張試算表（網址 /spreadsheets/d/<這一段>/edit）
+const SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
+
+const FORM_TITLE = '心情AED － 索取方案報價 / 預約免費諮詢';
+const FORM_DESC  = '留下您的資料，顧問將主動與您聯繫。本表單僅為諮詢與報價需求，不涉及任何付款。';
+const FORM_THANKS = '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
+
+// 題目定義。type: text（簡答）/ list（下拉）/ paragraph（段落）
+const QUESTIONS = [
+  { key: 'name',    title: '姓名',             type: 'text',      required: true  },
+  { key: 'title',   title: '職稱',             type: 'text',      required: false, help: '例如：人資主管' },
+  { key: 'company', title: '公司名稱',         type: 'text',      required: true  },
+  { key: 'size',    title: '員工人數規模',     type: 'list',      required: false,
+    choices: ['50 人以下', '50 – 200 人', '200 – 500 人', '500 人以上'] },
+  { key: 'phone',   title: '聯絡電話',         type: 'text',      required: true  },
+  { key: 'email',   title: '聯絡信箱',         type: 'text',      required: true  },
+  { key: 'note',    title: '目前遇到的狀況或需求（選填）', type: 'paragraph', required: false,
+    help: '例如：近期離職率偏高、想先了解方案內容…' }
+];
+
+// 題目關鍵字 → 內部欄位。用「包含」比對，所以題目文字微調不會讓程式失效。
 const FIELD_MATCHERS = [
   ['name',    ['姓名']],
   ['title',   ['職稱']],
@@ -32,35 +48,80 @@ const FIELD_MATCHERS = [
   ['note',    ['狀況', '需求']]
 ];
 
-/* ---------- 一次性安裝：建立觸發器 ---------- */
-function createTrigger() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+/* ======================================================================
+   一次性安裝：建立表單 + 接上試算表 + 裝觸發器
+   ====================================================================== */
+function setupForm() {
+  const report = [];
 
-  // 先清掉舊的，避免重複建立導致一次送出寄兩次信
+  // 1. 建立表單
+  const form = FormApp.create(FORM_TITLE);
+  form.setDescription(FORM_DESC);
+  form.setConfirmationMessage(FORM_THANKS);
+  form.setAllowResponseEdits(false);
+  form.setLimitOneResponsePerUser(false);   // 訪客不需登入 Google
+  try { form.setCollectEmail(true); } catch (err) { report.push('⚠️ 收集電子郵件地址設定失敗：' + err); }
+  report.push('✅ 已建立表單「' + FORM_TITLE + '」');
+
+  // 2. 加題目
+  QUESTIONS.forEach(function (q) {
+    var item;
+    if (q.type === 'list') {
+      item = form.addListItem().setChoiceValues(q.choices);
+    } else if (q.type === 'paragraph') {
+      item = form.addParagraphTextItem();
+    } else {
+      item = form.addTextItem();
+    }
+    item.setTitle(q.title);
+    if (q.help) item.setHelpText(q.help);
+    item.setRequired(!!q.required);
+  });
+  report.push('✅ 已加入 ' + QUESTIONS.length + ' 個題目');
+
+  // 3. 回覆寫進指定試算表（會在該檔案新增一個「表單回應」分頁）
+  try {
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, SHEET_ID);
+    report.push('✅ 回覆已接到試算表：' + SpreadsheetApp.openById(SHEET_ID).getName());
+  } catch (err) {
+    report.push('⚠️ 接試算表失敗（表單仍可用，回覆存在表單內）：' + err);
+  }
+
+  // 4. 裝觸發器（先清掉舊的，避免一次送出寄兩封）
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'onFormSubmit') ScriptApp.deleteTrigger(t);
   });
+  ScriptApp.newTrigger('onFormSubmit').forForm(form).onFormSubmit().create();
+  report.push('✅ 已安裝「表單提交時」觸發器');
 
-  ScriptApp.newTrigger('onFormSubmit')
-    .forSpreadsheet(ss)
-    .onFormSubmit()
-    .create();
+  // 5. 印出網址
+  var publicUrl = form.getPublishedUrl();
+  var shortUrl  = '';
+  try { shortUrl = form.shortenFormUrl(publicUrl); } catch (err) {}
 
-  const msg = '✅ 觸發器已建立，之後每次有人送出表單都會自動寄信。';
-  console.log(msg);
-  return msg;
+  report.push('');
+  report.push('──────── 請把下面這串網址貼給 Claude ────────');
+  report.push('填寫用網址：' + publicUrl);
+  if (shortUrl) report.push('短網址　　：' + shortUrl);
+  report.push('編輯用網址：' + form.getEditUrl());
+  report.push('─────────────────────────────────────────');
+
+  const out = report.join('\n');
+  console.log(out);
+  return out;
 }
 
-/* ---------- 表單送出時自動執行 ---------- */
+/* ======================================================================
+   表單送出時自動執行
+   ====================================================================== */
 function onFormSubmit(e) {
   try {
     const data = extractFields(e);
 
     if (!data.email) {
-      console.warn('這筆沒有收到填單者信箱，只寄通知信。namedValues=' + JSON.stringify(e && e.namedValues));
+      console.warn('這筆沒有取到填單者信箱，只寄通知信。event=' + JSON.stringify(e && e.namedValues));
     }
 
-    // 通知信給後台
     try {
       MailApp.sendEmail({
         to: OWNER_EMAIL,
@@ -72,7 +133,6 @@ function onFormSubmit(e) {
       console.error('通知信寄送失敗：' + err);
     }
 
-    // 自動回覆信給填單者
     if (data.email) {
       try {
         MailApp.sendEmail({
@@ -89,24 +149,38 @@ function onFormSubmit(e) {
   }
 }
 
-/* ---------- 從觸發器事件取出各欄位 ---------- */
+/* ----------------------------------------------------------------------
+   取出欄位。表單觸發器給的是 e.response，試算表觸發器給的是 e.namedValues，
+   兩種都支援，之後改綁法也不會壞。
+   ---------------------------------------------------------------------- */
 function extractFields(e) {
-  const out = { name: '', title: '', company: '', size: '', phone: '', email: '', note: '', time: '' };
-  const named = (e && e.namedValues) || {};
+  const out = { name: '', title: '', company: '', size: '', phone: '', email: '', note: '' };
+  const pairs = [];
 
-  Object.keys(named).forEach(function (question) {
-    const answer = [].concat(named[question]).join(' ').trim();
+  if (e && e.namedValues) {
+    Object.keys(e.namedValues).forEach(function (q) {
+      pairs.push([q, [].concat(e.namedValues[q]).join(' ').trim()]);
+    });
+  } else if (e && e.response && e.response.getItemResponses) {
+    e.response.getItemResponses().forEach(function (ir) {
+      pairs.push([ir.getItem().getTitle(), [].concat(ir.getResponse()).join(' ').trim()]);
+    });
+    try {
+      var re = e.response.getRespondentEmail();
+      if (re) out.email = re;
+    } catch (err) {}
+  }
+
+  pairs.forEach(function (pair) {
+    var question = pair[0], answer = pair[1];
     if (!answer) return;
 
-    // 表單「收集電子郵件地址」產生的欄位
-    if (/電子郵件地址|Email Address/i.test(question) && !out.email) {
-      out.email = answer;
+    if (/電子郵件地址|Email Address/i.test(question)) {
+      if (!out.email) out.email = answer;
       return;
     }
-
     for (var i = 0; i < FIELD_MATCHERS.length; i++) {
-      var key = FIELD_MATCHERS[i][0];
-      var words = FIELD_MATCHERS[i][1];
+      var key = FIELD_MATCHERS[i][0], words = FIELD_MATCHERS[i][1];
       if (out[key]) continue;
       for (var j = 0; j < words.length; j++) {
         if (question.indexOf(words[j]) >= 0) { out[key] = answer; return; }
@@ -115,11 +189,11 @@ function extractFields(e) {
   });
 
   out.time = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss');
-  try { out.sheetUrl = SpreadsheetApp.getActiveSpreadsheet().getUrl(); } catch (err) { out.sheetUrl = ''; }
+  try { out.sheetUrl = SpreadsheetApp.openById(SHEET_ID).getUrl(); } catch (err) { out.sheetUrl = ''; }
   return out;
 }
 
-/* ---------- 安裝後的自我測試 ---------- */
+/* ---------- 安裝後的自我測試：不用真的填表單也能驗證寄信 ---------- */
 function testNotify() {
   onFormSubmit({
     namedValues: {
@@ -129,10 +203,10 @@ function testNotify() {
       '員工人數規模': ['50 – 200 人'],
       '聯絡電話': ['0912345678'],
       '聯絡信箱': [OWNER_EMAIL],
-      '目前遇到的狀況或需求': ['這是 testNotify 送出的測試內容']
+      '目前遇到的狀況或需求（選填）': ['這是 testNotify 送出的測試內容']
     }
   });
-  const msg = '已送出測試信，請到 ' + OWNER_EMAIL + ' 的收件匣與垃圾郵件確認（應該會收到兩封）。';
+  const msg = '已送出測試信，請到 ' + OWNER_EMAIL + ' 的收件匣與垃圾郵件確認（應收到兩封）。';
   console.log(msg);
   return msg;
 }
