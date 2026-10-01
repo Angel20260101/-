@@ -29,7 +29,7 @@ const FN_SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
 // 若表單已經建好（例如在別的地方建的），把它的「編輯用網址」貼在這裡，
 // 然後執行 attachExistingForm()。網址長這樣（結尾是 /edit，不是 /viewform）：
 // https://docs.google.com/forms/d/1AbC.../edit
-const FN_FORM_EDIT_URL = '';
+const FN_FORM_EDIT_URL = 'https://docs.google.com/forms/d/1ABDbJ6d8tn3nll8HI3yCUWEnMOtR6WO5P9BYczXgDLg/edit';
 
 const FN_FORM_TITLE = '心情AED － 索取方案報價 / 預約免費諮詢';
 const FN_FORM_DESC  = '留下您的資料，顧問將主動與您聯繫。本表單僅為諮詢與報價需求，不涉及任何付款。';
@@ -39,11 +39,11 @@ const FN_FORM_THANKS = '感謝您的填寫！確認信已寄到您的信箱，�
 const FN_QUESTIONS = [
   { key: 'name',    title: '姓名',             type: 'text',      required: true  },
   { key: 'title',   title: '職稱',             type: 'text',      required: false, help: '例如：人資主管' },
-  { key: 'company', title: '公司名稱',         type: 'text',      required: true  },
+  { key: 'company', title: '公司名稱',         type: 'text',      required: false },
   { key: 'size',    title: '員工人數規模',     type: 'list',      required: false,
     choices: ['50 人以下', '50 – 200 人', '200 – 500 人', '500 人以上'] },
   { key: 'phone',   title: '聯絡電話',         type: 'text',      required: true  },
-  { key: 'email',   title: '聯絡信箱',         type: 'text',      required: true  },
+  { key: 'email',   title: '聯絡信箱',         type: 'text',      required: true, validate: 'email' },
   { key: 'note',    title: '目前遇到的狀況或需求（選填）', type: 'paragraph', required: false,
     help: '例如：近期離職率偏高、想先了解方案內容…' }
 ];
@@ -87,6 +87,14 @@ function setupForm() {
     item.setTitle(q.title);
     if (q.help) item.setHelpText(q.help);
     item.setRequired(!!q.required);
+    if (q.validate === 'email' && item.asTextItem) {
+      item.asTextItem().setValidation(
+        FormApp.createTextValidation()
+          .requireTextIsEmail()
+          .setHelpText('請輸入有效的電子郵件地址，例如 you@company.com')
+          .build()
+      );
+    }
   });
   report.push('✅ 已加入 ' + FN_QUESTIONS.length + ' 個題目');
 
@@ -187,6 +195,76 @@ function attachExistingForm() {
   report.push('──────── 請把下面這串網址貼給 Claude ────────');
   report.push('填寫用網址：' + form.getPublishedUrl());
   report.push('─────────────────────────────────────────');
+
+  const out = report.join('\n');
+  console.log(out);
+  return out;
+}
+
+/* ======================================================================
+   把 FN_QUESTIONS 的必填與驗證規則，套用到已經建好的表單
+   用法：函式下拉選單選 updateFormRules → 執行
+   ====================================================================== */
+function updateFormRules() {
+  const report = [];
+
+  if (!FN_FORM_EDIT_URL) {
+    const hint = '❌ 請先把表單的「編輯用網址」填進程式最上方的 FN_FORM_EDIT_URL。';
+    console.log(hint);
+    return hint;
+  }
+
+  let form;
+  try {
+    form = FormApp.openByUrl(FN_FORM_EDIT_URL);
+  } catch (err) {
+    const hint = '❌ 打不開表單：' + err + '\n   請確認 FN_FORM_EDIT_URL 是結尾 /edit 的編輯用網址。';
+    console.log(hint);
+    return hint;
+  }
+  report.push('✅ 已開啟表單「' + form.getTitle() + '」');
+
+  form.getItems().forEach(function (item) {
+    const title = item.getTitle();
+
+    // 用關鍵字找出這一題對應的設定
+    var spec = null;
+    for (var i = 0; i < FN_QUESTIONS.length; i++) {
+      var words = null;
+      for (var j = 0; j < FN_FIELD_MATCHERS.length; j++) {
+        if (FN_FIELD_MATCHERS[j][0] === FN_QUESTIONS[i].key) { words = FN_FIELD_MATCHERS[j][1]; break; }
+      }
+      if (!words) continue;
+      for (var k = 0; k < words.length; k++) {
+        if (title.indexOf(words[k]) >= 0) { spec = FN_QUESTIONS[i]; break; }
+      }
+      if (spec) break;
+    }
+    if (!spec) { report.push('・' + title + '　（沒有對應設定，略過）'); return; }
+
+    try {
+      item.setRequired(!!spec.required);
+    } catch (err) {
+      report.push('⚠️ ' + title + ' 設定必填失敗：' + err);
+      return;
+    }
+
+    var extra = '';
+    if (spec.validate === 'email') {
+      try {
+        item.asTextItem().setValidation(
+          FormApp.createTextValidation()
+            .requireTextIsEmail()
+            .setHelpText('請輸入有效的電子郵件地址，例如 you@company.com')
+            .build()
+        );
+        extra = '，已加上 Email 格式驗證';
+      } catch (err) {
+        extra = '，⚠️ Email 驗證設定失敗：' + err;
+      }
+    }
+    report.push('・' + title + '　→ ' + (spec.required ? '必填' : '選填') + extra);
+  });
 
   const out = report.join('\n');
   console.log(out);

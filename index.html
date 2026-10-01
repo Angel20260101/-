@@ -507,7 +507,13 @@
     margin-left:8px;font-size:13px;font-weight:700;color:var(--coral-dark);
     background:rgba(201,123,91,.14);padding:2px 8px;border-radius:999px;
   }
-  .form-panel .form-cta{width:100%;margin-top:26px;text-align:center;}
+  .form-panel .form-cta{
+    width:100%;margin-top:26px;text-align:center;
+    position:relative;z-index:1;          /* 確保不被任何裝飾元素蓋住 */
+    min-height:56px;                      /* 手機上好按 */
+    -webkit-tap-highlight-color:rgba(0,0,0,.08);
+    touch-action:manipulation;            /* 去掉 iOS 點擊 300ms 延遲 */
+  }
   .form-note{font-size:16px;color:var(--navy);text-align:center;margin-top:14px;font-weight:600;}
   .form-disclaimer{font-size:15px;color:var(--muted);text-align:center;margin-top:8px;}
 
@@ -1009,14 +1015,16 @@
       <ul class="form-preview">
         <li>姓名<span>必填</span></li>
         <li>職稱</li>
-        <li>公司名稱<span>必填</span></li>
+        <li>公司名稱</li>
         <li>員工人數規模</li>
         <li>聯絡電話<span>必填</span></li>
         <li>聯絡信箱<span>必填</span></li>
         <li class="full">目前遇到的狀況或需求（選填）</li>
       </ul>
 
-      <a class="btn btn-primary form-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform" target="_blank" rel="noopener">
+      <!-- 刻意不用 target="_blank"：iOS Safari 的彈出視窗封鎖會擋掉開新分頁，
+           而且毫無提示，使用者只會覺得「按了沒反應」。同分頁開啟，返回用上一頁。 -->
+      <a class="btn btn-primary form-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform">
         前往填寫，索取報價並保留優惠 ›
       </a>
       <p class="form-note">約 1 分鐘填完，送出後會立即收到確認信。</p>
