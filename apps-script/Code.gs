@@ -13,6 +13,10 @@ const OWNER_EMAIL = 'may2003mary@gmail.com';
 const BRAND_NAME  = '心情AED';
 const SHEET_NAME  = '工作表1';   // 如果你把分頁改名了，這裡要跟著改
 
+// 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
+// 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
+const CODE_VERSION = '2026-10-01';
+
 function doPost(e) {
   try {
     const p = (e && e.parameter) || {};
@@ -102,7 +106,12 @@ function doPost(e) {
 
 // 讓你可以直接用瀏覽器打開網址確認服務有活著
 function doGet() {
-  return jsonOut({ ok: true, service: BRAND_NAME + ' form endpoint' });
+  return jsonOut({
+    ok: true,
+    service: BRAND_NAME + ' form endpoint',
+    version: CODE_VERSION,
+    features: ['dedupe', 'lock', 'mail']   // 新版才有，舊版不會出現這一行
+  });
 }
 
 /* ---------- 工具函式 ---------- */

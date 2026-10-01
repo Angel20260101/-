@@ -32,6 +32,17 @@ Google Apps Script 網頁應用程式 (apps-script/Code.gs)
 4. 把該網址填入 `index.html` 的 `FORM_ENDPOINT`（已設定）
 5. 在 GitHub 開啟 Pages（Settings → Pages → Branch）
 
+## 確認線上跑的是哪一版
+
+`Code.gs` 裡有 `CODE_VERSION`，`doGet` 會把它回傳。用瀏覽器打開部署的 `/exec` 網址即可看到：
+
+```json
+{"ok":true,"service":"心情AED form endpoint","version":"2026-10-01","features":["dedupe","lock","mail"]}
+```
+
+改完程式碼要讓線上生效，是「部署 → **管理部署作業** → ✏️ → 版本選**新版本** → 部署」。
+按「新增部署作業」會產生另一個網址，`index.html` 的 `FORM_ENDPOINT` 就會指到舊的那個。
+
 ## 送出的可靠性
 
 - 前端每次送出會帶一組 `sid`，後端以 `CacheService` 記住 6 小時並據此去重。
