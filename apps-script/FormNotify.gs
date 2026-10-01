@@ -67,6 +67,8 @@ function setupForm() {
 
   // 1. 建立表單
   const form = FormApp.create(FN_FORM_TITLE);
+  // FormApp.create() 設的是雲端硬碟的檔名，表單頁面上顯示的標題要另外設
+  form.setTitle(FN_FORM_TITLE);
   form.setDescription(FN_FORM_DESC);
   form.setConfirmationMessage(FN_FORM_THANKS);
   form.setAllowResponseEdits(false);
@@ -239,7 +241,21 @@ function updateFormRules() {
     console.log(hint);
     return hint;
   }
-  report.push('✅ 已開啟表單「' + (form.getTitle() || '(未命名)') + '」');
+  // 表單頁面上顯示的標題與說明。沒有的話訪客會看到一張沒有抬頭的表單。
+  if (!form.getTitle()) {
+    form.setTitle(FN_FORM_TITLE);
+    report.push('✅ 已補上表單標題：' + FN_FORM_TITLE);
+  }
+  if (!form.getDescription()) {
+    form.setDescription(FN_FORM_DESC);
+    report.push('✅ 已補上表單說明');
+  }
+  if (!form.getConfirmationMessage()) {
+    form.setConfirmationMessage(FN_FORM_THANKS);
+    report.push('✅ 已補上送出後的確認訊息');
+  }
+
+  report.push('✅ 表單標題：「' + form.getTitle() + '」');
 
   form.getItems().forEach(function (item) {
     const title = item.getTitle();
