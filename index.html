@@ -931,6 +931,7 @@
       <div class="countdown-badge"><span class="dot"></span>本優惠僅剩 <span id="offer-days-text">1</span> 天，倒數結束後恢復原價</div>
     </div>
     <div class="countdown" id="countdown-offer">
+      <div class="cd-box"><div class="num" data-unit="days">00</div><div class="lbl">天</div></div>
       <div class="cd-box"><div class="num" data-unit="hours">00</div><div class="lbl">時</div></div>
       <div class="cd-box"><div class="num" data-unit="minutes">00</div><div class="lbl">分</div></div>
       <div class="cd-box"><div class="num" data-unit="seconds">00</div><div class="lbl">秒</div></div>
@@ -981,7 +982,7 @@
     <p class="lede">填寫以下表單，我們的顧問將於 1 個工作日內與您聯繫，說明最適合貴公司規模的方案。</p>
 
     <div class="cta-buttons">
-      <a href="#contact-form" class="btn btn-primary">倒數最後 1 天，立即索取報價享 8 折優惠</a>
+      <a href="#contact-form" class="btn btn-primary">倒數最後 <span id="cta-days-text">1</span> 天，立即索取報價享 8 折優惠</a>
       <a href="#contact-form" class="btn btn-ghost">預約諮詢，加碼 15 天免費試用</a>
     </div>
 
@@ -1118,14 +1119,21 @@
     }
 
     const totalSeconds = Math.floor(diff / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
+    // 分出「天」，否則長天數的優惠會在「時」欄位跑出 699 這種看起來壞掉的數字
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
     containers.forEach(c => {
-      c.querySelector('[data-unit="hours"]').textContent = String(hours).padStart(2,'0');
-      c.querySelector('[data-unit="minutes"]').textContent = String(minutes).padStart(2,'0');
-      c.querySelector('[data-unit="seconds"]').textContent = String(seconds).padStart(2,'0');
+      const set = (unit, val) => {
+        const el = c.querySelector('[data-unit="' + unit + '"]');
+        if (el) el.textContent = String(val).padStart(2,'0');
+      };
+      set('days', days);
+      set('hours', hours);
+      set('minutes', minutes);
+      set('seconds', seconds);
     });
 
     const daysLeft = Math.max(1, Math.ceil(diff / (1000*60*60*24)));
