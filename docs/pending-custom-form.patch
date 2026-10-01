@@ -1,0 +1,162 @@
+diff --git a/index.html b/index.html
+index 9c2cf0e..76d8522 100644
+--- a/index.html
++++ b/index.html
+@@ -487,18 +487,14 @@
+   textarea{resize:vertical;min-height:80px;}
+   input:focus,select:focus,textarea:focus{outline:2px solid var(--mint);outline-offset:1px;}
+   .form-panel .btn-primary{width:100%;margin-top:22px;}
+-  .form-embed{
+-    margin-top:22px;border-radius:14px;overflow:hidden;
+-    background:var(--white);border:1px solid var(--line);
+-  }
+-  .form-embed iframe{
+-    display:block;width:100%;border:0;
+-    height:1250px;                       /* 夠高，讓訪客不用在框裡面捲 */
+-    background:var(--white);
++  .form-sink{display:none;width:0;height:0;border:0;}
++  #form-status{
++    display:none;margin:14px 0 0;padding:12px 16px;border-radius:10px;
++    font-size:15px;line-height:1.7;text-align:center;white-space:pre-wrap;
+   }
+-  @media (max-width:560px){ .form-embed iframe{height:1500px;} }
+-  .form-note{font-size:15px;color:var(--muted);text-align:center;margin-top:14px;}
+-  .form-note a{color:var(--coral-dark);font-weight:700;}
++  #form-status.ok{background:rgba(166,214,149,.18);color:#3E4A32;border:1px solid rgba(166,214,149,.55);}
++  #form-status.err{background:rgba(201,123,91,.12);color:var(--coral-dark);border:1px solid rgba(201,123,91,.35);}
++  #form-status a{color:inherit;font-weight:800;text-decoration:underline;}
+   .form-disclaimer{font-size:15px;color:var(--muted);text-align:center;margin-top:8px;}
+ 
+   footer{background:var(--navy-deep);color:#C7C0A7;text-align:center;padding:32px 0;font-size:16px;}    #gradient-wrap{
+@@ -989,26 +985,60 @@
+       <a href="#contact-form" class="btn btn-ghost">預約諮詢，加碼 15 天免費試用</a>
+     </div>
+ 
+-    <div class="form-panel" id="contact-form">
++    <!-- 落地頁自己的表單。送出用瀏覽器原生的 form POST 打到 Google 表單的收件端點，
++         目標是下方隱藏的 iframe，所以訪客留在本頁、看不到任何 Google 介面。
++         這跟先前失敗的做法不同：那些是 JavaScript 發跨網域請求（被 iOS Safari 擋），
++         這個是瀏覽器原生的表單送出，跟按任何網站的送出鈕是同一件事。 -->
++    <form class="form-panel" id="contact-form"
++          method="POST" target="aed_sink"
++          action="__FORM_RESPONSE_URL__">
+       <div class="form-head">
+         <p class="offer-line">本表單僅為諮詢與報價需求，不涉及任何付款</p>
+         <h3>索取方案報價 / 預約免費諮詢</h3>
+         <p class="sub">留下您的資料，顧問將主動與您聯繫，優惠期限內送出即自動保留折扣資格。</p>
+       </div>
+-
+-      <!-- 直接嵌入 Google 表單：訪客在本頁填寫、在本頁送出。
+-           送出動作發生在 Google 自己的網域內，不是從本站發出的跨網域請求，
+-           所以不會重蹈先前 fetch / iframe POST / JSONP 全被 iOS Safari 擋掉的覆轍。 -->
+-      <div class="form-embed">
+-        <iframe
+-          src="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform?embedded=true"
+-          title="索取方案報價 / 預約免費諮詢"
+-          loading="lazy">載入中…</iframe>
++      <div class="form-grid">
++        <div>
++          <label for="f-name">姓名</label>
++          <input type="text" id="f-name" name="__E_NAME__" placeholder="請輸入您的姓名" required>
++        </div>
++        <div>
++          <label for="f-title">職稱</label>
++          <input type="text" id="f-title" name="__E_TITLE__" placeholder="例如：人資主管">
++        </div>
++        <div>
++          <label for="f-company">公司名稱</label>
++          <input type="text" id="f-company" name="__E_COMPANY__" placeholder="請輸入公司名稱">
++        </div>
++        <div>
++          <label for="f-size">員工人數規模</label>
++          <select id="f-size" name="__E_SIZE__">
++            <option>50 人以下</option>
++            <option>50 – 200 人</option>
++            <option>200 – 500 人</option>
++            <option>500 人以上</option>
++          </select>
++        </div>
++        <div>
++          <label for="f-phone">聯絡電話</label>
++          <input type="tel" id="f-phone" name="__E_PHONE__" placeholder="方便聯繫的電話" required>
++        </div>
++        <div>
++          <label for="f-email">聯絡信箱</label>
++          <input type="email" id="f-email" name="__E_EMAIL__" placeholder="you@company.com" required>
++        </div>
++        <div class="full">
++          <label for="f-note">目前遇到的狀況或需求（選填）</label>
++          <textarea id="f-note" name="__E_NOTE__" placeholder="例如：近期離職率偏高、想先了解方案內容..."></textarea>
++        </div>
+       </div>
+-
+-      <p class="form-note">表單沒有顯示出來？<a href="https://docs.google.com/forms/d/e/1FAIpQLSeYw6jJEZ62q2iTsiTQ4NsT2KWTQW-SsgO98EiwWUTQMdjrdA/viewform">點此另開填寫 ›</a></p>
++      <!-- 表單開了「收集電子郵件地址」，Google 用這個固定名稱接收 -->
++      <input type="hidden" id="f-email-mirror" name="emailAddress" value="">
++      <button type="submit" class="btn btn-primary">送出，索取報價並保留優惠</button>
++      <p id="form-status" role="status" aria-live="polite"></p>
+       <p class="form-disclaimer">送出即表示您同意我們透過留下的聯絡方式與您聯繫，本頁不會產生任何付款行為。</p>
+-    </div>
++    </form>
++    <iframe name="aed_sink" title="表單送出" aria-hidden="true" tabindex="-1" class="form-sink"></iframe>
+   </div>
+ </section>
+ 
+@@ -1017,6 +1047,57 @@
+ </footer>
+ 
+ <script>
++  // ====== 表單送出 ======
++  // 原生 form POST 送到隱藏 iframe，所以頁面不會跳走。
++  // 讀不到 iframe 的內容（跨網域），改以 load 事件判斷伺服器已回應。
++  (function(){
++    var form = document.getElementById('contact-form');
++    var sink = document.querySelector('.form-sink');
++    if (!form || !sink) return;
++
++    var statusEl = document.getElementById('form-status');
++    var btn = form.querySelector('button[type="submit"]');
++    var btnText = btn ? btn.textContent : '';
++    var waiting = false, timer = null;
++
++    function say(kind, html){
++      if (!statusEl) return;
++      statusEl.className = kind;
++      statusEl.style.display = 'block';
++      statusEl.innerHTML = html;
++    }
++    function restore(){
++      waiting = false;
++      if (timer) { clearTimeout(timer); timer = null; }
++      if (btn) { btn.disabled = false; btn.textContent = btnText; }
++    }
++
++    form.addEventListener('submit', function(){
++      // 讓瀏覽器自己做必填與 Email 格式檢查；沒過就不會走到這裡
++      var email = document.getElementById('f-email');
++      var mirror = document.getElementById('f-email-mirror');
++      if (email && mirror) mirror.value = email.value;
++
++      waiting = true;
++      if (btn) { btn.disabled = true; btn.textContent = '送出中…'; }
++      say('ok', '資料傳送中，請稍候…');
++
++      timer = setTimeout(function(){
++        if (!waiting) return;
++        say('err', '送出時發生問題，請稍後再試，或<a href="__FORM_VIEW_URL__">點此改用備用表單</a>。');
++        restore();
++      }, 15000);
++      // 不呼叫 preventDefault：交給瀏覽器原生送出
++    });
++
++    sink.addEventListener('load', function(){
++      if (!waiting) return;   // 第一次的空白載入不算
++      form.reset();
++      say('ok', '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。');
++      restore();
++    });
++  })();
++
+   // ====== 倒數計時器：截止時間以固定日期設定，方便上線後調整 ======
+   // 請將下方日期改成你實際要下架優惠的日期與時間
+   const deadline = new Date("2026-10-30T23:59:59+08:00").getTime();
