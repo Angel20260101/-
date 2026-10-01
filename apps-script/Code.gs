@@ -15,7 +15,11 @@ const SHEET_NAME  = '工作表1';   // 如果你把分頁改名了，這裡要�
 
 // 每次改完這份程式碼就把日期往後更新，部署後用瀏覽器打開 /exec 即可確認
 // 線上跑的是不是最新版（避免「存檔了但忘記重新部署」的情況）
-const CODE_VERSION = '2026-10-01b';
+const CODE_VERSION = '2026-10-01c';
+
+// selftest 用的通行碼。網址帶上 ?selftest=<這組字串> 會實際寫入一列並寄信，
+// 用來驗證「匿名訪客」走完整條路徑是否暢通。驗完可以改掉這組字串。
+const SELFTEST_KEY = 'aed-check-9471';
 
 function doPost(e) {
   try {
@@ -119,7 +123,40 @@ function doPost(e) {
 }
 
 // 讓你可以直接用瀏覽器打開網址確認服務有活著
-function doGet() {
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+
+  // ?selftest=<SELFTEST_KEY>：以「這個部署實際跑的程式碼」走完寫入 + 寄信，
+  // 並回報每一步的結果。用無痕視窗打開，就等同模擬一位匿名訪客。
+  if (p.selftest) {
+    if (p.selftest !== SELFTEST_KEY) {
+      return jsonOut({ ok: false, error: 'selftest key 不正確' });
+    }
+    var steps = {};
+    var row = -1;
+    try {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+      sheet.appendRow([new Date(), 'SELFTEST', '', '自我測試（可刪除）', '', '', OWNER_EMAIL, '由 selftest 寫入', '待刪除']);
+      row = sheet.getLastRow();
+      steps.sheet = 'ok (row ' + row + ')';
+    } catch (err) {
+      steps.sheet = 'FAILED: ' + err;
+    }
+    try {
+      MailApp.sendEmail({
+        to: OWNER_EMAIL,
+        subject: '【' + BRAND_NAME + '】selftest 通過（版本 ' + CODE_VERSION + '）',
+        htmlBody: '<p>匿名存取路徑正常：已寫入第 ' + row + ' 列並寄出本信。</p>'
+      });
+      steps.mail = 'ok';
+    } catch (err) {
+      steps.mail = 'FAILED: ' + err;
+    }
+    steps.quotaRemaining = mailQuota();
+    return jsonOut({ ok: true, selftest: steps, version: CODE_VERSION });
+  }
+
   return jsonOut({
     ok: true,
     service: BRAND_NAME + ' form endpoint',
