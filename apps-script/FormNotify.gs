@@ -20,6 +20,11 @@ const BRAND_NAME  = '心情AED';
 // 回覆要寫進哪張試算表（網址 /spreadsheets/d/<這一段>/edit）
 const SHEET_ID = '1l8Zn4W_KpPIMkzWlgoryzSup9tALcDpslFg7tVu0zgk';
 
+// 若表單已經建好（例如在別的地方建的），把它的「編輯用網址」貼在這裡，
+// 然後執行 attachExistingForm()。網址長這樣（結尾是 /edit，不是 /viewform）：
+// https://docs.google.com/forms/d/1AbC.../edit
+const EXISTING_FORM_URL = '';
+
 const FORM_TITLE = '心情AED － 索取方案報價 / 預約免費諮詢';
 const FORM_DESC  = '留下您的資料，顧問將主動與您聯繫。本表單僅為諮詢與報價需求，不涉及任何付款。';
 const FORM_THANKS = '感謝您的填寫！確認信已寄到您的信箱，我們的顧問將於 1 個工作日內與您聯繫。';
@@ -104,6 +109,77 @@ function setupForm() {
   report.push('填寫用網址：' + publicUrl);
   if (shortUrl) report.push('短網址　　：' + shortUrl);
   report.push('編輯用網址：' + form.getEditUrl());
+  report.push('─────────────────────────────────────────');
+
+  const out = report.join('\n');
+  console.log(out);
+  return out;
+}
+
+/* ======================================================================
+   接上「已經建好的」表單：設定回覆去向 + 裝觸發器
+   用法：把表單的編輯用網址填進上面的 EXISTING_FORM_URL，執行這支函式。
+   ====================================================================== */
+function attachExistingForm() {
+  const report = [];
+
+  if (!EXISTING_FORM_URL) {
+    const hint = '❌ 請先把表單的「編輯用網址」填進程式最上方的 EXISTING_FORM_URL。\n'
+               + '   要的是結尾 /edit 的那個，不是 /viewform。';
+    console.log(hint);
+    return hint;
+  }
+
+  let form;
+  try {
+    form = FormApp.openByUrl(EXISTING_FORM_URL);
+  } catch (err) {
+    const hint = '❌ 打不開這個表單：' + err + '\n'
+               + '   請確認 EXISTING_FORM_URL 是「編輯用網址」（結尾 /edit），而且是同一個 Google 帳號建立的。';
+    console.log(hint);
+    return hint;
+  }
+  report.push('✅ 已開啟表單「' + form.getTitle() + '」');
+
+  // 確認訊息與收集信箱，照落地頁的設定補上（已經設過也不會出錯）
+  try { form.setConfirmationMessage(FORM_THANKS); report.push('✅ 已設定確認訊息'); }
+  catch (err) { report.push('⚠️ 確認訊息設定失敗：' + err); }
+  try { form.setCollectEmail(true); report.push('✅ 已開啟「收集電子郵件地址」'); }
+  catch (err) { report.push('⚠️ 收集電子郵件地址設定失敗：' + err); }
+
+  // 回覆寫進指定試算表
+  try {
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, SHEET_ID);
+    report.push('✅ 回覆已接到試算表：' + SpreadsheetApp.openById(SHEET_ID).getName());
+  } catch (err) {
+    report.push('⚠️ 接試算表失敗（表單仍可用，回覆存在表單內）：' + err);
+  }
+
+  // 裝觸發器（先清掉舊的，避免一次送出寄兩封）
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'onFormSubmit') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('onFormSubmit').forForm(form).onFormSubmit().create();
+  report.push('✅ 已安裝「表單提交時」觸發器');
+
+  // 列出題目，方便核對關鍵字有沒有對上
+  report.push('');
+  report.push('目前的題目（確認每一題都有對到欄位）：');
+  form.getItems().forEach(function (item) {
+    var t = item.getTitle();
+    var matched = '（對不到，這題不會進信件內容）';
+    for (var i = 0; i < FIELD_MATCHERS.length; i++) {
+      for (var j = 0; j < FIELD_MATCHERS[i][1].length; j++) {
+        if (t.indexOf(FIELD_MATCHERS[i][1][j]) >= 0) { matched = '→ ' + FIELD_MATCHERS[i][0]; break; }
+      }
+      if (matched.charAt(0) === '→') break;
+    }
+    report.push('  ・' + t + '  ' + matched);
+  });
+
+  report.push('');
+  report.push('──────── 請把下面這串網址貼給 Claude ────────');
+  report.push('填寫用網址：' + form.getPublishedUrl());
   report.push('─────────────────────────────────────────');
 
   const out = report.join('\n');
