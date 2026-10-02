@@ -30,6 +30,7 @@ Google 表單 /formResponse
 | `assets/` | 圖片與影片（原本內嵌為 base64，已抽出並壓縮） |
 | `apps-script/FormNotify.gs` | 貼到試算表的 Apps Script：建立／維護表單、表單送出時寄信 |
 | `docs/email-template-lead.html` | 確認信的原始版型，供日後改版參考 |
+| `docs/收單系統踩坑筆記.md` | 這次踩過的坑與下次的設計指南，動手前先看 |
 | `order-query.html` | 先前的訂單查詢頁，與本專案無關，暫存保留 |
 
 ## Apps Script 的函式
