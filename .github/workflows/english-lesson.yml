@@ -1,0 +1,99 @@
+name: Weekly English Lesson
+
+on:
+  schedule:
+    # 12:05 UTC on Sunday = 20:05 Taipei time (UTC+8).
+    # GitHub queues scheduled runs, so a few minutes of delay is normal; an
+    # off-the-hour minute gets picked up sooner than :00 does.
+    - cron: '5 12 * * 0'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build the lesson but do not send mail (writes artifacts instead)'
+        type: boolean
+        default: false
+      ignore_state:
+        description: 'Send even if this episode was already sent'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: english-lesson
+  cancel-in-progress: false
+
+jobs:
+  lesson:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: english-lesson-bot
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: english-lesson-bot/package-lock.json
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Generate and send the lesson
+        env:
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          IGNORE_STATE: ${{ inputs.ignore_state && '1' || '' }}
+
+          # --- required secrets ---
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+
+          # --- optional variables (Settings -> Variables), defaults in src/config.js ---
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          PODCAST_RSS_URL: ${{ vars.PODCAST_RSS_URL }}
+          LESSON_LEVEL: ${{ vars.LESSON_LEVEL }}
+          NATIVE_LANGUAGE: ${{ vars.NATIVE_LANGUAGE }}
+          VOCAB_COUNT: ${{ vars.VOCAB_COUNT }}
+          PHRASE_COUNT: ${{ vars.PHRASE_COUNT }}
+          QUESTION_COUNT: ${{ vars.QUESTION_COUNT }}
+          MAX_EPISODE_AGE_DAYS: ${{ vars.MAX_EPISODE_AGE_DAYS }}
+          ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+          ELEVENLABS_MODEL_ID: ${{ vars.ELEVENLABS_MODEL_ID }}
+          TTS_ENABLED: ${{ vars.TTS_ENABLED }}
+          TTS_MAX_CHARS: ${{ vars.TTS_MAX_CHARS }}
+          MAIL_SUBJECT_PREFIX: ${{ vars.MAIL_SUBJECT_PREFIX }}
+        run: npm start
+
+      - name: Upload the dry-run output
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-preview
+          path: english-lesson-bot/out/
+          if-no-files-found: ignore
+
+      - name: Remember which episode was sent
+        if: ${{ success() && !inputs.dry_run }}
+        run: |
+          if git diff --quiet -- state/; then
+            echo "No state change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/
+          git commit -m "chore(english-lesson-bot): record the episode sent this week"
+          for delay in 0 2 4 8 16; do
+            [ "$delay" -gt 0 ] && sleep "$delay"
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+          done
+          echo "::warning::Could not push the state file; the next run may resend this episode."
