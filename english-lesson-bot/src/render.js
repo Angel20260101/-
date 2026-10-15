@@ -20,6 +20,7 @@ const S = {
   word: 'padding:8px 10px;border:1px solid #e3e5e8;vertical-align:top;font-weight:600;white-space:nowrap;',
   ex: 'color:#6b7280;font-style:italic;',
   qa: 'margin:0 0 14px;padding:12px 14px;background:#f7f8f9;border-radius:8px;border:1px solid #eceef0;',
+  script: 'margin:0;padding:14px 16px;background:#f7f8f9;border-radius:8px;border:1px solid #eceef0;font-size:15px;line-height:1.8;white-space:pre-wrap;',
   footer: 'margin:26px 0 0;padding-top:16px;border-top:1px solid #f0f1f3;font-size:12px;color:#9ca3af;',
   link: 'color:#1a56db;',
 };
@@ -77,9 +78,11 @@ export function renderHtml({ episode, lesson, podcastTitle, hasAudio }) {
 
     ${section('🧠 理解測驗', questions)}
 
-    ${section('🔊 語音講解', hasAudio
-      ? `<p style="${S.p}">本信附上 <strong>lesson.mp3</strong>，是本課的英語講解錄音，通勤時可以直接聽。</p>`
-      : `<p style="${S.native}">本週語音合成未成功（通常是 ElevenLabs 額度用完），以下是講解稿，可自行朗讀：</p>${lesson.audioScript ? `<p style="${S.p}">${esc(lesson.audioScript)}</p>` : ''}`)}
+    ${section('🔊 語音講解', `
+      ${hasAudio
+        ? `<p style="${S.native}">本信附上 <strong>lesson.mp3</strong>，就是下面這段講解稿的錄音 — 可以邊聽邊看。</p>`
+        : `<p style="${S.native}">本週語音合成未成功（通常是 ElevenLabs 額度用完），以下講解稿可自行朗讀：</p>`}
+      ${lesson.audioScript ? `<div style="${S.script}">${esc(lesson.audioScript)}</div>` : ''}`)}
 
     <p style="${S.footer}">由 english-lesson-bot 自動產生 · 每週日寄出</p>
   </div>

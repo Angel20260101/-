@@ -93,10 +93,13 @@ test('renderHtml escapes user content and mentions the attachment when audio exi
   assert.match(withAudio, /lesson\.mp3/);
   assert.match(withAudio, /Stop dawdling &lt;and&gt; finish it\./);
   assert.doesNotMatch(withAudio, /dawdling <and>/);
+  // The transcript rides along with the audio so it can be read while listening.
+  assert.match(withAudio, /Hello and welcome/);
 
   const noAudio = renderHtml({ episode, lesson, podcastTitle: '6 Minute English', hasAudio: false });
   assert.match(noAudio, /語音合成未成功/);
   assert.match(noAudio, /Hello and welcome/);
+  assert.doesNotMatch(noAudio, /lesson\.mp3/);
 });
 
 test('renderText includes every section', () => {
@@ -145,7 +148,8 @@ test('loadConfig applies defaults and strips spaces from the app password', () =
   assert.equal(config.mail.to, 'a@b.c');
   assert.equal(config.llm.provider, 'openai');
   assert.equal(config.lesson.vocabCount, 8);
-  assert.equal(config.tts.voiceId, '21m00Tcm4TlvDq8ikWAM');
+  assert.equal(config.tts.voiceId, '');
+  assert.equal(config.tts.voiceGender, 'female');
 });
 
 test('loadConfig honours overrides', () => {
@@ -538,4 +542,57 @@ test('no usable voice still sends the lesson as text', async () => {
   }, { fetchImpl, sleep: async () => {} });
 
   assert.equal(result, null);
+});
+
+test('with no voice configured it picks a female voice from the account', async () => {
+  const spokenWith = [];
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/v1/voices')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          voices: [
+            { voice_id: 'roger', name: 'Roger', labels: { gender: 'male' } },
+            { voice_id: 'alice', name: 'Alice', labels: { gender: 'female' } },
+          ],
+        }),
+      };
+    }
+    spokenWith.push(url.match(/text-to-speech\/([^?]+)/)[1]);
+    return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(1024).buffer };
+  };
+
+  const result = await synthesize('Hello.', {
+    enabled: true, apiKey: 'k', voiceId: '', voiceGender: 'female', modelId: 'm', maxChars: 2500, timeoutMs: 1000,
+  }, { fetchImpl, sleep: async () => {} });
+
+  assert.ok(result);
+  // Straight to a female voice: no wasted call on an id the plan would refuse.
+  assert.deepEqual(spokenWith, ['alice']);
+});
+
+test('voice preference honours the configured gender and tolerates unlabelled voices', async () => {
+  const spokenWith = [];
+  const voices = [
+    { voice_id: 'unlabelled', name: 'Mystery' },
+    { voice_id: 'roger', name: 'Roger', labels: { gender: 'male' } },
+  ];
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/v1/voices')) return { ok: true, status: 200, json: async () => ({ voices }) };
+    spokenWith.push(url.match(/text-to-speech\/([^?]+)/)[1]);
+    return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(1024).buffer };
+  };
+
+  await synthesize('Hello.', {
+    enabled: true, apiKey: 'k', voiceId: '', voiceGender: 'male', modelId: 'm', maxChars: 2500, timeoutMs: 1000,
+  }, { fetchImpl, sleep: async () => {} });
+  assert.deepEqual(spokenWith, ['roger']);
+
+  // No female voice on the account: an unlabelled one beats sending no audio.
+  spokenWith.length = 0;
+  await synthesize('Hello.', {
+    enabled: true, apiKey: 'k', voiceId: '', voiceGender: 'female', modelId: 'm', maxChars: 2500, timeoutMs: 1000,
+  }, { fetchImpl, sleep: async () => {} });
+  assert.deepEqual(spokenWith, ['unlabelled']);
 });
