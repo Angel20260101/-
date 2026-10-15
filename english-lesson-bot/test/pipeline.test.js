@@ -143,7 +143,7 @@ test('loadConfig applies defaults and strips spaces from the app password', () =
   const config = loadConfig({ GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop', GMAIL_USER: 'a@b.c' });
   assert.equal(config.mail.appPassword, 'abcdefghijklmnop');
   assert.equal(config.mail.to, 'a@b.c');
-  assert.equal(config.llm.provider, 'gemini');
+  assert.equal(config.llm.provider, 'openai');
   assert.equal(config.lesson.vocabCount, 8);
   assert.equal(config.tts.voiceId, '21m00Tcm4TlvDq8ikWAM');
 });
@@ -397,4 +397,93 @@ test('a model that stays overloaded falls through to another model', async () =>
   const text = await complete('p', { provider: 'gemini', apiKey: 'k', model: busy, timeoutMs: 5000 }, { fetchImpl, sleep: noSleep });
   assert.match(text, /"topic":"T"/);
   assert.ok(calls.some((u) => u.includes('gemini-3.8-flash-lite:generateContent')));
+});
+
+test('the model fallback skips speech, image and embedding models', async () => {
+  // Seen in production: the walk tried gemini-2.5-flash-preview-tts, a
+  // text-to-speech model, and wasted an attempt on a guaranteed failure.
+  const lessonJson = JSON.stringify({ topic: 'T', summary_en: 'S', vocabulary: [{ word: 'w', meaning_native: 'm' }] });
+  const tried = [];
+  const fetchImpl = async (url) => {
+    if (url.includes('/models?key=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          models: [
+            'gemini-2.5-flash-preview-tts',
+            'gemini-embedding-001',
+            'imagen-4.0-generate-001',
+            'gemini-live-2.5-flash',
+            'gemini-flash-latest',
+          ].map((n) => ({ name: `models/${n}`, supportedGenerationMethods: ['generateContent'] })),
+        }),
+      };
+    }
+    const model = url.match(/models\/([^:]+):generateContent/)[1];
+    tried.push(model);
+    if (model === 'gemini-dead') {
+      return { ok: false, status: 404, statusText: 'Not Found', json: async () => ({ error: { message: 'gone' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: lessonJson }] } }] }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  await complete('p', { provider: 'gemini', apiKey: 'k', model: 'gemini-dead', timeoutMs: 5000 }, { fetchImpl, sleep: async () => {} });
+
+  assert.deepEqual(tried, ['gemini-dead', 'gemini-flash-latest']);
+  for (const junk of ['tts', 'embedding', 'imagen', 'live']) {
+    assert.ok(!tried.some((m) => m.includes(junk)), `should not have tried a ${junk} model`);
+  }
+});
+
+test('OpenAI walks past a retired model and skips non-chat ones', async () => {
+  const tried = [];
+  const fetchImpl = async (url, init) => {
+    if (url.endsWith('/models')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [
+            { id: 'whisper-1' },
+            { id: 'text-embedding-3-small' },
+            { id: 'dall-e-3' },
+            { id: 'gpt-9' },
+            { id: 'gpt-9-mini' },
+          ],
+        }),
+      };
+    }
+    const model = JSON.parse(init.body).model;
+    tried.push(model);
+    if (model === 'gpt-4o-mini') {
+      return { ok: false, status: 404, statusText: 'Not Found', json: async () => ({ error: { message: 'The model `gpt-4o-mini` does not exist' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"topic":"T"}' } }] }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  const text = await complete('p', { provider: 'openai', apiKey: 'k', timeoutMs: 5000 }, { fetchImpl, sleep: async () => {} });
+
+  assert.equal(text, '{"topic":"T"}');
+  // Default first, then the cheapest usable chat model — never whisper/embedding/dall-e.
+  assert.deepEqual(tried, ['gpt-4o-mini', 'gpt-9-mini']);
+});
+
+test('OpenAI retries a 503 the same way Gemini does', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return calls < 3
+      ? { ok: false, status: 503, statusText: 'Service Unavailable', json: async () => ({}) }
+      : { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"ok":1}' } }] }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  assert.equal(
+    await complete('p', { provider: 'openai', apiKey: 'k', timeoutMs: 5000 }, { fetchImpl, sleep: async () => {} }),
+    '{"ok":1}',
+  );
+  assert.equal(calls, 3);
 });
