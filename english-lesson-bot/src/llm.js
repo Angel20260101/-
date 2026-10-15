@@ -1,6 +1,8 @@
 // One small adapter per provider. They all take a prompt and return text, so
 // switching provider is an environment change, never a code change.
 
+import { fetchWithRetry } from './http.js';
+
 const DEFAULT_MODELS = {
   gemini: 'gemini-3.8-flash',
   groq: 'llama-3.3-70b-versatile',
@@ -51,12 +53,12 @@ async function listGeminiModels(apiKey, timeoutMs, fetchImpl) {
     .sort((a, b) => rank(a) - rank(b));
 }
 
-async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl }) {
+async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl, sleep }) {
   const tried = new Set();
 
   const attempt = async (modelName) => {
     tried.add(modelName);
-    const res = await fetchImpl(
+    const res = await fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
         method: 'POST',
@@ -65,17 +67,17 @@ async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl }) {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
         }),
-        signal: AbortSignal.timeout(timeoutMs),
       },
+      { fetchImpl, timeoutMs, sleep, label: `Gemini ${modelName}` },
     );
     return { res, body: await res.json() };
   };
 
   let { res, body } = await attempt(model);
 
-  if (!res.ok && (res.status === 404 || res.status === 400)) {
-    // A retired or misspelled model: collect every other name worth trying,
-    // starting with the one Google names in the rejection itself.
+  if (!res.ok && (res.status === 404 || res.status === 400 || res.status === 503)) {
+    // A retired, misspelled or still-overloaded model: collect every other
+    // name worth trying, starting with the one Google names in the rejection.
     const queue = [];
     const enqueue = (name) => {
       if (name && !tried.has(name) && !queue.includes(name)) queue.push(name);
@@ -101,8 +103,8 @@ async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl }) {
   return text;
 }
 
-async function callOpenAICompatible({ prompt, apiKey, model, timeoutMs, baseUrl, provider, fetchImpl }) {
-  const res = await fetchImpl(`${baseUrl}/chat/completions`, {
+async function callOpenAICompatible({ prompt, apiKey, model, timeoutMs, baseUrl, provider, fetchImpl, sleep }) {
+  const res = await fetchWithRetry(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -114,8 +116,7 @@ async function callOpenAICompatible({ prompt, apiKey, model, timeoutMs, baseUrl,
       response_format: { type: 'json_object' },
       messages: [{ role: 'user', content: prompt }],
     }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  }, { fetchImpl, timeoutMs, sleep, label: provider });
   const body = await res.json();
   requireOk(res, body, provider);
   const text = body.choices?.[0]?.message?.content?.trim();
@@ -123,23 +124,23 @@ async function callOpenAICompatible({ prompt, apiKey, model, timeoutMs, baseUrl,
   return text;
 }
 
-export async function complete(prompt, llmConfig, { fetchImpl = fetch } = {}) {
+export async function complete(prompt, llmConfig, { fetchImpl = fetch, sleep } = {}) {
   const { provider, apiKey, timeoutMs } = llmConfig;
   const model = llmConfig.model || DEFAULT_MODELS[provider];
   if (!model) throw new Error(`Unknown LLM_PROVIDER "${provider}". Use gemini, groq or openai.`);
 
   switch (provider) {
     case 'gemini':
-      return callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl });
+      return callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl, sleep });
     case 'groq':
       return callOpenAICompatible({
-        prompt, apiKey, model, timeoutMs, fetchImpl,
+        prompt, apiKey, model, timeoutMs, fetchImpl, sleep,
         baseUrl: 'https://api.groq.com/openai/v1',
         provider: 'Groq',
       });
     case 'openai':
       return callOpenAICompatible({
-        prompt, apiKey, model, timeoutMs, fetchImpl,
+        prompt, apiKey, model, timeoutMs, fetchImpl, sleep,
         baseUrl: 'https://api.openai.com/v1',
         provider: 'OpenAI',
       });

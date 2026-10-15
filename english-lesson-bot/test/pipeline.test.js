@@ -257,3 +257,144 @@ test('complete rejects an unknown provider', async () => {
     /Unknown LLM_PROVIDER/,
   );
 });
+
+// --- transient failure handling -------------------------------------------
+
+const noSleep = async () => {};
+
+test('fetchWithRetry retries a 503 and returns the first success', async () => {
+  const { fetchWithRetry } = await import('../src/http.js');
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return calls < 3
+      ? { ok: false, status: 503, statusText: 'Service Unavailable' }
+      : { ok: true, status: 200 };
+  };
+
+  const res = await fetchWithRetry('https://x', {}, { fetchImpl, sleep: noSleep });
+  assert.equal(res.ok, true);
+  assert.equal(calls, 3);
+});
+
+test('fetchWithRetry does not retry a client error', async () => {
+  const { fetchWithRetry } = await import('../src/http.js');
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return { ok: false, status: 401, statusText: 'Unauthorized' };
+  };
+
+  const res = await fetchWithRetry('https://x', {}, { fetchImpl, sleep: noSleep });
+  assert.equal(res.status, 401);
+  assert.equal(calls, 1);
+});
+
+test('fetchWithRetry gives up and returns the last failure', async () => {
+  const { fetchWithRetry } = await import('../src/http.js');
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return { ok: false, status: 503, statusText: 'Service Unavailable' };
+  };
+
+  const res = await fetchWithRetry('https://x', {}, { fetchImpl, sleep: noSleep, attempts: 3 });
+  assert.equal(res.status, 503);
+  assert.equal(calls, 3);
+});
+
+test('fetchWithRetry retries a dropped connection and rethrows if it never recovers', async () => {
+  const { fetchWithRetry } = await import('../src/http.js');
+  let calls = 0;
+  const flaky = async () => {
+    calls += 1;
+    if (calls < 2) throw new Error('socket hang up');
+    return { ok: true, status: 200 };
+  };
+  assert.equal((await fetchWithRetry('https://x', {}, { fetchImpl: flaky, sleep: noSleep })).ok, true);
+
+  const alwaysDown = async () => { throw new Error('network down'); };
+  await assert.rejects(
+    fetchWithRetry('https://x', {}, { fetchImpl: alwaysDown, sleep: noSleep, attempts: 2 }),
+    /network down/,
+  );
+});
+
+test('fetchWithRetry waits for Retry-After when the server sets it', async () => {
+  const { fetchWithRetry } = await import('../src/http.js');
+  const waits = [];
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    return calls === 1
+      ? { ok: false, status: 429, statusText: 'Too Many Requests', headers: { get: (h) => (h === 'retry-after' ? '7' : null) } }
+      : { ok: true, status: 200 };
+  };
+
+  await fetchWithRetry('https://x', {}, { fetchImpl, sleep: async (ms) => { waits.push(ms); } });
+  assert.deepEqual(waits, [7000]);
+});
+
+test('fetchWithRetry gives each attempt its own timeout signal', async () => {
+  const { fetchWithRetry } = await import('../src/http.js');
+  const signals = [];
+  let calls = 0;
+  const fetchImpl = async (_url, init) => {
+    signals.push(init.signal);
+    calls += 1;
+    return calls < 2 ? { ok: false, status: 502, statusText: 'Bad Gateway' } : { ok: true, status: 200 };
+  };
+
+  await fetchWithRetry('https://x', { method: 'POST' }, { fetchImpl, sleep: noSleep, timeoutMs: 5000 });
+  assert.equal(signals.length, 2);
+  assert.notEqual(signals[0], signals[1]);
+  assert.ok(signals.every((s) => s instanceof AbortSignal));
+});
+
+test('a Gemini overload recovers on retry instead of failing the run', async () => {
+  // The production failure: 503 "This model is currently experiencing high demand".
+  const lessonJson = JSON.stringify({ topic: 'T', summary_en: 'S', vocabulary: [{ word: 'w', meaning_native: 'm' }] });
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    if (calls < 3) {
+      return { ok: false, status: 503, statusText: 'Service Unavailable', json: async () => ({ error: { message: 'high demand' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: lessonJson }] } }] }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  const text = await complete('p', { provider: 'gemini', apiKey: 'k', model: 'gemini-3.8-flash', timeoutMs: 5000 }, { fetchImpl, sleep: noSleep });
+  assert.match(text, /"topic":"T"/);
+  assert.equal(calls, 3);
+});
+
+test('a model that stays overloaded falls through to another model', async () => {
+  const lessonJson = JSON.stringify({ topic: 'T', summary_en: 'S', vocabulary: [{ word: 'w', meaning_native: 'm' }] });
+  const busy = 'gemini-3.8-flash';
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (url.includes('/models?key=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          models: [
+            { name: `models/${busy}`, supportedGenerationMethods: ['generateContent'] },
+            { name: 'models/gemini-3.8-flash-lite', supportedGenerationMethods: ['generateContent'] },
+          ],
+        }),
+      };
+    }
+    if (url.includes(`${busy}:generateContent`)) {
+      return { ok: false, status: 503, statusText: 'Service Unavailable', json: async () => ({ error: { message: 'high demand' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: lessonJson }] } }] }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  const text = await complete('p', { provider: 'gemini', apiKey: 'k', model: busy, timeoutMs: 5000 }, { fetchImpl, sleep: noSleep });
+  assert.match(text, /"topic":"T"/);
+  assert.ok(calls.some((u) => u.includes('gemini-3.8-flash-lite:generateContent')));
+});

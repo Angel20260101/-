@@ -1,9 +1,11 @@
+import { fetchWithRetry } from './http.js';
+
 /**
  * ElevenLabs narration. Returns null instead of throwing when synthesis fails,
  * so a quota error or outage downgrades the email to text-only rather than
  * losing the whole week's lesson.
  */
-export async function synthesize(script, ttsConfig, { fetchImpl = fetch } = {}) {
+export async function synthesize(script, ttsConfig, { fetchImpl = fetch, sleep } = {}) {
   if (!ttsConfig.enabled) return null;
 
   const text = (script || '').trim();
@@ -22,7 +24,7 @@ export async function synthesize(script, ttsConfig, { fetchImpl = fetch } = {}) 
   }
 
   try {
-    const res = await fetchImpl(
+    const res = await fetchWithRetry(
       `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ttsConfig.voiceId)}?output_format=mp3_44100_128`,
       {
         method: 'POST',
@@ -36,8 +38,8 @@ export async function synthesize(script, ttsConfig, { fetchImpl = fetch } = {}) 
           model_id: ttsConfig.modelId,
           voice_settings: { stability: 0.5, similarity_boost: 0.75 },
         }),
-        signal: AbortSignal.timeout(ttsConfig.timeoutMs),
       },
+      { fetchImpl, sleep, timeoutMs: ttsConfig.timeoutMs, label: 'ElevenLabs' },
     );
 
     if (!res.ok) {
