@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>6 Minute English</title>
+    <item>
+      <title>Why do we procrastinate?</title>
+      <guid isPermaLink="false">ep-002</guid>
+      <link>https://example.com/ep-002</link>
+      <pubDate>Thu, 09 Oct 2026 06:00:00 GMT</pubDate>
+      <itunes:duration>06:12</itunes:duration>
+      <enclosure url="https://example.com/ep-002.mp3" length="3000000" type="audio/mpeg"/>
+      <description><![CDATA[<p>Neil and Beth discuss <b>procrastination</b> &amp; why we put things off.</p><p>Learn vocabulary including <i>dawdle</i> and <i>deadline</i>.</p>]]></description>
+    </item>
+    <item>
+      <title>The science of sleep</title>
+      <guid isPermaLink="false">ep-001</guid>
+      <link>https://example.com/ep-001</link>
+      <pubDate>Thu, 02 Oct 2026 06:00:00 GMT</pubDate>
+      <enclosure url="https://example.com/ep-001.mp3" length="2900000" type="audio/mpeg"/>
+      <description>A look at how sleep works.</description>
+    </item>
+  </channel>
+</rss>
