@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { fetchWithRetry } from './http.js';
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -72,11 +73,12 @@ export function parseFeed(xml) {
   };
 }
 
-export async function fetchFeed(url, { timeoutMs = 30000, fetchImpl = fetch } = {}) {
-  const res = await fetchImpl(url, {
-    headers: { 'user-agent': 'english-lesson-bot/1.0 (+github-actions)' },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+export async function fetchFeed(url, { timeoutMs = 30000, fetchImpl = fetch, sleep } = {}) {
+  const res = await fetchWithRetry(
+    url,
+    { headers: { 'user-agent': 'english-lesson-bot/1.0 (+github-actions)' } },
+    { fetchImpl, sleep, timeoutMs, label: 'RSS feed' },
+  );
   if (!res.ok) throw new Error(`RSS fetch failed: ${res.status} ${res.statusText} for ${url}`);
   return parseFeed(await res.text());
 }

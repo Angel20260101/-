@@ -79,6 +79,7 @@ Gemini 的模型名稱常改版（Google 會把舊模型停掉，但清單裡還
 - **語音失敗不會讓整封信寄不出去。** ElevenLabs 額度用完或出錯時，程式印警告、改寄純文字信，並把英語講解稿直接放在信裡讓你自己念。
 - **同一集不會重複寄。** 寄成功後會把集數 ID 寫進 `state/last-episode.json` 並 commit 回 repo。下週如果 podcast 還沒更新，就不寄信、不報錯。想強制重寄，手動跑 workflow 時勾 `ignore_state`。
 - **每次自動跑之前會先跑測試**，程式壞掉時不會寄出壞內容。
+- **暫時性的錯誤會自動重試。** 三個 API 都包了重試機制（最多 4 次，間隔 2/4/8 秒，伺服器有指定 `Retry-After` 就照它說的等）。Google 的模型塞車（503）、流量限制（429）、連線中斷都會自己救回來，不用你手動重跑。
 - **信件是 inline style 的 HTML**，Gmail 會把 `<style>` 區塊丟掉，所以樣式全部寫在標籤上。
 - **所有外部文字都做 HTML escape**，shownotes 裡的 `<` `&` 不會弄壞版面。
 
@@ -125,6 +126,8 @@ english-lesson-bot/
 | `Nothing to send: the newest episode ... was already sent` | podcast 這週沒更新，正常，不是錯誤 |
 | `Nothing to send: ... past MAX_EPISODE_AGE_DAYS` | 這個 feed 很久沒更新，調大 `MAX_EPISODE_AGE_DAYS` 或換 feed |
 | `[warn] ElevenLabs failed: 401` | ElevenLabs key 錯了或額度用完，信照寄但沒有 mp3 |
+| `[retry] Gemini ...: attempt 2 of 4` | 正常，暫時性錯誤自動重試中，不是失敗 |
+| `Gemini request failed: 503` | 重試 4 次、換過模型都還塞車，稍後手動重跑一次即可 |
 | `Gemini request failed: 429` | 免費額度達上限，隔天會重置 |
 | `Gemini request failed: 404 ... no longer available` | 連換 4 個模型都不行，用 `LLM_MODEL` 指定一個現有模型（到 [AI Studio](https://aistudio.google.com) 看有哪些） |
 | `Invalid login` / `535` | Gmail 用了登入密碼而不是應用程式密碼 |
