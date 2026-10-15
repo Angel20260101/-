@@ -72,7 +72,7 @@ RSS 最新一集  →  LLM 產生課程內容  →  ElevenLabs 合成語音  →
 - 用 Groq：`LLM_PROVIDER=groq`（Variable），`LLM_API_KEY` 換成 Groq 的 key
 - 用 OpenAI：`LLM_PROVIDER=openai`，`LLM_API_KEY` 換成 OpenAI 的 key
 
-Gemini 的模型名稱常改版，所以程式有保險：如果設定的模型被拒絕，會自動問 API 你的 key 能用哪些模型，挑一個 Flash 重試。
+Gemini 的模型名稱常改版（Google 會把舊模型停掉，但清單裡還留著），所以程式有保險：模型被拒絕時，會先讀錯誤訊息裡 Google 建議的替代模型，再去查你的 key 還能用哪些模型，最多換 4 次。想手動指定就填 `LLM_MODEL`。
 
 ## 五、設計上刻意的幾件事
 
@@ -126,5 +126,6 @@ english-lesson-bot/
 | `Nothing to send: ... past MAX_EPISODE_AGE_DAYS` | 這個 feed 很久沒更新，調大 `MAX_EPISODE_AGE_DAYS` 或換 feed |
 | `[warn] ElevenLabs failed: 401` | ElevenLabs key 錯了或額度用完，信照寄但沒有 mp3 |
 | `Gemini request failed: 429` | 免費額度達上限，隔天會重置 |
+| `Gemini request failed: 404 ... no longer available` | 連換 4 個模型都不行，用 `LLM_MODEL` 指定一個現有模型（到 [AI Studio](https://aistudio.google.com) 看有哪些） |
 | `Invalid login` / `535` | Gmail 用了登入密碼而不是應用程式密碼 |
 | `Missing required environment variables` | Secrets 有漏填 |

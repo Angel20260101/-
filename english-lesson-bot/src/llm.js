@@ -2,10 +2,14 @@
 // switching provider is an environment change, never a code change.
 
 const DEFAULT_MODELS = {
-  gemini: 'gemini-2.5-flash',
+  gemini: 'gemini-3.8-flash',
   groq: 'llama-3.3-70b-versatile',
   openai: 'gpt-4o',
 };
+
+// Enough to walk past a retired model and its replacement, not enough to burn
+// a free-tier quota when the key itself is the problem.
+const MAX_GEMINI_ATTEMPTS = 4;
 
 function requireOk(res, body, provider) {
   if (!res.ok) {
@@ -15,27 +19,43 @@ function requireOk(res, body, provider) {
 }
 
 /**
- * Gemini model names move around between releases, so when the configured
- * model is rejected we ask the API which models this key can actually use and
- * retry once with the first Flash model that supports generateContent.
+ * Google retires a model by rejecting it while still listing it, and the
+ * rejection names the replacement: "Please update your code to use
+ * models/gemini-3.8-flash". That name is the most reliable thing we have, so
+ * read it straight out of the error.
  */
-async function resolveGeminiModel(apiKey, timeoutMs, fetchImpl) {
+function suggestedModelFrom(body) {
+  const message = body?.error?.message ?? '';
+  const match = message.match(/models\/([A-Za-z0-9._-]+)/g);
+  if (!match) return null;
+  // The first name is the model we just asked for; a later one is the suggestion.
+  const names = match.map((m) => m.replace('models/', ''));
+  return names.length > 1 ? names[names.length - 1] : null;
+}
+
+async function listGeminiModels(apiKey, timeoutMs, fetchImpl) {
   const res = await fetchImpl(
     `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
     { signal: AbortSignal.timeout(timeoutMs) },
   );
   const body = await res.json();
-  requireOk(res, body, 'Gemini (listModels)');
+  if (!res.ok) return [];
+
   const usable = (body.models || []).filter((m) =>
     (m.supportedGenerationMethods || []).includes('generateContent'),
   );
-  const flash = usable.find((m) => /flash/i.test(m.name) && !/lite/i.test(m.name)) ?? usable[0];
-  if (!flash) throw new Error('No Gemini model available to this API key supports generateContent.');
-  return flash.name.replace(/^models\//, '');
+  // Flash first: cheapest and the only family with a free tier.
+  const rank = (name) => (/flash/i.test(name) ? (/lite/i.test(name) ? 1 : 0) : 2);
+  return usable
+    .map((m) => m.name.replace(/^models\//, ''))
+    .sort((a, b) => rank(a) - rank(b));
 }
 
 async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl }) {
-  const request = async (modelName) => {
+  const tried = new Set();
+
+  const attempt = async (modelName) => {
+    tried.add(modelName);
     const res = await fetchImpl(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
@@ -51,14 +71,28 @@ async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl }) {
     return { res, body: await res.json() };
   };
 
-  let { res, body } = await request(model);
-  if (res.status === 404 || res.status === 400) {
-    const resolved = await resolveGeminiModel(apiKey, timeoutMs, fetchImpl);
-    if (resolved !== model) {
-      console.warn(`[warn] Gemini model "${model}" unavailable; retrying with "${resolved}".`);
-      ({ res, body } = await request(resolved));
+  let { res, body } = await attempt(model);
+
+  if (!res.ok && (res.status === 404 || res.status === 400)) {
+    // A retired or misspelled model: collect every other name worth trying,
+    // starting with the one Google names in the rejection itself.
+    const queue = [];
+    const enqueue = (name) => {
+      if (name && !tried.has(name) && !queue.includes(name)) queue.push(name);
+    };
+
+    enqueue(suggestedModelFrom(body));
+    for (const name of await listGeminiModels(apiKey, timeoutMs, fetchImpl)) enqueue(name);
+
+    while (queue.length && tried.size < MAX_GEMINI_ATTEMPTS) {
+      const next = queue.shift();
+      console.warn(`[warn] Gemini model "${[...tried].pop()}" was rejected; trying "${next}".`);
+      ({ res, body } = await attempt(next));
+      if (res.ok) break;
+      enqueue(suggestedModelFrom(body));
     }
   }
+
   requireOk(res, body, 'Gemini');
 
   const parts = body.candidates?.[0]?.content?.parts ?? [];
