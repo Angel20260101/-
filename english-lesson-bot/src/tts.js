@@ -1,6 +1,16 @@
 import { fetchWithRetry } from './http.js';
 
 /**
+ * Prefer the requested gender, then anything else. ElevenLabs does not label
+ * every voice, so an unlabelled one is a better answer than no voice at all.
+ */
+function preferVoice(voices, gender) {
+  const wanted = voices.filter((v) => v.gender === gender);
+  const unknown = voices.filter((v) => !v.gender);
+  return [...wanted, ...unknown, ...voices][0] ?? null;
+}
+
+/**
  * Which voices this key may actually speak with. A free plan is refused the
  * Voice Library, so the configured voice can be valid and still unusable —
  * the account's own list is the only reliable source.
@@ -15,7 +25,11 @@ async function listUsableVoices(apiKey, timeoutMs, fetchImpl) {
     const body = await res.json();
     return (body.voices || [])
       .filter((v) => v.voice_id)
-      .map((v) => ({ id: v.voice_id, name: v.name ?? v.voice_id, category: v.category ?? '' }));
+      .map((v) => ({
+        id: v.voice_id,
+        name: v.name ?? v.voice_id,
+        gender: (v.labels?.gender ?? '').toLowerCase(),
+      }));
   } catch {
     return [];
   }
@@ -62,22 +76,39 @@ export async function synthesize(script, ttsConfig, { fetchImpl = fetch, sleep }
     { fetchImpl, sleep, timeoutMs: ttsConfig.timeoutMs, label: 'ElevenLabs' },
   );
 
+  const gender = ttsConfig.voiceGender ?? 'female';
+
   try {
-    let res = await speak(ttsConfig.voiceId);
+    let voiceId = ttsConfig.voiceId;
+
+    // With no voice configured, ask the account what it has rather than
+    // guessing an id the free plan will refuse.
+    if (!voiceId) {
+      const voices = await listUsableVoices(ttsConfig.apiKey, ttsConfig.timeoutMs, fetchImpl);
+      const chosen = preferVoice(voices, gender);
+      if (!chosen) {
+        console.warn('[warn] No voice is available to this key — sending a text-only lesson.');
+        return null;
+      }
+      console.log(`[tts] Using "${chosen.name}"${chosen.gender ? ` (${chosen.gender})` : ''} — ${voices.length} voices available.`);
+      voiceId = chosen.id;
+    }
+
+    let res = await speak(voiceId);
 
     // 402 means the plan cannot use that voice, 404 that the key cannot see
     // it. Either way another voice on this account may work.
     if (!res.ok && [401, 402, 403, 404].includes(res.status)) {
       const detail = await res.text().catch(() => '');
-      console.warn(`[warn] Voice "${ttsConfig.voiceId}" unavailable: ${res.status} — ${detail.slice(0, 200)}`);
+      console.warn(`[warn] Voice "${voiceId}" unavailable: ${res.status} — ${detail.slice(0, 200)}`);
 
       const voices = await listUsableVoices(ttsConfig.apiKey, ttsConfig.timeoutMs, fetchImpl);
-      const alternative = voices.find((v) => v.id !== ttsConfig.voiceId);
+      const alternative = preferVoice(voices.filter((v) => v.id !== voiceId), gender);
       if (!alternative) {
         console.warn('[warn] No other voice is available to this key — sending a text-only lesson.');
         return null;
       }
-      console.warn(`[warn] Falling back to "${alternative.name}" (${alternative.id}).`);
+      console.warn(`[warn] Falling back to "${alternative.name}"${alternative.gender ? ` (${alternative.gender})` : ''}.`);
       res = await speak(alternative.id);
     }
 

@@ -47,7 +47,10 @@ export function loadConfig(env = process.env) {
     tts: {
       enabled: bool(env, 'TTS_ENABLED', true),
       apiKey: env.ELEVENLABS_API_KEY || '',
-      voiceId: env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM', // "Rachel"
+      // Empty means "pick one this account can actually use" — a hard-coded
+      // id is refused on the free plan, which costs a request every run.
+      voiceId: env.ELEVENLABS_VOICE_ID || '',
+      voiceGender: (env.ELEVENLABS_VOICE_GENDER || 'female').toLowerCase(),
       modelId: env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2',
       // Hard cap so a long script cannot silently drain a free-tier quota.
       maxChars: int(env, 'TTS_MAX_CHARS', 2500),
