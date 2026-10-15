@@ -487,3 +487,55 @@ test('OpenAI retries a 503 the same way Gemini does', async () => {
   );
   assert.equal(calls, 3);
 });
+
+test('a voice the plan cannot use falls back to one the account owns', async () => {
+  // Production: ElevenLabs returned 402 "Free users cannot use library voices
+  // via the API" for the hard-coded default voice.
+  const blocked = '21m00Tcm4TlvDq8ikWAM';
+  const spokenWith = [];
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/v1/voices')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          voices: [
+            { voice_id: blocked, name: 'Rachel', category: 'premade' },
+            { voice_id: 'own-voice-1', name: 'My Voice', category: 'cloned' },
+          ],
+        }),
+      };
+    }
+    const voiceId = url.match(/text-to-speech\/([^?]+)/)[1];
+    spokenWith.push(voiceId);
+    if (voiceId === blocked) {
+      return {
+        ok: false,
+        status: 402,
+        statusText: 'Payment Required',
+        text: async () => '{"detail":{"code":"paid_plan_required"}}',
+      };
+    }
+    return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(2048).buffer };
+  };
+
+  const result = await synthesize('Hello there.', {
+    enabled: true, apiKey: 'k', voiceId: blocked, modelId: 'm', maxChars: 2500, timeoutMs: 1000,
+  }, { fetchImpl, sleep: async () => {} });
+
+  assert.ok(result, 'expected audio from the fallback voice');
+  assert.deepEqual(spokenWith, [blocked, 'own-voice-1']);
+});
+
+test('no usable voice still sends the lesson as text', async () => {
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/v1/voices')) return { ok: true, status: 200, json: async () => ({ voices: [] }) };
+    return { ok: false, status: 402, statusText: 'Payment Required', text: async () => 'paid_plan_required' };
+  };
+
+  const result = await synthesize('Hello there.', {
+    enabled: true, apiKey: 'k', voiceId: 'blocked', modelId: 'm', maxChars: 2500, timeoutMs: 1000,
+  }, { fetchImpl, sleep: async () => {} });
+
+  assert.equal(result, null);
+});

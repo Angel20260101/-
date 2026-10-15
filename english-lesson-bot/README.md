@@ -79,6 +79,7 @@ RSS 最新一集  →  LLM 產生課程內容  →  ElevenLabs 合成語音  →
 ## 五、設計上刻意的幾件事
 
 - **語音失敗不會讓整封信寄不出去。** ElevenLabs 額度用完或出錯時，程式印警告、改寄純文字信，並把英語講解稿直接放在信裡讓你自己念。
+- **聲音用不了會自動換一個。** 免費方案不能透過 API 使用「語音庫」的聲音（會回 402），所以被拒絕時程式會去查你帳號實際擁有哪些聲音，挑一個可用的重試。
 - **同一集不會重複寄。** 寄成功後會把集數 ID 寫進 `state/last-episode.json` 並 commit 回 repo。下週如果 podcast 還沒更新，就不寄信、不報錯。想強制重寄，手動跑 workflow 時勾 `ignore_state`。
 - **每次自動跑之前會先跑測試**，程式壞掉時不會寄出壞內容。
 - **暫時性的錯誤會自動重試。** 三個 API 都包了重試機制（最多 4 次，間隔 2/4/8 秒，伺服器有指定 `Retry-After` 就照它說的等）。Google 的模型塞車（503）、流量限制（429）、連線中斷都會自己救回來，不用你手動重跑。
@@ -128,9 +129,19 @@ english-lesson-bot/
 | `Nothing to send: the newest episode ... was already sent` | podcast 這週沒更新，正常，不是錯誤 |
 | `Nothing to send: ... past MAX_EPISODE_AGE_DAYS` | 這個 feed 很久沒更新，調大 `MAX_EPISODE_AGE_DAYS` 或換 feed |
 | `[warn] ElevenLabs failed: 401` | ElevenLabs key 錯了或額度用完，信照寄但沒有 mp3 |
+| `[warn] Voice "..." unavailable: 402` | 免費方案不能用語音庫的聲音，程式會自動改用你帳號裡的聲音 |
+| `[warn] No other voice is available` | 帳號裡沒有任何可用聲音，改寄純文字版。見下方「想要語音」 |
 | `[retry] ...: attempt 2 of 4` | 正常，暫時性錯誤自動重試中，不是失敗 |
 | `... request failed: 503` | 重試 4 次、換過模型都還塞車。用 Gemini 免費額度時常見，改用 OpenAI 可解決 |
 | `... request failed: 429` | 流量或額度達上限 |
 | `... request failed: 404 ... no longer available` | 連換 4 個模型都不行，用 `LLM_MODEL` 指定一個現有模型 |
 | `Invalid login` / `535` | Gmail 用了登入密碼而不是應用程式密碼 |
 | `Missing required environment variables` | Secrets 有漏填 |
+
+## 九、想要語音講解（選用）
+
+ElevenLabs 免費方案不開放 API 使用語音庫的聲音。三條路：
+
+1. **什麼都不做** — 信裡會附上英語講解稿，自己念或用手機內建朗讀功能聽。免費。
+2. **到 ElevenLabs 建立自己的聲音** — 在網站的 Voices 頁面產生或複製一個聲音到你的帳號，程式會自動偵測並使用它，不用改設定。免費方案可行與否依當下政策而定。
+3. **升級 ElevenLabs 付費方案** — 最便宜的方案約每月 US$5，之後預設的 Rachel 就能用。
