@@ -398,3 +398,41 @@ test('a model that stays overloaded falls through to another model', async () =>
   assert.match(text, /"topic":"T"/);
   assert.ok(calls.some((u) => u.includes('gemini-3.8-flash-lite:generateContent')));
 });
+
+test('the model fallback skips speech, image and embedding models', async () => {
+  // Seen in production: the walk tried gemini-2.5-flash-preview-tts, a
+  // text-to-speech model, and wasted an attempt on a guaranteed failure.
+  const lessonJson = JSON.stringify({ topic: 'T', summary_en: 'S', vocabulary: [{ word: 'w', meaning_native: 'm' }] });
+  const tried = [];
+  const fetchImpl = async (url) => {
+    if (url.includes('/models?key=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          models: [
+            'gemini-2.5-flash-preview-tts',
+            'gemini-embedding-001',
+            'imagen-4.0-generate-001',
+            'gemini-live-2.5-flash',
+            'gemini-flash-latest',
+          ].map((n) => ({ name: `models/${n}`, supportedGenerationMethods: ['generateContent'] })),
+        }),
+      };
+    }
+    const model = url.match(/models\/([^:]+):generateContent/)[1];
+    tried.push(model);
+    if (model === 'gemini-dead') {
+      return { ok: false, status: 404, statusText: 'Not Found', json: async () => ({ error: { message: 'gone' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: lessonJson }] } }] }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  await complete('p', { provider: 'gemini', apiKey: 'k', model: 'gemini-dead', timeoutMs: 5000 }, { fetchImpl, sleep: async () => {} });
+
+  assert.deepEqual(tried, ['gemini-dead', 'gemini-flash-latest']);
+  for (const junk of ['tts', 'embedding', 'imagen', 'live']) {
+    assert.ok(!tried.some((m) => m.includes(junk)), `should not have tried a ${junk} model`);
+  }
+});

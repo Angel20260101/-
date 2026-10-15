@@ -43,14 +43,18 @@ async function listGeminiModels(apiKey, timeoutMs, fetchImpl) {
   const body = await res.json();
   if (!res.ok) return [];
 
-  const usable = (body.models || []).filter((m) =>
-    (m.supportedGenerationMethods || []).includes('generateContent'),
-  );
-  // Flash first: cheapest and the only family with a free tier.
-  const rank = (name) => (/flash/i.test(name) ? (/lite/i.test(name) ? 1 : 0) : 2);
-  return usable
+  // Speech, image, video and embedding models advertise generateContent too,
+  // and asking one of them for a lesson just burns an attempt.
+  const WRONG_JOB = /tts|embedding|image|imagen|veo|audio|live|guard|aqa/i;
+
+  const usable = (body.models || [])
+    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
     .map((m) => m.name.replace(/^models\//, ''))
-    .sort((a, b) => rank(a) - rank(b));
+    .filter((name) => !WRONG_JOB.test(name));
+
+  // Flash first: cheapest, and the family the free tier actually serves.
+  const rank = (name) => (/flash/i.test(name) ? (/lite/i.test(name) ? 1 : 0) : 2);
+  return usable.sort((a, b) => rank(a) - rank(b));
 }
 
 async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl, sleep }) {
