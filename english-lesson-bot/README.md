@@ -14,7 +14,7 @@ RSS 最新一集  →  LLM 產生課程內容  →  ElevenLabs 合成語音  →
 
 | 用途 | 去哪裡拿 | 費用 |
 |---|---|---|
-| LLM | [aistudio.google.com](https://aistudio.google.com) → Get API key | Gemini Flash 有免費額度，不用綁卡 |
+| LLM | [platform.openai.com](https://platform.openai.com/api-keys) → Create new secret key | 最低儲值 US$5，本流程一年約 US$0.07 |
 | 語音 | [elevenlabs.io](https://elevenlabs.io) → Profile → API Keys | 免費方案每月額度有限 |
 | 寄信 | Google 帳號 → [應用程式密碼](https://myaccount.google.com/apppasswords) | 免費 |
 
@@ -26,7 +26,7 @@ RSS 最新一集  →  LLM 產生課程內容  →  ElevenLabs 合成語音  →
 
 | Secret 名稱 | 值 |
 |---|---|
-| `LLM_API_KEY` | 你的 Gemini API key |
+| `LLM_API_KEY` | 你的 OpenAI API key（`sk-` 開頭） |
 | `ELEVENLABS_API_KEY` | 你的 ElevenLabs API key |
 | `GMAIL_USER` | 寄信的 Gmail 帳號，例如 `you@gmail.com` |
 | `GMAIL_APP_PASSWORD` | 上面那組 16 碼應用程式密碼 |
@@ -61,7 +61,7 @@ RSS 最新一集  →  LLM 產生課程內容  →  ElevenLabs 合成語音  →
 | `ELEVENLABS_VOICE_ID` | `21m00Tcm4TlvDq8ikWAM`（Rachel） | 換聲音 |
 | `TTS_MAX_CHARS` | `2500` | 語音字數上限，保護免費額度 |
 | `TTS_ENABLED` | `true` | 設 `false` 就只寄文字不合成語音 |
-| `LLM_PROVIDER` | `gemini` | 可換 `groq` 或 `openai` |
+| `LLM_PROVIDER` | `openai` | 可換 `gemini` 或 `groq` |
 | `LLM_MODEL` | 各家預設 | 想指定特定模型時填 |
 | `MAIL_SUBJECT_PREFIX` | `🎧 本週英語課` | 信件主旨開頭 |
 
@@ -69,10 +69,12 @@ RSS 最新一集  →  LLM 產生課程內容  →  ElevenLabs 合成語音  →
 
 只要改兩個地方，程式不用動：
 
-- 用 Groq：`LLM_PROVIDER=groq`（Variable），`LLM_API_KEY` 換成 Groq 的 key
-- 用 OpenAI：`LLM_PROVIDER=openai`，`LLM_API_KEY` 換成 OpenAI 的 key
+- 用 Gemini：`LLM_PROVIDER=gemini`（Variable），`LLM_API_KEY` 換成 Gemini 的 key
+- 用 Groq：`LLM_PROVIDER=groq`，`LLM_API_KEY` 換成 Groq 的 key
 
-Gemini 的模型名稱常改版（Google 會把舊模型停掉，但清單裡還留著），所以程式有保險：模型被拒絕時，會先讀錯誤訊息裡 Google 建議的替代模型，再去查你的 key 還能用哪些模型，最多換 4 次。想手動指定就填 `LLM_MODEL`。
+**為什麼預設是 OpenAI 而不是免費的 Gemini**：實測 Gemini 免費額度在尖峰時段會持續回 503「需求量過高」，重試 4 次、換過 3 個模型都排不進去。免費方案在容量吃緊時會被降級，付費 key 不會。想省錢可以改回 Gemini，但要接受偶爾整週收不到信。
+
+**模型停用的保險**：三家都會改版下架舊模型。模型被拒絕時，程式會先讀錯誤訊息裡建議的替代模型，再去查你的 key 還能用哪些，自動換最多 4 次，並且會跳過語音、圖片、embedding 這些不能產生文字的模型。想手動指定就填 `LLM_MODEL`。
 
 ## 五、設計上刻意的幾件事
 
@@ -126,9 +128,9 @@ english-lesson-bot/
 | `Nothing to send: the newest episode ... was already sent` | podcast 這週沒更新，正常，不是錯誤 |
 | `Nothing to send: ... past MAX_EPISODE_AGE_DAYS` | 這個 feed 很久沒更新，調大 `MAX_EPISODE_AGE_DAYS` 或換 feed |
 | `[warn] ElevenLabs failed: 401` | ElevenLabs key 錯了或額度用完，信照寄但沒有 mp3 |
-| `[retry] Gemini ...: attempt 2 of 4` | 正常，暫時性錯誤自動重試中，不是失敗 |
-| `Gemini request failed: 503` | 重試 4 次、換過模型都還塞車，稍後手動重跑一次即可 |
-| `Gemini request failed: 429` | 免費額度達上限，隔天會重置 |
-| `Gemini request failed: 404 ... no longer available` | 連換 4 個模型都不行，用 `LLM_MODEL` 指定一個現有模型（到 [AI Studio](https://aistudio.google.com) 看有哪些） |
+| `[retry] ...: attempt 2 of 4` | 正常，暫時性錯誤自動重試中，不是失敗 |
+| `... request failed: 503` | 重試 4 次、換過模型都還塞車。用 Gemini 免費額度時常見，改用 OpenAI 可解決 |
+| `... request failed: 429` | 流量或額度達上限 |
+| `... request failed: 404 ... no longer available` | 連換 4 個模型都不行，用 `LLM_MODEL` 指定一個現有模型 |
 | `Invalid login` / `535` | Gmail 用了登入密碼而不是應用程式密碼 |
 | `Missing required environment variables` | Secrets 有漏填 |

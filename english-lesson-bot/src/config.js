@@ -16,7 +16,7 @@ function bool(env, name, fallback = false) {
 }
 
 export function loadConfig(env = process.env) {
-  const provider = (env.LLM_PROVIDER || 'gemini').toLowerCase();
+  const provider = (env.LLM_PROVIDER || 'openai').toLowerCase();
 
   const config = {
     dryRun: bool(env, 'DRY_RUN'),
@@ -39,7 +39,7 @@ export function loadConfig(env = process.env) {
 
     llm: {
       provider,
-      apiKey: env.LLM_API_KEY || env.GEMINI_API_KEY || env.GROQ_API_KEY || env.OPENAI_API_KEY || '',
+      apiKey: env.LLM_API_KEY || env.OPENAI_API_KEY || env.GEMINI_API_KEY || env.GROQ_API_KEY || '',
       model: env.LLM_MODEL || '',
       timeoutMs: int(env, 'LLM_TIMEOUT_MS', 120000),
     },

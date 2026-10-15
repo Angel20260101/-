@@ -6,12 +6,16 @@ import { fetchWithRetry } from './http.js';
 const DEFAULT_MODELS = {
   gemini: 'gemini-3.8-flash',
   groq: 'llama-3.3-70b-versatile',
-  openai: 'gpt-4o',
+  openai: 'gpt-4o-mini',
 };
 
 // Enough to walk past a retired model and its replacement, not enough to burn
-// a free-tier quota when the key itself is the problem.
-const MAX_GEMINI_ATTEMPTS = 4;
+// a quota — or real money — when the key itself is the problem.
+const MAX_MODEL_ATTEMPTS = 4;
+
+// Speech, image, video and embedding models are listed alongside the chat
+// models, and asking one of them for a lesson just burns an attempt.
+const WRONG_JOB = /tts|embedding|image|imagen|veo|audio|live|guard|aqa|whisper|dall-e|sora|moderation|transcribe|realtime/i;
 
 function requireOk(res, body, provider) {
   if (!res.ok) {
@@ -42,10 +46,6 @@ async function listGeminiModels(apiKey, timeoutMs, fetchImpl) {
   );
   const body = await res.json();
   if (!res.ok) return [];
-
-  // Speech, image, video and embedding models advertise generateContent too,
-  // and asking one of them for a lesson just burns an attempt.
-  const WRONG_JOB = /tts|embedding|image|imagen|veo|audio|live|guard|aqa/i;
 
   const usable = (body.models || [])
     .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
@@ -90,7 +90,7 @@ async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl, sleep }
     enqueue(suggestedModelFrom(body));
     for (const name of await listGeminiModels(apiKey, timeoutMs, fetchImpl)) enqueue(name);
 
-    while (queue.length && tried.size < MAX_GEMINI_ATTEMPTS) {
+    while (queue.length && tried.size < MAX_MODEL_ATTEMPTS) {
       const next = queue.shift();
       console.warn(`[warn] Gemini model "${[...tried].pop()}" was rejected; trying "${next}".`);
       ({ res, body } = await attempt(next));
@@ -107,21 +107,57 @@ async function callGemini({ prompt, apiKey, model, timeoutMs, fetchImpl, sleep }
   return text;
 }
 
-async function callOpenAICompatible({ prompt, apiKey, model, timeoutMs, baseUrl, provider, fetchImpl, sleep }) {
-  const res = await fetchWithRetry(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  }, { fetchImpl, timeoutMs, sleep, label: provider });
+async function listChatModels({ baseUrl, apiKey, timeoutMs, fetchImpl }) {
+  const res = await fetchImpl(`${baseUrl}/models`, {
+    headers: { authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) return [];
   const body = await res.json();
+
+  const names = (body.data || [])
+    .map((m) => m.id)
+    .filter((id) => typeof id === 'string' && !WRONG_JOB.test(id));
+
+  // Cheapest first: a weekly lesson does not need a frontier model.
+  const rank = (id) => (/mini|lite|flash|small|8b/i.test(id) ? 0 : 1);
+  return names.sort((a, b) => rank(a) - rank(b));
+}
+
+async function callOpenAICompatible({ prompt, apiKey, model, timeoutMs, baseUrl, provider, fetchImpl, sleep }) {
+  const tried = new Set();
+
+  const attempt = async (modelName) => {
+    tried.add(modelName);
+    const res = await fetchWithRetry(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: modelName,
+        temperature: 0.4,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    }, { fetchImpl, timeoutMs, sleep, label: `${provider} ${modelName}` });
+    return { res, body: await res.json() };
+  };
+
+  let { res, body } = await attempt(model);
+
+  // A retired or renamed model reads as 404, or as a 400 naming the parameter.
+  if (!res.ok && (res.status === 404 || res.status === 400)) {
+    const candidates = await listChatModels({ baseUrl, apiKey, timeoutMs, fetchImpl });
+    for (const next of candidates) {
+      if (tried.has(next) || tried.size >= MAX_MODEL_ATTEMPTS) break;
+      console.warn(`[warn] ${provider} model "${model}" was rejected; trying "${next}".`);
+      ({ res, body } = await attempt(next));
+      if (res.ok) break;
+    }
+  }
+
   requireOk(res, body, provider);
   const text = body.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error(`${provider} returned no text.`);
