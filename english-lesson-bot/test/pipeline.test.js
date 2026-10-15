@@ -156,7 +156,11 @@ test('loadConfig honours overrides', () => {
   assert.equal(config.mail.to, 'x@y.z');
 });
 
-test('generateLesson strips code fences and survives a Gemini model fallback', async () => {
+test('generateLesson strips code fences and survives a retired Gemini model', async () => {
+  // The exact failure seen in production: Google rejects the configured model,
+  // still lists it in listModels, and names the replacement in the error text.
+  const retired = 'gemini-2.5-flash';
+  const replacement = 'gemini-3.8-flash';
   const lessonJson = JSON.stringify({
     topic: 'Procrastination',
     summary_en: 'Why we delay.',
@@ -173,14 +177,27 @@ test('generateLesson strips code fences and survives a Gemini model fallback', a
         status: 200,
         json: async () => ({
           models: [
+            // The retired model is still listed — picking from this list alone
+            // would loop straight back onto it.
+            { name: `models/${retired}`, supportedGenerationMethods: ['generateContent'] },
             { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] },
-            { name: 'models/gemini-9-flash', supportedGenerationMethods: ['generateContent'] },
           ],
         }),
       };
     }
-    if (url.includes('gemini-does-not-exist')) {
-      return { ok: false, status: 404, statusText: 'Not Found', json: async () => ({ error: 'nope' }) };
+    if (url.includes(`${retired}:generateContent`)) {
+      return {
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({
+          error: {
+            code: 404,
+            message: `This model models/${retired} is no longer available to new users. Please update your code to use models/${replacement} for the latest features and improvements.`,
+            status: 'NOT_FOUND',
+          },
+        }),
+      };
     }
     return {
       ok: true,
@@ -194,16 +211,43 @@ test('generateLesson strips code fences and survives a Gemini model fallback', a
     { title: 'Why do we procrastinate?', summary: 'notes' },
     {
       lesson: { level: 'B1-B2', nativeLanguage: '繁體中文', vocabCount: 8, phraseCount: 5, questionCount: 3 },
-      llm: { provider: 'gemini', apiKey: 'k', model: 'gemini-does-not-exist', timeoutMs: 5000 },
+      llm: { provider: 'gemini', apiKey: 'k', model: retired, timeoutMs: 5000 },
     },
     { fetchImpl },
   );
 
   assert.equal(lesson.topic, 'Procrastination');
   assert.equal(lesson.vocabulary[0].word, 'dawdle');
-  // 404 on the configured model -> list models -> retry on the Flash model.
-  assert.ok(calls.some((u) => u.includes('/models?key=')));
-  assert.ok(calls.some((u) => u.includes('gemini-9-flash:generateContent')));
+  // The model named in the error is tried before anything from listModels.
+  assert.ok(calls.some((u) => u.includes(`${replacement}:generateContent`)));
+  assert.equal(calls.filter((u) => u.includes(`${retired}:generateContent`)).length, 1);
+});
+
+test('callGemini gives up instead of retrying forever on a bad key', async () => {
+  let generateCalls = 0;
+  const fetchImpl = async (url) => {
+    if (url.includes('/models?key=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          models: ['a', 'b', 'c', 'd', 'e', 'f'].map((n) => ({
+            name: `models/gemini-${n}-flash`,
+            supportedGenerationMethods: ['generateContent'],
+          })),
+        }),
+      };
+    }
+    generateCalls += 1;
+    return { ok: false, status: 400, statusText: 'Bad Request', json: async () => ({ error: { message: 'API key not valid' } }) };
+  };
+
+  const { complete } = await import('../src/llm.js');
+  await assert.rejects(
+    complete('p', { provider: 'gemini', apiKey: 'bad', model: 'gemini-x-flash', timeoutMs: 5000 }, { fetchImpl }),
+    /Gemini request failed: 400/,
+  );
+  assert.ok(generateCalls <= 4, `expected at most 4 generate calls, got ${generateCalls}`);
 });
 
 test('complete rejects an unknown provider', async () => {
