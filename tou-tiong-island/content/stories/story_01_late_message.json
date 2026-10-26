@@ -1,0 +1,1477 @@
+{
+  "story_id": "story_01_late_message",
+  "version": "1.0.0",
+  "schema_version": "1.0.0",
+  "title": "晚上九點十七分",
+  "subtitle": "主管下班後傳訊",
+  "island_id": "island_boundary",
+  "order": 1,
+  "theme": "工作責任與個人界線",
+  "logline": "泡麵還冒著熱氣，手機亮了。明天早上十點要用的簡報，現在要改。",
+  "estimated_minutes": 3,
+  "content_notes": [
+    "職場壓力",
+    "加班",
+    "界線議題"
+  ],
+  "setting": {
+    "location": "你的租屋處，六坪大的套房，桌上一碗剛泡好的麵",
+    "time": "星期三晚上九點十七分",
+    "conflict": "責任感說「現在就做」，身體說「我今天已經結束了」。兩個聲音都是你。"
+  },
+  "characters": [
+    {
+      "character_id": "you",
+      "name": "你",
+      "role": "專案執行",
+      "profile": "進公司一年八個月。做事細、交件準時，所以大家都知道傳給你一定會動。",
+      "voice": "心裡話很多，說出口的很少"
+    },
+    {
+      "character_id": "lin",
+      "name": "林經理",
+      "role": "直屬主管",
+      "profile": "四十多歲，兩個小孩。自己也常常半夜在回信，並不覺得這有什麼問題。",
+      "voice": "客氣、句尾常加『好嗎』『麻煩你』，但訊息一則接一則"
+    },
+    {
+      "character_id": "yijie",
+      "name": "怡潔",
+      "role": "同組同事",
+      "profile": "比你早兩年進來。手機工作群組常年靜音，從來沒有人說過她什麼。",
+      "voice": "直接、省話，偶爾一句很準"
+    }
+  ],
+  "state_vars": [
+    {
+      "key": "boundary",
+      "label": "界線",
+      "init": 0,
+      "description": "你把「可以」與「不行」說出口的程度"
+    },
+    {
+      "key": "care",
+      "label": "自我照顧",
+      "init": 0,
+      "description": "你有沒有留下屬於自己的時間與睡眠"
+    },
+    {
+      "key": "duty",
+      "label": "承擔",
+      "init": 0,
+      "description": "你實際扛下了多少工作"
+    },
+    {
+      "key": "voice",
+      "label": "開口",
+      "init": 0,
+      "description": "你把狀況說給別人聽的程度"
+    }
+  ],
+  "start_node_id": "n_01_open",
+  "nodes": [
+    {
+      "node_id": "n_01_open",
+      "node_type": "narration",
+      "title": "開場",
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 21:17",
+        "mood": "剛要落地的疲倦"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你洗完澡，頭髮還半濕。泡麵悶了三分鐘，剛剛好。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "影片按下播放，你把腳縮上椅子——這是今天第一個完全屬於你的動作。"
+        },
+        {
+          "speaker": "sfx",
+          "style": "sfx",
+          "text": "手機在桌面上亮起來，嗡了一聲。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "螢幕上是四個字：林經理。"
+        }
+      ],
+      "next_node_id": "n_01_message"
+    },
+    {
+      "node_id": "n_01_message",
+      "node_type": "narration",
+      "title": "訊息",
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 21:17",
+        "mood": "胃往下沉"
+      },
+      "dialogue": [
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "不好意思這麼晚打擾～客戶臨時把會議提前到明天早上十點"
+        },
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "簡報第三到第五頁要照新的方向重做，你方便看一下嗎？"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "麵還在冒煙。你看著那兩行字，看了大概十秒。"
+        }
+      ],
+      "next_node_id": "n_01_d1"
+    },
+    {
+      "node_id": "n_01_d1",
+      "node_type": "decision",
+      "title": "決策點一：九點十七分的那隻手",
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 21:18",
+        "mood": "手指懸在螢幕上方"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你的手指懸在螢幕上方。"
+        }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_01_d1_now",
+          "text": "打開電腦，現在就處理",
+          "hint": "先把事情解決，心才放得下來",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你把筆電掀開。開機的風扇聲，和影片的聲音疊在一起，你伸手把影片關掉。"
+            },
+            {
+              "speaker": "you",
+              "style": "message",
+              "text": "好的，我現在看一下"
+            },
+            {
+              "speaker": "lin",
+              "style": "message",
+              "text": "太好了，麻煩你囉🙏"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "麵在旁邊，慢慢變成一碗冷掉的、糊掉的東西。"
+            }
+          ],
+          "consequence": "你在九點十八分重新上工，今晚不再屬於你。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_fast_yes",
+            "title": "心聲線索",
+            "text": "你回得很快。快到你自己都還沒問過：我現在想做這件事嗎？「立刻答應」有時候不是因為願意，是因為那樣最不用面對對方的反應。"
+          },
+          "state_effects": [
+            {
+              "var": "duty",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "care",
+              "op": "add",
+              "value": -1
+            }
+          ],
+          "tags": [
+            "take_on"
+          ],
+          "next_node_id": "n_01_a1"
+        },
+        {
+          "choice_id": "c_01_d1_tomorrow",
+          "text": "回覆：明天早上八點我進公司第一件事處理",
+          "hint": "不是拒絕，是把它放回上班時間",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "message",
+              "text": "經理，我明天早上八點到公司，第一件事就處理，十點前一定給你"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你按下送出。訊息旁邊的「已讀」亮起來。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "然後，沒有了。三分鐘，對話框安安靜靜。"
+            },
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "你發現自己一直盯著那三個字看。已讀。然後呢。"
+            }
+          ],
+          "consequence": "你把時間劃回上班時段，也把一段不確定留給了自己。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_name_the_time",
+            "title": "心聲線索",
+            "text": "你給了一個具體時間，而不是一句「不行」。這通常比較容易被接受，但你也付出了代價——接下來那三分鐘的安靜，是你自己在撐。"
+          },
+          "state_effects": [
+            {
+              "var": "boundary",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "voice",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "boundary_clear",
+            "speak"
+          ],
+          "next_node_id": "n_01_b1"
+        },
+        {
+          "choice_id": "c_01_d1_pause",
+          "text": "先不回，把手機翻面",
+          "hint": "今天到此為止，明天的事明天再說",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你把手機蓋在桌上，螢幕朝下。影片繼續播。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "十分鐘後你發現，剛剛那一段你一句都沒聽進去。"
+            },
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "人在這裡，腦子在那則訊息裡。"
+            }
+          ],
+          "consequence": "你沒有回，但那則訊息整個晚上都在房間裡。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_face_down",
+            "title": "心聲線索",
+            "text": "把手機翻面，是身體先替你做的決定。它在說：我今天已經結束了。只是「不回」還不等於「放下」——沒說出口的那部分，常常由你自己扛著。"
+          },
+          "state_effects": [
+            {
+              "var": "care",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "boundary",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "pause"
+          ],
+          "next_node_id": "n_01_c1"
+        }
+      ]
+    },
+    {
+      "node_id": "n_01_a1",
+      "node_type": "narration",
+      "title": "分支 A：九點十八分開工",
+      "scene": {
+        "location": "租屋處書桌",
+        "time": "星期三 22:05",
+        "mood": "進入狀態，但不是自己想進的那種"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "第三頁改完，十點零五分。第四頁的圖表要重拉，你找不到原始檔。"
+        },
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "辛苦了！啊對，順便第七頁的數字也更新一下好嗎"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "第七頁。剛剛說的是第三到第五頁。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你沒有說什麼。你把第七頁打開。"
+        }
+      ],
+      "next_node_id": "n_01_merge1"
+    },
+    {
+      "node_id": "n_01_b1",
+      "node_type": "narration",
+      "title": "分支 B：三分鐘的安靜之後",
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 21:24",
+        "mood": "等待"
+      },
+      "dialogue": [
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "明天十點就要用，八點會不會有點趕？"
+        },
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "我是怕來不及啦，你評估看看"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "「你評估看看」——這句話把球丟回來了，而且丟得很輕，輕到你很難不接。"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "他沒有命令你。他只是擔心。所以如果事情沒做好，就是你的評估有問題。"
+        }
+      ],
+      "next_node_id": "n_01_merge1"
+    },
+    {
+      "node_id": "n_01_c1",
+      "node_type": "narration",
+      "title": "分支 C：翻面之後的四十分鐘",
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 22:01",
+        "mood": "心不在焉"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "四十分鐘後，你翻回手機。兩則新訊息。"
+        },
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "在嗎？"
+        },
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "如果今天真的不方便，我再問問怡潔"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "最後那句，你讀了兩次。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "它聽起來很體貼。它也剛好讓你知道：有人可以取代你。"
+        }
+      ],
+      "next_node_id": "n_01_merge1"
+    },
+    {
+      "node_id": "n_01_merge1",
+      "node_type": "converge",
+      "title": "匯流一：十點半，對話框還開著",
+      "converge_from": [
+        "n_01_a1",
+        "n_01_b1",
+        "n_01_c1"
+      ],
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 22:30",
+        "mood": "今晚不會自己結束"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "十點半。不管你剛剛怎麼做，有一件事沒有變——"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "明天早上十點，那份簡報要上場。而現在，它還不是能上場的樣子。"
+        }
+      ],
+      "conditional_dialogue": [
+        {
+          "condition": {
+            "tag": "take_on",
+            "op": ">=",
+            "count": 1
+          },
+          "dialogue": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你已經做了一個半小時。眼睛開始酸，第四頁才做到一半。"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "tag": "boundary_clear",
+            "op": ">=",
+            "count": 1
+          },
+          "dialogue": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你還沒動手。但你也還沒真的放下——你在想明天八點到十點，夠不夠。"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "tag": "pause",
+            "op": ">=",
+            "count": 1
+          },
+          "dialogue": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你一個字都還沒回。手機在手上，螢幕的光打在你臉上。"
+            }
+          ]
+        }
+      ],
+      "next_node_id": "n_01_d2"
+    },
+    {
+      "node_id": "n_01_d2",
+      "node_type": "decision",
+      "title": "決策點二：這一夜怎麼過",
+      "scene": {
+        "location": "租屋處",
+        "time": "星期三 22:31",
+        "mood": "要為整個晚上做一個決定"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你看了一眼時間，再看一眼明天的行程。"
+        }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_01_d2_allnight",
+          "text": "熬夜，做到好為止",
+          "hint": "做完才睡得著",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "一點四十分，你存檔。第三到第五頁，還有第七頁，全部重做完。"
+            },
+            {
+              "speaker": "you",
+              "style": "message",
+              "text": "經理，都改好了，檔案放雲端"
+            },
+            {
+              "speaker": "lin",
+              "style": "message",
+              "text": "👍"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "一個讚。你盯著那個圖示看了一下，然後把筆電闔上。"
+            }
+          ],
+          "consequence": "你用自己的睡眠把事情補起來，沒有人知道這件事花了你多少。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_invisible_cost",
+            "title": "心聲線索",
+            "text": "你把缺口補起來了，而且補得很好——好到從外面完全看不出有過缺口。這是很多人累垮的方式：成本全部由你一個人默默吸收，於是下一次，標準就從這裡開始算。"
+          },
+          "state_effects": [
+            {
+              "var": "duty",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "care",
+              "op": "add",
+              "value": -2
+            }
+          ],
+          "tags": [
+            "take_on"
+          ],
+          "next_node_id": "n_01_a2"
+        },
+        {
+          "choice_id": "c_01_d2_say_no",
+          "text": "告訴他：今晚我沒辦法，明早八點給你",
+          "hint": "把今晚還給自己",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "message",
+              "text": "經理，今晚我沒辦法處理。我明早八點進公司做，十點前給你。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你看著那行字，手指在送出鍵上停了兩秒，然後按下去。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "心跳有點快。這種快，和熬夜的快不太一樣。"
+            },
+            {
+              "speaker": "lin",
+              "style": "message",
+              "text": "好，那就辛苦你明天早一點"
+            },
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "⋯⋯就這樣？"
+            }
+          ],
+          "consequence": "你把「今晚不行」說出口了，而天沒有塌下來。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_sky_didnt_fall",
+            "title": "心聲線索",
+            "text": "說出「今晚我沒辦法」之後，你心裡最大的那個預期——對方會生氣、會失望、會記住——有沒有真的發生？很多界線之所以難畫，不是因為對方不同意，是因為我們先在腦中演過一次最壞的版本。"
+          },
+          "state_effects": [
+            {
+              "var": "boundary",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "voice",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "boundary_clear",
+            "speak"
+          ],
+          "next_node_id": "n_01_b2"
+        },
+        {
+          "choice_id": "c_01_d2_partial",
+          "text": "先傳一版大綱過去，細節明早補",
+          "hint": "給出一半，留下一半",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你花二十五分鐘，把新方向的架構列成三頁純文字，沒有排版、沒有配圖。"
+            },
+            {
+              "speaker": "you",
+              "style": "message",
+              "text": "經理，新方向的架構先給你，你看方向對不對。排版和圖我明早八點來做，十點前完成。"
+            },
+            {
+              "speaker": "lin",
+              "style": "message",
+              "text": "喔喔這樣很清楚，方向就這樣，明天再美化就好"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "十一點，你刷牙。鏡子裡的人看起來還行。"
+            }
+          ],
+          "consequence": "你讓這件事變成一件可以討論的事，而不是一個必須獨自完成的指令。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_half_now",
+            "title": "心聲線索",
+            "text": "你沒有全收，也沒有全擋，你把事情切開了。這需要你先知道「哪一半現在真的需要」——這是一種很花腦力的體貼，記得它也是工作量。"
+          },
+          "state_effects": [
+            {
+              "var": "voice",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "duty",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "var": "boundary",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "negotiate",
+            "speak"
+          ],
+          "next_node_id": "n_01_c2"
+        }
+      ]
+    },
+    {
+      "node_id": "n_01_a2",
+      "node_type": "narration",
+      "title": "分支：凌晨一點四十分之後",
+      "scene": {
+        "location": "床上",
+        "time": "凌晨 01:52",
+        "mood": "過度清醒"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "躺下之後，腦子還在跑第四頁的圖表。你翻了三次身。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "最後一次看時間是兩點二十。鬧鐘設在六點五十。"
+        }
+      ],
+      "next_node_id": "n_01_merge2"
+    },
+    {
+      "node_id": "n_01_b2",
+      "node_type": "narration",
+      "title": "分支：一句話之後的安靜",
+      "scene": {
+        "location": "床上",
+        "time": "星期三 23:10",
+        "mood": "鬆了一點，又還沒完全鬆"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你十一點十分上床。難得的早。"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "但你還是想了一下：他那句『那就辛苦你明天早一點』，到底是不是在不高興。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "想著想著，你睡著了。"
+        }
+      ],
+      "next_node_id": "n_01_merge2"
+    },
+    {
+      "node_id": "n_01_c2",
+      "node_type": "narration",
+      "title": "分支：十一點的鏡子",
+      "scene": {
+        "location": "浴室／床上",
+        "time": "星期三 23:00",
+        "mood": "事情還在，但今晚結束了"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你設了兩個鬧鐘，六點四十、六點五十。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "事情還沒做完，但你知道明天早上那兩個小時要做什麼。這種「知道」，讓人睡得著。"
+        }
+      ],
+      "next_node_id": "n_01_merge2"
+    },
+    {
+      "node_id": "n_01_merge2",
+      "node_type": "converge",
+      "title": "匯流二：星期四早上",
+      "converge_from": [
+        "n_01_a2",
+        "n_01_b2",
+        "n_01_c2"
+      ],
+      "scene": {
+        "location": "公司",
+        "time": "星期四 09:58",
+        "mood": "會議前兩分鐘"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "九點五十八分，會議室。投影機嗡嗡作響。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "簡報順利跑完。客戶點頭，說第四頁的圖很清楚。"
+        },
+        {
+          "speaker": "lin",
+          "style": "line",
+          "text": "這是我們團隊昨天晚上趕出來的，謝謝大家配合。"
+        }
+      ],
+      "next_node_id": "n_01_morning_check"
+    },
+    {
+      "node_id": "n_01_morning_check",
+      "node_type": "conditional",
+      "title": "條件分流：你是用什麼狀態坐在這裡的",
+      "conditions": [
+        {
+          "condition": {
+            "var": "care",
+            "op": "<=",
+            "value": -2
+          },
+          "next_node_id": "n_01_m_tired",
+          "note": "睡眠被大量犧牲"
+        },
+        {
+          "condition": {
+            "var": "boundary",
+            "op": ">=",
+            "value": 3
+          },
+          "next_node_id": "n_01_m_steady",
+          "note": "界線清楚地走到這裡"
+        }
+      ],
+      "default_next_node_id": "n_01_m_middle"
+    },
+    {
+      "node_id": "n_01_m_tired",
+      "node_type": "narration",
+      "title": "早上 A：撐著的那種清醒",
+      "scene": {
+        "location": "會議室",
+        "time": "星期四 10:40",
+        "mood": "亢奮之後的空"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你聽見「昨天晚上趕出來的」，身體有一瞬間的反應——不是生氣，比較像有什麼東西悶住了。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "散會後怡潔走過來，手上兩杯咖啡，遞給你一杯。"
+        },
+        {
+          "speaker": "yijie",
+          "style": "line",
+          "text": "你昨天幾點睡？"
+        },
+        {
+          "speaker": "yijie",
+          "style": "line",
+          "text": "你的黑眼圈在跟我講話。"
+        }
+      ],
+      "next_node_id": "n_01_d3"
+    },
+    {
+      "node_id": "n_01_m_steady",
+      "node_type": "narration",
+      "title": "早上 B：睡飽的那種清楚",
+      "scene": {
+        "location": "會議室",
+        "time": "星期四 10:40",
+        "mood": "腳踏在地上"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你聽見「昨天晚上趕出來的」，心裡清楚地知道：昨天晚上，你在家裡。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "那句話沒有騙人，只是也沒有那麼準。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "散會後怡潔走過來，遞給你一杯咖啡。"
+        },
+        {
+          "speaker": "yijie",
+          "style": "line",
+          "text": "昨天經理也傳給我了。我十一點才看到，就沒回。"
+        },
+        {
+          "speaker": "yijie",
+          "style": "line",
+          "text": "他今天也沒說什麼啊。"
+        }
+      ],
+      "next_node_id": "n_01_d3"
+    },
+    {
+      "node_id": "n_01_m_middle",
+      "node_type": "narration",
+      "title": "早上 C：中間的那種早上",
+      "scene": {
+        "location": "會議室",
+        "time": "星期四 10:40",
+        "mood": "還好，但說不上好"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "會議結束，客戶滿意。你收起筆電，動作比平常慢一點。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "怡潔走過來，遞給你一杯咖啡。"
+        },
+        {
+          "speaker": "yijie",
+          "style": "line",
+          "text": "昨天那個急件，他幾點傳給你的？"
+        },
+        {
+          "speaker": "yijie",
+          "style": "line",
+          "text": "我是問一下而已。我每次都裝沒看到。"
+        }
+      ],
+      "next_node_id": "n_01_d3"
+    },
+    {
+      "node_id": "n_01_d3",
+      "node_type": "decision",
+      "title": "決策點三：會議之後",
+      "scene": {
+        "location": "茶水間",
+        "time": "星期四 10:45",
+        "mood": "一個可以說話的空檔"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "茶水間只有你們兩個。林經理的辦公室就在走廊另一頭，門開著。"
+        }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_01_d3_talk",
+          "text": "去找林經理，談晚上傳訊息這件事",
+          "hint": "把這件事放到桌面上",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你敲了門。林經理抬頭，示意你坐。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "經理，昨天的案子有趕上，我想跟你討論一下下班之後的訊息。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "我晚上九點之後通常不會開電腦。如果是隔天早上要用的，可以在下班前跟我說嗎？真的臨時的，我們約一個做法。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "林經理愣了一下。那一下有點長。"
+            },
+            {
+              "speaker": "lin",
+              "style": "line",
+              "text": "⋯⋯喔。我沒想過這個。我自己都半夜在弄，就以為大家都一樣。"
+            },
+            {
+              "speaker": "lin",
+              "style": "line",
+              "text": "那這樣好了，真的急的我打電話，其他的我標個『不急』。"
+            }
+          ],
+          "consequence": "你把一次性的忍耐，換成了一條兩個人都看得到的規則。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_rule_not_mood",
+            "title": "心聲線索",
+            "text": "你談的不是「昨天那件事」，是「以後這類事情怎麼辦」。前者容易變成誰對誰錯，後者是在建立一個規則。多數人卡住的地方是：以為要先生氣，才有資格開口。"
+          },
+          "state_effects": [
+            {
+              "var": "boundary",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "voice",
+              "op": "add",
+              "value": 2
+            }
+          ],
+          "tags": [
+            "boundary_clear",
+            "speak",
+            "negotiate"
+          ],
+          "next_node_id": "n_01_a3"
+        },
+        {
+          "choice_id": "c_01_d3_peer",
+          "text": "先跟怡潔講，問她怎麼處理",
+          "hint": "找一個懂的人說說",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "九點十七分傳的。我⋯⋯其實有點不知道怎麼辦。"
+            },
+            {
+              "speaker": "yijie",
+              "style": "line",
+              "text": "九點十七，真的假的。"
+            },
+            {
+              "speaker": "yijie",
+              "style": "line",
+              "text": "我跟你說，我前兩年也每則都回。後來有一次我重感冒沒回，結果什麼事都沒發生。"
+            },
+            {
+              "speaker": "yijie",
+              "style": "line",
+              "text": "他不是壞人啦，他只是沒在管時間。你不講，他就不會知道。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你笑了一下。原來不是只有你。"
+            }
+          ],
+          "consequence": "你知道了這不是你一個人的問題，但規則還沒有改變。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_not_alone",
+            "title": "心聲線索",
+            "text": "「原來不是只有我」——這句話本身就有效果。被理解會讓事情變得比較可以承受。它和「事情被改變」是兩件事，兩件都需要，只是順序可以由你決定。"
+          },
+          "state_effects": [
+            {
+              "var": "voice",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "var": "care",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "seek_support"
+          ],
+          "next_node_id": "n_01_b3"
+        },
+        {
+          "choice_id": "c_01_d3_silent",
+          "text": "不提了，事情過去就好",
+          "hint": "這次也撐過來了",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "還好啦，沒什麼。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "怡潔看了你一眼，沒有追問，點點頭就走了。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你把咖啡喝完。杯底有點甜。"
+            },
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "反正做完了。下次再說。"
+            }
+          ],
+          "consequence": "這件事沒有留下任何紀錄，包括在林經理那裡。",
+          "inner_voice_clue": {
+            "clue_id": "clue_01_next_time",
+            "title": "心聲線索",
+            "text": "「下次再說」是很合理的選擇——你累了，而且事情真的過去了。只是有一件事值得記得：如果這次沒有留下痕跡，對方那邊的預設值，就會停在「這樣是可以的」。"
+          },
+          "state_effects": [
+            {
+              "var": "duty",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "swallow"
+          ],
+          "next_node_id": "n_01_c3"
+        }
+      ]
+    },
+    {
+      "node_id": "n_01_a3",
+      "node_type": "narration",
+      "title": "分支：規則被寫下來之後",
+      "scene": {
+        "location": "座位",
+        "time": "星期四 11:20",
+        "mood": "一種陌生的輕"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "下午，群組裡多了一則公告。"
+        },
+        {
+          "speaker": "lin",
+          "style": "message",
+          "text": "各位，以後下班後的訊息，如果我沒有特別註明【急】，都可以隔天上班再處理。真的很急我會打電話。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "下面跳出三個讚，一個愛心。怡潔傳了一個貼圖給你，是一隻貓舉牌：恭喜。"
+        }
+      ],
+      "next_node_id": "n_01_ending_check"
+    },
+    {
+      "node_id": "n_01_b3",
+      "node_type": "narration",
+      "title": "分支：有人陪著的那種知道",
+      "scene": {
+        "location": "座位",
+        "time": "星期四 11:20",
+        "mood": "沒解決，但沒那麼重"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "回到座位，你把手機的工作群組通知改成靜音。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "只是靜音，沒有退出，也沒有跟誰說。"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "這是一個很小的動作。小到沒有人會注意到。"
+        }
+      ],
+      "next_node_id": "n_01_ending_check"
+    },
+    {
+      "node_id": "n_01_c3",
+      "node_type": "narration",
+      "title": "分支：沒有留下痕跡的那一天",
+      "scene": {
+        "location": "座位",
+        "time": "星期四 11:20",
+        "mood": "平靜"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "下午的工作很順。你把昨天沒吃的那碗麵倒掉，洗了碗。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "一切回到原來的樣子。"
+        }
+      ],
+      "next_node_id": "n_01_ending_check"
+    },
+    {
+      "node_id": "n_01_ending_check",
+      "node_type": "conditional",
+      "title": "結局判定",
+      "conditions": [
+        {
+          "condition": {
+            "all": [
+              {
+                "var": "boundary",
+                "op": ">=",
+                "value": 5
+              },
+              {
+                "var": "voice",
+                "op": ">=",
+                "value": 3
+              }
+            ]
+          },
+          "next_node_id": "n_01_e_line",
+          "note": "多次表達界線，且有把事情說出口"
+        },
+        {
+          "condition": {
+            "any": [
+              {
+                "tag": "negotiate",
+                "op": ">=",
+                "count": 2
+              },
+              {
+                "all": [
+                  {
+                    "var": "voice",
+                    "op": ">=",
+                    "value": 3
+                  },
+                  {
+                    "var": "boundary",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            ]
+          },
+          "next_node_id": "n_01_e_deal",
+          "note": "以協商方式處理"
+        },
+        {
+          "condition": {
+            "all": [
+              {
+                "tag": "take_on",
+                "op": ">=",
+                "count": 2
+              },
+              {
+                "var": "care",
+                "op": "<=",
+                "value": -1
+              }
+            ]
+          },
+          "next_node_id": "n_01_e_carry",
+          "note": "全程獨自扛下"
+        },
+        {
+          "condition": {
+            "all": [
+              {
+                "var": "care",
+                "op": ">=",
+                "value": 2
+              },
+              {
+                "var": "boundary",
+                "op": ">=",
+                "value": 2
+              }
+            ]
+          },
+          "next_node_id": "n_01_e_rest",
+          "note": "把休息留下來了"
+        }
+      ],
+      "default_next_node_id": "n_01_e_quiet"
+    },
+    {
+      "node_id": "n_01_e_line",
+      "node_type": "ending",
+      "title": "結局：一條畫出來的線",
+      "ending_id": "e_01_line"
+    },
+    {
+      "node_id": "n_01_e_deal",
+      "node_type": "ending",
+      "title": "結局：一個說得出口的版本",
+      "ending_id": "e_01_deal"
+    },
+    {
+      "node_id": "n_01_e_carry",
+      "node_type": "ending",
+      "title": "結局：你把它扛完了",
+      "ending_id": "e_01_carry"
+    },
+    {
+      "node_id": "n_01_e_rest",
+      "node_type": "ending",
+      "title": "結局：先睡再說",
+      "ending_id": "e_01_rest"
+    },
+    {
+      "node_id": "n_01_e_quiet",
+      "node_type": "ending",
+      "title": "結局：沒有說出口的那句",
+      "ending_id": "e_01_quiet"
+    }
+  ],
+  "endings": [
+    {
+      "ending_id": "e_01_line",
+      "title": "一條畫出來的線",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "星期五晚上九點十七分，手機沒有亮。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你注意到了這件事，這表示你其實一直在等它亮。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "泡麵悶三分鐘，剛剛好。這次你把整集看完了。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你把「可以」和「不行」都說出口了。",
+        "closing": "界線不是一次畫完的。它是每一次你開口之後，才慢慢變成真的。"
+      },
+      "tags": [
+        "boundary",
+        "spoken"
+      ]
+    },
+    {
+      "ending_id": "e_01_deal",
+      "title": "一個說得出口的版本",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "後來你發現，你和林經理之間多了一種講法：「這個我今天可以做到這裡，剩下的明天早上。」"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "不是每次都順利。但至少，它變成了一件可以談的事。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你沒有全部收下，也沒有一口回絕。",
+        "closing": "能切開的事情，就不必整塊吞下去。「我可以做到這裡」也是一種完整的回答。"
+      },
+      "tags": [
+        "negotiate",
+        "spoken"
+      ]
+    },
+    {
+      "ending_id": "e_01_carry",
+      "title": "你把它扛完了",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "星期五，林經理在群組裡說：這週辛苦了，大家週末好好休息。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你看著那句話，想起星期三晚上那碗沒吃的麵。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "沒有人做錯什麼。事情都完成了。你只是有點說不上來的累。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你用自己的時間和睡眠，把缺口補起來了。",
+        "closing": "你確實把事情做完了，這是真的。只是補缺口的成本，目前只有你自己知道——這件事也是真的。"
+      },
+      "tags": [
+        "carry",
+        "invisible_cost"
+      ]
+    },
+    {
+      "ending_id": "e_01_rest",
+      "title": "先睡再說",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "那天晚上你睡了七個半小時。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "事情沒有全部解決，有些話也還沒說出口。但你是用一個睡飽的身體，去面對星期四的。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "這件事沒有出現在任何一份工作報告裡。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你把休息留給了自己。",
+        "closing": "休息不需要先做完所有事才配擁有。你先把自己接住了，這不是逃避，是補給。"
+      },
+      "tags": [
+        "self_care",
+        "boundary"
+      ]
+    },
+    {
+      "ending_id": "e_01_quiet",
+      "title": "沒有說出口的那句",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "一切回到原來的樣子。沒有人不開心，沒有事情出錯。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "只有一句話留在你身上，它一直沒有找到可以說出口的地方。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "下個星期三晚上九點十七分，手機又亮了。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，有些話你留在心裡了。",
+        "closing": "留在心裡不等於做錯。只是那句話還在，它會等下一個九點十七分。你隨時可以回來，換一個方式走走看。"
+      },
+      "tags": [
+        "silent",
+        "pending"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "r_01_boundary",
+      "name": "立界線航線",
+      "priority": 1,
+      "meaning": "在故事中至少兩次主動把『可以』與『不行』說出口，或界線值累積到高點。重點不是拒絕，而是讓對方知道你的時間長什麼樣子。",
+      "narrative_explain": "你走的是「立界線航線」。\n這條航線的特徵不是強硬，是具體：你給出了時間、範圍，或是一條以後大家都能照著走的規則。\n畫界線最難的部分通常不在對方，而在按下送出之前的那兩秒。這次你按下去了。",
+      "rule": {
+        "any": [
+          {
+            "var": "boundary",
+            "op": ">=",
+            "value": 5
+          },
+          {
+            "tag": "boundary_clear",
+            "op": ">=",
+            "count": 2
+          }
+        ]
+      },
+      "practice_card_id": "pc_01_boundary",
+      "island_growth_id": "ig_01_boundary"
+    },
+    {
+      "route_id": "r_01_dialogue",
+      "name": "協商航線",
+      "priority": 2,
+      "meaning": "沒有全部收下，也沒有一口回絕，而是把事情切開、說明、或找人討論。重點是讓事情從『獨自承擔的指令』變成『可以談的事』。",
+      "narrative_explain": "你走的是「協商航線」。\n你沒有把事情整塊吞下去，也沒有把門關上，而是試著找出一個雙方都活得下去的版本。\n這種做法很花腦力——你得先判斷哪一半現在真的需要。這份判斷本身就是工作量，值得被你自己看見。",
+      "rule": {
+        "any": [
+          {
+            "tag": "negotiate",
+            "op": ">=",
+            "count": 1
+          },
+          {
+            "var": "voice",
+            "op": ">=",
+            "value": 3
+          },
+          {
+            "tag": "speak",
+            "op": ">=",
+            "count": 2
+          }
+        ]
+      },
+      "practice_card_id": "pc_01_dialogue",
+      "island_growth_id": "ig_01_dialogue"
+    },
+    {
+      "route_id": "r_01_carry",
+      "name": "接住航線",
+      "priority": 3,
+      "meaning": "保底航線。以承擔、沉默或獨自完成為主的所有組合都落在這裡。不代表做錯，代表這一次成本主要由你吸收。",
+      "narrative_explain": "你走的是「接住航線」。\n事情沒有掉下來，因為你在下面接著。這份可靠是真的，完成度也是真的。\n唯一沒有被記錄下來的，是接住它花了你多少——那個部分目前只有你自己知道。知道，是改變的第一步。",
+      "rule": {
+        "always": true
+      },
+      "practice_card_id": "pc_01_carry",
+      "island_growth_id": "ig_01_carry"
+    }
+  ],
+  "replay_hints": [
+    "第一個決策點如果換一個做法，林經理在十點之後傳來的訊息會完全不同。",
+    "星期四早上的場景有三個版本，取決於你前一晚睡了多久、以及有沒有把話說出口。",
+    "怡潔在茶水間說的話，會隨著你走過來的路徑而改變——她不是每次都說同一句。",
+    "這篇故事有五個固定結局與三條航線，其中「先睡再說」只有在你兩次都把時間留給自己時才會出現。"
+  ]
+}

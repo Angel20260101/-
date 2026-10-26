@@ -1,0 +1,604 @@
+{
+  "story_id": "story_03_three_am_alarm",
+  "version": "1.0.0",
+  "schema_version": "1.0.0",
+  "title": "凌晨三點的警示燈",
+  "subtitle": "輪班現場突發狀況",
+  "island_id": "island_night",
+  "order": 3,
+  "theme": "壓力、責任與求援",
+  "logline": "黃燈轉起來的時候，線上只有三個人。原本應該有五個。",
+  "estimated_minutes": 3,
+  "content_notes": ["夜班", "工安風險", "人力不足"],
+  "setting": {
+    "location": "物流分揀中心，二號線。鐵皮屋頂，日光燈，輸送帶的聲音從來沒停過",
+    "time": "星期四 凌晨 03:12",
+    "conflict": "七點的貨要出。人不夠。而剛剛那個聲音，不是正常的聲音。"
+  },
+  "characters": [
+    { "character_id": "you",   "name": "你",     "role": "夜班組員", "profile": "做夜班兩年。知道哪一段輸送帶會在濕氣重的時候打滑。", "voice": "工作時話少，動作快" },
+    { "character_id": "hao",   "name": "阿豪",   "role": "新人",     "profile": "來三個禮拜。很認真，認真到有時候會做超出自己該做的事。", "voice": "語尾會上揚，常常問『這樣對嗎』" },
+    { "character_id": "huang", "name": "黃主任", "role": "值班主管", "profile": "住在廠區二十分鐘外。電話永遠會接，但人不一定會來。", "voice": "睡醒的聲音，講話先吸一口氣" },
+    { "character_id": "mei",   "name": "美姐",   "role": "早班組長", "profile": "做了十一年。交接本上她的字很用力，用力到背面會凸起來。", "voice": "直接，不繞" }
+  ],
+  "state_vars": [
+    { "key": "help",   "label": "求援",     "init": 0, "description": "你讓別人加入或接手的程度" },
+    { "key": "safety", "label": "安全把關", "init": 0, "description": "你把安全放在進度前面的程度" },
+    { "key": "hold",   "label": "獨撐",     "init": 0, "description": "你自己扛下來的部分" },
+    { "key": "voice",  "label": "開口",     "init": 0, "description": "你把狀況說出來、留下紀錄的程度" }
+  ],
+  "start_node_id": "n_03_open",
+  "nodes": [
+    {
+      "node_id": "n_03_open",
+      "node_type": "narration",
+      "title": "開場",
+      "scene": { "location": "二號線", "time": "凌晨 03:12", "mood": "規律到讓人恍神" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "凌晨三點十二分。輸送帶的聲音像一條河，流了六個小時。" },
+        { "speaker": "narration", "style": "narration", "text": "今晚該有五個人。有兩個請假，調不到人。" },
+        { "speaker": "narration", "style": "narration", "text": "你、阿豪，還有在另一頭盤點的老張。七點的貨要出，進度剛好卡在一半。" }
+      ],
+      "next_node_id": "n_03_alarm"
+    },
+    {
+      "node_id": "n_03_alarm",
+      "node_type": "narration",
+      "title": "警示燈",
+      "scene": { "location": "二號線中段", "time": "凌晨 03:14", "mood": "聲音不對" },
+      "dialogue": [
+        { "speaker": "sfx", "style": "sfx", "text": "喀。喀喀。" },
+        { "speaker": "narration", "style": "narration", "text": "聲音變了。不是平常那條河的聲音。" },
+        { "speaker": "narration", "style": "narration", "text": "中段的黃燈轉起來，一圈一圈打在鐵皮屋頂上。" },
+        { "speaker": "narration", "style": "narration", "text": "一個箱子歪在軌道接縫上，半個身體懸空，後面的箱子正在一個一個頂上去。" },
+        { "speaker": "narration", "style": "narration", "text": "箱子側面印著：易碎・玻璃。" },
+        { "speaker": "hao", "style": "line", "text": "欸！這個是不是要——" },
+        { "speaker": "narration", "style": "narration", "text": "阿豪已經往前跨了一步，手伸出去。" }
+      ],
+      "next_node_id": "n_03_d1"
+    },
+    {
+      "node_id": "n_03_d1",
+      "node_type": "decision",
+      "title": "決策點一：三秒鐘",
+      "scene": { "location": "二號線中段", "time": "凌晨 03:14", "mood": "腎上腺素" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "急停鈕在你左手邊兩公尺，紅色的蘑菇頭。按下去，整條線停，進度歸零重啟要十五分鐘。" }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_03_d1_fix",
+          "text": "自己先上去把箱子扶正",
+          "hint": "線不要停，快一點就好",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "你退開，我來。" },
+            { "speaker": "narration", "style": "narration", "text": "你側身跨到檢修踏板上，一手撐著護欄，一手去搆那個箱子。" },
+            { "speaker": "narration", "style": "narration", "text": "輸送帶在你腳邊繼續跑。你抓到箱子的邊角，用力一推——" },
+            { "speaker": "sfx", "style": "sfx", "text": "咚。" },
+            { "speaker": "narration", "style": "narration", "text": "箱子歸位，後面的隊伍重新流動。黃燈熄了。" },
+            { "speaker": "narration", "style": "narration", "text": "你跳下踏板，手心全是汗。整件事花了二十二秒。" }
+          ],
+          "consequence": "線沒有停，進度保住了，而你剛剛在運轉中的機台上伸了手。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_twenty_two_seconds",
+            "title": "心聲線索",
+            "text": "你很熟練，所以你知道這樣做得到。熟練是真的，風險也是真的——這兩件事不衝突。值得問自己一句：剛剛那二十二秒，是我選的，還是進度幫我選的？"
+          },
+          "state_effects": [
+            { "var": "hold", "op": "add", "value": 2 },
+            { "var": "safety", "op": "add", "value": -1 }
+          ],
+          "tags": ["hold"],
+          "next_node_id": "n_03_a1"
+        },
+        {
+          "choice_id": "c_03_d1_stop",
+          "text": "立刻按下急停，再通報",
+          "hint": "先停，其他的之後再說",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "阿豪，手收回來！" },
+            { "speaker": "narration", "style": "narration", "text": "你兩步跨過去，手掌拍在紅色蘑菇頭上。" },
+            { "speaker": "sfx", "style": "sfx", "text": "整條線慢下來，停住。那條河第一次安靜。" },
+            { "speaker": "narration", "style": "narration", "text": "安靜得你耳鳴。阿豪站在原地，手還半舉著。" },
+            { "speaker": "hao", "style": "line", "text": "⋯⋯啊。對不起。" },
+            { "speaker": "you", "style": "line", "text": "不是你的錯。線在跑的時候不能伸手，這是規定。" }
+          ],
+          "consequence": "線停了，十五分鐘的進度沒了，阿豪的手還在。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_the_button",
+            "title": "心聲線索",
+            "text": "按下急停會讓你被看見——燈會亮、紀錄會留、有人會問為什麼。不按，沒有人會知道。這就是為什麼很多人選擇不按。你按了。"
+          },
+          "state_effects": [
+            { "var": "safety", "op": "add", "value": 2 },
+            { "var": "voice", "op": "add", "value": 1 }
+          ],
+          "tags": ["safety", "speak"],
+          "next_node_id": "n_03_b1"
+        },
+        {
+          "choice_id": "c_03_d1_team",
+          "text": "叫阿豪一起處理，同時打給主任",
+          "hint": "兩個人做，而且讓上面知道",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "阿豪，按急停，我打電話。站在按鈕旁邊不要動。" },
+            { "speaker": "narration", "style": "narration", "text": "線停下來。你一邊看著那個歪掉的箱子，一邊撥號。響了四聲。" },
+            { "speaker": "huang", "style": "line", "text": "⋯⋯喂。" },
+            { "speaker": "you", "style": "line", "text": "主任，二號線中段卡箱，易碎品，我們已經急停。現在線上只有三個人。" },
+            { "speaker": "huang", "style": "line", "text": "等一下，我開個燈。" },
+            { "speaker": "narration", "style": "narration", "text": "電話那頭傳來拖鞋的聲音。" }
+          ],
+          "consequence": "線停了，人到位了，而且這件事現在不只你一個人知道。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_two_people",
+            "title": "心聲線索",
+            "text": "你同時做了兩件事：把人配好，把訊息送出去。這代表你在混亂裡還保有判斷力。現場最容易丟掉的就是這個——因為所有的壓力都在叫你趕快動手。"
+          },
+          "state_effects": [
+            { "var": "help", "op": "add", "value": 2 },
+            { "var": "safety", "op": "add", "value": 1 }
+          ],
+          "tags": ["help", "safety"],
+          "next_node_id": "n_03_c1"
+        }
+      ]
+    },
+    {
+      "node_id": "n_03_a1",
+      "node_type": "narration",
+      "title": "分支 A：沒有人看見的二十二秒",
+      "scene": { "location": "二號線", "time": "凌晨 03:16", "mood": "心跳還沒下來" },
+      "dialogue": [
+        { "speaker": "hao", "style": "line", "text": "哇⋯⋯你好厲害喔。" },
+        { "speaker": "hao", "style": "line", "text": "那下次如果我遇到，也可以這樣用嗎？" },
+        { "speaker": "narration", "style": "narration", "text": "你張開嘴，又閉上。" },
+        { "speaker": "inner", "style": "inner", "text": "他是在問一個做法。而他會照著做。" }
+      ],
+      "next_node_id": "n_03_merge1"
+    },
+    {
+      "node_id": "n_03_b1",
+      "node_type": "narration",
+      "title": "分支 B：安靜的十五分鐘",
+      "scene": { "location": "二號線", "time": "凌晨 03:20", "mood": "等重啟" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "你把箱子搬下來，玻璃沒破。系統跳出一行紅字：異常停機・需填報。" },
+        { "speaker": "narration", "style": "narration", "text": "重啟要十五分鐘。你看了一下進度條，七點的貨，開始有點危險。" },
+        { "speaker": "narration", "style": "narration", "text": "手機震動。黃主任看到停機通知了。" }
+      ],
+      "next_node_id": "n_03_merge1"
+    },
+    {
+      "node_id": "n_03_c1",
+      "node_type": "narration",
+      "title": "分支 C：電話那頭的拖鞋聲",
+      "scene": { "location": "二號線", "time": "凌晨 03:19", "mood": "等指示" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "阿豪把箱子搬下來。玻璃沒破。" },
+        { "speaker": "hao", "style": "line", "text": "剛剛我差點就伸手了。" },
+        { "speaker": "you", "style": "line", "text": "我知道。所以我才叫你去按按鈕。" },
+        { "speaker": "narration", "style": "narration", "text": "電話那頭，黃主任正在看系統的遠端畫面。" }
+      ],
+      "next_node_id": "n_03_merge1"
+    },
+    {
+      "node_id": "n_03_merge1",
+      "node_type": "converge",
+      "title": "匯流一：主任的那句話",
+      "converge_from": ["n_03_a1", "n_03_b1", "n_03_c1"],
+      "scene": { "location": "二號線", "time": "凌晨 03:24", "mood": "問題從機台轉到人" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "黃主任的聲音從電話裡出來，背景有電視的聲音被關掉。" },
+        { "speaker": "huang", "style": "line", "text": "狀況我知道了。那個接縫下禮拜排保養。" },
+        { "speaker": "huang", "style": "line", "text": "現在調不到人，派遣那邊也沒有。七點那批一定要出，客戶那邊我扛不住。" },
+        { "speaker": "huang", "style": "line", "text": "你們三個⋯⋯撐到早班，可以嗎？" },
+        { "speaker": "narration", "style": "narration", "text": "「可以嗎」三個字，聽起來像在問你。" },
+        { "speaker": "inner", "style": "inner", "text": "但如果你說不可以，接下來要處理的是什麼，你也知道。" }
+      ],
+      "next_node_id": "n_03_d2"
+    },
+    {
+      "node_id": "n_03_d2",
+      "node_type": "decision",
+      "title": "決策點二：撐到早班",
+      "scene": { "location": "二號線", "time": "凌晨 03:25", "mood": "責任落在手上" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "距離早班交接還有三小時三十五分。阿豪在旁邊等你回答。" }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_03_d2_comply",
+          "text": "說可以，三個人撐完",
+          "hint": "講出來也不會多一個人",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "好，我們處理。" },
+            { "speaker": "narration", "style": "narration", "text": "電話掛了。你轉頭，阿豪的眼睛是紅的——不是哭，是太久沒睡。" },
+            { "speaker": "narration", "style": "narration", "text": "接下來三個半小時，你們三個人做五個人的事。" },
+            { "speaker": "narration", "style": "narration", "text": "六點四十，最後一板上車。你靠在柱子上，發現自己從三點以後沒有喝過水。" }
+          ],
+          "consequence": "貨準時出了。三個人做完五個人的量，這件事沒有被記在任何地方。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_said_yes",
+            "title": "心聲線索",
+            "text": "「反正講了也不會多一個人」——這句話常常是真的。但它會慢慢變成另一句：「所以不用講」。當現場從來不回報，缺口在報表上就不存在，於是人力永遠補不到。"
+          },
+          "state_effects": [ { "var": "hold", "op": "add", "value": 2 } ],
+          "tags": ["hold"],
+          "next_node_id": "n_03_a2"
+        },
+        {
+          "choice_id": "c_03_d2_push",
+          "text": "說明風險，要求支援或降載",
+          "hint": "把現在的狀況講清楚",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "主任，我講一下現況。" },
+            { "speaker": "you", "style": "line", "text": "三個人跑完整條線，中段剛卡過一次，接縫還沒修。阿豪來三個禮拜，他的工序我要盯。" },
+            { "speaker": "you", "style": "line", "text": "我可以撐，但我要先講：這樣的條件下，再出一次狀況我處理不來。要嘛加人，要嘛減量。" },
+            { "speaker": "narration", "style": "narration", "text": "電話那頭安靜了五秒。" },
+            { "speaker": "huang", "style": "line", "text": "⋯⋯好。我過去。四十分鐘。" },
+            { "speaker": "huang", "style": "line", "text": "那批先出八成，剩下的我跟客戶談。" }
+          ],
+          "consequence": "主任進廠，出貨量調整，而你把條件講在前面了。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_two_options",
+            "title": "心聲線索",
+            "text": "你沒有說「不行」，你說的是「這樣的條件下不行」，然後給了兩個選項。這讓對方有東西可以決定。單純的拒絕會讓對方卡住，附帶選項的說明會讓事情往前。"
+          },
+          "state_effects": [
+            { "var": "help", "op": "add", "value": 2 },
+            { "var": "voice", "op": "add", "value": 1 }
+          ],
+          "tags": ["help", "speak"],
+          "next_node_id": "n_03_b2"
+        },
+        {
+          "choice_id": "c_03_d2_partial",
+          "text": "在安全前提下，只跑一半的線",
+          "hint": "能做多少做多少，但不冒險",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "主任，中段那個接縫我不敢跑。我們把中段關掉，用一號線繞。" },
+            { "speaker": "you", "style": "line", "text": "速度會慢，七點大概出得了七成。剩下的三成我整理好，給早班接。" },
+            { "speaker": "huang", "style": "line", "text": "⋯⋯七成喔。" },
+            { "speaker": "narration", "style": "narration", "text": "你聽見他在那頭吸了一口氣。" },
+            { "speaker": "huang", "style": "line", "text": "好啦。安全第一。你把沒出的那些列清楚，我早上跟客戶講。" }
+          ],
+          "consequence": "你用降速換掉了風險，缺口交給早班，而且交得清清楚楚。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_seven_tenths",
+            "title": "心聲線索",
+            "text": "七成不是失敗，是一個經過判斷的數字。最難的部分是：你得先接受「今天不會做完」，才有辦法安全地做到七成。很多現場出事，是因為沒有人願意先講出那個數字。"
+          },
+          "state_effects": [
+            { "var": "safety", "op": "add", "value": 2 },
+            { "var": "hold", "op": "add", "value": 1 }
+          ],
+          "tags": ["safety"],
+          "next_node_id": "n_03_c2"
+        }
+      ]
+    },
+    {
+      "node_id": "n_03_a2",
+      "node_type": "narration",
+      "title": "分支：六點四十的柱子",
+      "scene": { "location": "二號線", "time": "凌晨 06:40", "mood": "撐完了" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "最後一板上車，鐵捲門放下來。阿豪坐在空棧板上，整個人往後躺。" },
+        { "speaker": "hao", "style": "line", "text": "我們⋯⋯做完了喔？" },
+        { "speaker": "narration", "style": "narration", "text": "你點頭。你想說點什麼鼓勵他，但喉嚨很乾，什麼都沒出來。" }
+      ],
+      "next_node_id": "n_03_merge2"
+    },
+    {
+      "node_id": "n_03_b2",
+      "node_type": "narration",
+      "title": "分支：四十分鐘後進來的人",
+      "scene": { "location": "二號線", "time": "凌晨 04:08", "mood": "多了一個人" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "四點零八分，黃主任穿著夾克進來，頭髮亂的。他直接走到中段去看接縫。" },
+        { "speaker": "huang", "style": "line", "text": "這個⋯⋯真的不行。這個不能再跑。" },
+        { "speaker": "narration", "style": "narration", "text": "他拿手機拍了三張照。" },
+        { "speaker": "huang", "style": "line", "text": "你剛剛那通電話打得對。" }
+      ],
+      "next_node_id": "n_03_merge2"
+    },
+    {
+      "node_id": "n_03_c2",
+      "node_type": "narration",
+      "title": "分支：繞過中段的那一夜",
+      "scene": { "location": "一號線", "time": "凌晨 05:30", "mood": "慢，但穩" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "一號線比較窄，要多走十幾步。三個人輪著走，走了三個小時。" },
+        { "speaker": "narration", "style": "narration", "text": "沒有再出任何狀況。那是今晚唯一值得高興的事。" },
+        { "speaker": "narration", "style": "narration", "text": "你把沒出的三成列成清單，一箱一箱寫，寫到手痠。" }
+      ],
+      "next_node_id": "n_03_merge2"
+    },
+    {
+      "node_id": "n_03_merge2",
+      "node_type": "converge",
+      "title": "匯流二：六點五十，交接本",
+      "converge_from": ["n_03_a2", "n_03_b2", "n_03_c2"],
+      "scene": { "location": "交接台", "time": "凌晨 06:50", "mood": "天開始亮" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "鐵皮屋頂的縫透進一點灰藍色的光。早班的人陸續刷卡進來。" },
+        { "speaker": "narration", "style": "narration", "text": "交接台上放著那本藍色的本子。美姐把包包放下，拉開椅子坐下。" },
+        { "speaker": "mei", "style": "line", "text": "昨晚怎麼樣？" }
+      ],
+      "next_node_id": "n_03_mei_check"
+    },
+    {
+      "node_id": "n_03_mei_check",
+      "node_type": "conditional",
+      "title": "條件分流：美姐看到的現場",
+      "conditions": [
+        { "condition": { "var": "safety", "op": ">=", "value": 3 }, "next_node_id": "n_03_m_safe", "note": "安全處置明顯" },
+        { "condition": { "var": "help", "op": ">=", "value": 2 }, "next_node_id": "n_03_m_backup", "note": "有把人叫進來" }
+      ],
+      "default_next_node_id": "n_03_m_quiet"
+    },
+    {
+      "node_id": "n_03_m_safe",
+      "node_type": "narration",
+      "title": "美姐 A：停機紀錄",
+      "scene": { "location": "交接台", "time": "06:51", "mood": "有跡可循" },
+      "dialogue": [
+        { "speaker": "mei", "style": "line", "text": "系統上有一筆異常停機，三點十四分。" },
+        { "speaker": "mei", "style": "line", "text": "中段對不對。那個接縫我上個月就寫過，寫了兩次。" },
+        { "speaker": "narration", "style": "narration", "text": "她翻開交接本，往前翻了幾頁，指給你看。她的字很用力。" }
+      ],
+      "next_node_id": "n_03_d3"
+    },
+    {
+      "node_id": "n_03_m_backup",
+      "node_type": "narration",
+      "title": "美姐 B：主任的車",
+      "scene": { "location": "交接台", "time": "06:51", "mood": "她注意到了" },
+      "dialogue": [
+        { "speaker": "mei", "style": "line", "text": "黃主任的車在外面。他半夜來過？" },
+        { "speaker": "narration", "style": "narration", "text": "你點頭。" },
+        { "speaker": "mei", "style": "line", "text": "他半夜會來，表示你講得夠清楚。" },
+        { "speaker": "mei", "style": "line", "text": "我做十一年，他來過三次。" }
+      ],
+      "next_node_id": "n_03_d3"
+    },
+    {
+      "node_id": "n_03_m_quiet",
+      "node_type": "narration",
+      "title": "美姐 C：看不出來的一夜",
+      "scene": { "location": "交接台", "time": "06:51", "mood": "表面上什麼都沒發生" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "美姐翻開交接本，看了一眼進度數字。" },
+        { "speaker": "mei", "style": "line", "text": "數字很漂亮欸。三個人跑出這個量。" },
+        { "speaker": "narration", "style": "narration", "text": "她抬頭看你，又看了一眼坐在棧板上的阿豪。" },
+        { "speaker": "mei", "style": "line", "text": "⋯⋯太漂亮了。" }
+      ],
+      "next_node_id": "n_03_d3"
+    },
+    {
+      "node_id": "n_03_d3",
+      "node_type": "decision",
+      "title": "決策點三：交接本上要寫什麼",
+      "scene": { "location": "交接台", "time": "06:52", "mood": "最後一個動作" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "本子攤開著。筆在旁邊。你的手很重，但這是今天最後一件事。" }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_03_d3_record",
+          "text": "寫完整異常紀錄，附上改善建議",
+          "hint": "讓這件事留下來",
+          "immediate": [
+            { "speaker": "narration", "style": "narration", "text": "你寫了半頁：三點十四分中段卡箱、易碎品、處置方式、停機時間、人力配置三人。" },
+            { "speaker": "narration", "style": "narration", "text": "最後一行你寫：建議接縫優先排修，夜班低於四人時，中段降速運轉。" },
+            { "speaker": "narration", "style": "narration", "text": "美姐讀完，拿起筆，在你那段下面簽了名。" },
+            { "speaker": "mei", "style": "line", "text": "我連署。兩個人寫，比一個人寫有用。" }
+          ],
+          "consequence": "這一夜變成一份有兩個簽名的紀錄，上面看得到。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_on_paper",
+            "title": "心聲線索",
+            "text": "寫下來不是為了追究誰。是因為沒有被寫下來的事，在制度眼裡等於沒發生過——包括你今晚承受的那些。要讓條件改變，得先讓它存在。"
+          },
+          "state_effects": [
+            { "var": "safety", "op": "add", "value": 2 },
+            { "var": "voice", "op": "add", "value": 2 }
+          ],
+          "tags": ["safety", "speak"],
+          "next_node_id": "n_03_a3"
+        },
+        {
+          "choice_id": "c_03_d3_verbal",
+          "text": "口頭交代一下就好",
+          "hint": "太累了，講完就想走",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "中段卡過一次，處理掉了。其他正常。" },
+            { "speaker": "mei", "style": "line", "text": "嗯。" },
+            { "speaker": "narration", "style": "narration", "text": "你在交接本上寫了兩個字：正常。" },
+            { "speaker": "narration", "style": "narration", "text": "筆放下的時候，你發現自己的手在抖。可能是太久沒吃東西。" }
+          ],
+          "consequence": "這一夜在紙上是「正常」。下一班的人會從正常開始。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_normal",
+            "title": "心聲線索",
+            "text": "寫下「正常」只要兩秒，寫下實情要十分鐘，而你現在連站著都很勉強。這個選擇完全可以理解。只是那兩個字會變成下一班的起點，也會變成報表上的常態。"
+          },
+          "state_effects": [ { "var": "hold", "op": "add", "value": 1 } ],
+          "tags": ["hold"],
+          "next_node_id": "n_03_b3"
+        },
+        {
+          "choice_id": "c_03_d3_tell_hao",
+          "text": "先跟阿豪說清楚：下次不要自己伸手",
+          "hint": "有些事比紀錄更急",
+          "immediate": [
+            { "speaker": "narration", "style": "narration", "text": "你走到棧板旁邊，坐下來。阿豪抬頭。" },
+            { "speaker": "you", "style": "line", "text": "阿豪，有件事我要跟你講。" },
+            { "speaker": "you", "style": "line", "text": "線在跑的時候，不管看到什麼，手都不要伸進去。先按急停，被念是我的事。" },
+            { "speaker": "hao", "style": "line", "text": "可是停了進度就⋯⋯" },
+            { "speaker": "you", "style": "line", "text": "進度可以補。手不行。" },
+            { "speaker": "narration", "style": "narration", "text": "阿豪愣了一下，然後很用力地點頭。" }
+          ],
+          "consequence": "你把一條規矩交給了他，而且是用他聽得懂的方式。",
+          "inner_voice_clue": {
+            "clue_id": "clue_03_passed_on",
+            "title": "心聲線索",
+            "text": "新人學的不是手冊，是看前輩怎麼做。你今天教他的是哪一個版本，他明年就會變成哪一個版本——而這件事通常沒有人會特地跟你說。"
+          },
+          "state_effects": [
+            { "var": "help", "op": "add", "value": 2 },
+            { "var": "voice", "op": "add", "value": 1 }
+          ],
+          "tags": ["help"],
+          "next_node_id": "n_03_c3"
+        }
+      ]
+    },
+    {
+      "node_id": "n_03_a3",
+      "node_type": "narration",
+      "title": "分支：兩個簽名",
+      "scene": { "location": "停車場", "time": "07:10", "mood": "太陽出來了" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "走出廠房，太陽已經整個出來，刺得眼睛睜不開。" },
+        { "speaker": "narration", "style": "narration", "text": "三天後，中段接縫排進保養排程，比原定提早了一週。" }
+      ],
+      "next_node_id": "n_03_ending_check"
+    },
+    {
+      "node_id": "n_03_b3",
+      "node_type": "narration",
+      "title": "分支：正常的那一天",
+      "scene": { "location": "停車場", "time": "07:10", "mood": "空白" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "你騎車回家，在紅燈前面停下來，發呆了一下，後面的車按喇叭。" },
+        { "speaker": "narration", "style": "narration", "text": "回到家躺下，天已經很亮了。窗簾擋不住。" }
+      ],
+      "next_node_id": "n_03_ending_check"
+    },
+    {
+      "node_id": "n_03_c3",
+      "node_type": "narration",
+      "title": "分支：下個月的阿豪",
+      "scene": { "location": "廠房外", "time": "07:10", "mood": "有東西傳下去了" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "下個月，一號線有個新人想伸手去撿掉下去的東西。" },
+        { "speaker": "hao", "style": "line", "text": "欸欸欸！手！先按急停！" },
+        { "speaker": "narration", "style": "narration", "text": "阿豪的聲音，你在另一頭聽到了。" }
+      ],
+      "next_node_id": "n_03_ending_check"
+    },
+    {
+      "node_id": "n_03_ending_check",
+      "node_type": "conditional",
+      "title": "結局判定",
+      "conditions": [
+        { "condition": { "all": [ { "var": "safety", "op": ">=", "value": 4 }, { "var": "voice", "op": ">=", "value": 3 } ] }, "next_node_id": "n_03_e_railing", "note": "安全處置＋留下紀錄" },
+        { "condition": { "var": "help", "op": ">=", "value": 4 }, "next_node_id": "n_03_e_line_open", "note": "持續把人拉進來" },
+        { "condition": { "all": [ { "tag": "hold", "op": ">=", "count": 2 }, { "var": "safety", "op": "<=", "value": 0 } ] }, "next_node_id": "n_03_e_alone", "note": "全程獨自承擔" },
+        { "condition": { "var": "safety", "op": ">=", "value": 3 }, "next_node_id": "n_03_e_half", "note": "安全優先但沒有留下完整紀錄" }
+      ],
+      "default_next_node_id": "n_03_e_dawn"
+    },
+    { "node_id": "n_03_e_railing",   "node_type": "ending", "title": "結局：欄杆",               "ending_id": "e_03_railing" },
+    { "node_id": "n_03_e_line_open", "node_type": "ending", "title": "結局：電話沒有掛掉",       "ending_id": "e_03_line_open" },
+    { "node_id": "n_03_e_alone",     "node_type": "ending", "title": "結局：沒有人知道的那一夜", "ending_id": "e_03_alone" },
+    { "node_id": "n_03_e_half",      "node_type": "ending", "title": "結局：只跑一半的線",       "ending_id": "e_03_half" },
+    { "node_id": "n_03_e_dawn",      "node_type": "ending", "title": "結局：天亮的時候",         "ending_id": "e_03_dawn" }
+  ],
+  "endings": [
+    {
+      "ending_id": "e_03_railing",
+      "title": "欄杆",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "兩個禮拜後，中段裝上新的護欄，轉角多了一盞警示燈。" },
+        { "speaker": "narration", "style": "narration", "text": "沒有人在群組裡講這件事。工程單上寫著：依交接紀錄辦理。" },
+        { "speaker": "narration", "style": "narration", "text": "你經過的時候，順手摸了一下那根欄杆。冰的，很穩。" }
+      ],
+      "recap": { "summary": "這一次，你把安全放在進度前面，而且把它寫下來了。", "closing": "現場最珍貴的不是誰最會處理突發狀況，是誰願意讓突發狀況留下紀錄。因為紀錄會變成欄杆，欄杆會接住下一個人。" },
+      "tags": ["safety", "systemic"]
+    },
+    {
+      "ending_id": "e_03_line_open",
+      "title": "電話沒有掛掉",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "後來的夜班，你和黃主任之間多了一種默契：有狀況，先講，不要等到撐不住才講。" },
+        { "speaker": "narration", "style": "narration", "text": "他不是每次都來。但你每次都說。" },
+        { "speaker": "narration", "style": "narration", "text": "這條線沒有斷過。" }
+      ],
+      "recap": { "summary": "這一次，你讓別人進到現場了。", "closing": "一個人在凌晨三點做的判斷，不應該只有一個人承擔。你把線打開了——而線只要開著，下一次就比較容易開口。" },
+      "tags": ["help", "connection"]
+    },
+    {
+      "ending_id": "e_03_alone",
+      "title": "沒有人知道的那一夜",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "那一夜的數字很漂亮。三個人，跑出五個人的量。" },
+        { "speaker": "narration", "style": "narration", "text": "系統上沒有異常，交接本上寫著正常。" },
+        { "speaker": "narration", "style": "narration", "text": "下個月排班，夜班還是三個人。因為報表說，三個人做得完。" }
+      ],
+      "recap": { "summary": "這一次，你一個人把它接下來了。", "closing": "你的能力是真的。但當缺口每次都被能力補起來，缺口在制度眼裡就不存在。這不是你的錯——只是值得知道，這就是它運作的方式。" },
+      "tags": ["hold", "invisible_cost"]
+    },
+    {
+      "ending_id": "e_03_half",
+      "title": "只跑一半的線",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "七點，出了七成。客戶那邊黃主任去談，談成了。" },
+        { "speaker": "narration", "style": "narration", "text": "沒有人受傷，玻璃沒有破，三個人都準時下班。" },
+        { "speaker": "narration", "style": "narration", "text": "這是一個不會被寫進任何成功案例的夜班。" }
+      ],
+      "recap": { "summary": "這一次，你用降速換掉了風險。", "closing": "「做到七成」需要比「硬做完」更多的判斷力，因為你得先承認今天做不完。這個承認，往往是現場最難的那一步。" },
+      "tags": ["safety"]
+    },
+    {
+      "ending_id": "e_03_dawn",
+      "title": "天亮的時候",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "走出鐵捲門，天完全亮了。空氣有一點涼，聞得到柏油和露水。" },
+        { "speaker": "narration", "style": "narration", "text": "這一夜過去了。有些事你處理了，有些事還留在那裡。" },
+        { "speaker": "narration", "style": "narration", "text": "你騎上車。今天要睡到幾點，由你自己決定。" }
+      ],
+      "recap": { "summary": "這一次，你把它撐過來了，用你自己的方式。", "closing": "夜班的時間感和別人不一樣。有時候一夜平安就已經是很好的結果了，不需要再多一個意義。" },
+      "tags": ["mixed"]
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "r_03_help",
+      "name": "求援航線",
+      "priority": 1,
+      "meaning": "主動把人拉進現場——叫同事、打電話、或把規矩交給下一個人。重點是這件事不再只在你一個人手上。",
+      "narrative_explain": "你走的是「求援航線」。\n凌晨三點最容易發生的事，是一個人默默把它處理掉。你沒有。你讓別人知道、讓別人進來、或把判斷傳給下一個人。\n求援需要先承認「我需要」。在一個獎勵耐操的環境裡，這句話比動手還難說出口。",
+      "rule": { "any": [ { "tag": "help", "op": ">=", "count": 1 }, { "var": "help", "op": ">=", "value": 2 } ] },
+      "practice_card_id": "pc_03_help",
+      "island_growth_id": "ig_03_help"
+    },
+    {
+      "route_id": "r_03_safety",
+      "name": "安全優先航線",
+      "priority": 2,
+      "meaning": "在進度與安全之間，選擇安全——按下急停、降速、把風險寫下來。重點是你願意承擔「沒做完」的後果。",
+      "narrative_explain": "你走的是「安全優先航線」。\n你按下了那個會讓自己被看見的按鈕，或是講出了那個會讓進度難看的數字。\n這條航線的代價是當下的壓力，換到的是沒有人受傷。這個交換在事後通常沒有人會感謝，因為沒發生的事看不見。",
+      "rule": { "any": [ { "var": "safety", "op": ">=", "value": 3 }, { "tag": "safety", "op": ">=", "count": 2 } ] },
+      "practice_card_id": "pc_03_safety",
+      "island_growth_id": "ig_03_safety"
+    },
+    {
+      "route_id": "r_03_hold",
+      "name": "獨撐航線",
+      "priority": 3,
+      "meaning": "保底航線。以自己處理、照指示撐完、不留紀錄為主的所有組合。不代表錯，代表這一夜的重量主要由你自己承接。",
+      "narrative_explain": "你走的是「獨撐航線」。\n你很熟練，所以你做得到。事情確實被你處理掉了，而且處理得又快又乾淨。\n只是「乾淨」在這裡有一個副作用：從外面看，今晚什麼都沒發生。包括你。",
+      "rule": { "always": true },
+      "practice_card_id": "pc_03_hold",
+      "island_growth_id": "ig_03_hold"
+    }
+  ],
+  "replay_hints": [
+    "第一個決策點的處置方式，會決定阿豪在下個月遇到同樣狀況時怎麼做。",
+    "黃主任會不會半夜開車進廠，取決於你在第二個決策點講了什麼。",
+    "美姐在交接台說的話有三個版本——她看的是系統紀錄、停車場、還是那個太漂亮的數字。",
+    "這篇故事有五個固定結局與三條航線，其中「欄杆」需要你同時做到安全處置與留下紀錄。"
+  ]
+}

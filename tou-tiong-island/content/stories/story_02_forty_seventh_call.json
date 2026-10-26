@@ -1,0 +1,607 @@
+{
+  "story_id": "story_02_forty_seventh_call",
+  "version": "1.0.0",
+  "schema_version": "1.0.0",
+  "title": "第四十七通電話",
+  "subtitle": "客服面對情緒激動的顧客",
+  "island_id": "island_voice",
+  "order": 2,
+  "theme": "委屈與自我保護",
+  "logline": "離下班還有一小時十分。這是今天第四十七通，而他第一句話就不是在講訂單。",
+  "estimated_minutes": 3,
+  "content_notes": ["言語攻擊", "情緒勞動", "客服現場"],
+  "setting": {
+    "location": "電商客服中心，四十幾個座位，牆上的看板亮著即時數字",
+    "time": "星期二下午 16:50",
+    "conflict": "被攻擊的是你這個人，但公司給的流程只處理訂單。中間那段，沒有人接手。"
+  },
+  "characters": [
+    { "character_id": "you",   "name": "你",     "role": "客服專員", "profile": "做這份工作一年三個月。耳機戴久了，耳朵上方會有一條壓痕。", "voice": "語速穩、咬字清楚，那是訓練出來的" },
+    { "character_id": "chen",  "name": "陳先生", "role": "顧客",     "profile": "訂單延誤第四天。前面已經打過兩通，每一通都要從頭講一次。", "voice": "越講越快，音量一階一階往上" },
+    { "character_id": "wei",   "name": "小薇",   "role": "客服組長", "profile": "自己也從線上做起來的。看板上的數字壓在她身上，也壓在你身上。", "voice": "溫和但直接，習慣先問數字再問人" },
+    { "character_id": "ajun",  "name": "阿駿",   "role": "鄰座同事", "profile": "比你晚進來三個月。遇到難搞的電話會把耳機拉下來一點，深呼吸再戴回去。", "voice": "句子短，常常只有一個「欸」" }
+  ],
+  "state_vars": [
+    { "key": "protect", "label": "自我保護", "init": 0, "description": "你在當下為自己留下的空間" },
+    { "key": "endure",  "label": "承受",     "init": 0, "description": "你獨自吞下的部分" },
+    { "key": "support", "label": "連結",     "init": 0, "description": "你讓別人知道、或請人接手的程度" },
+    { "key": "voice",   "label": "開口",     "init": 0, "description": "你把事情說出來、說清楚的程度" }
+  ],
+  "start_node_id": "n_02_open",
+  "nodes": [
+    {
+      "node_id": "n_02_open",
+      "node_type": "narration",
+      "title": "開場",
+      "scene": { "location": "客服中心", "time": "星期二 16:50", "mood": "一天快要撐完的那種平靜" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "牆上的看板亮著：等待中 12 通，平均等待 4 分 32 秒。" },
+        { "speaker": "narration", "style": "narration", "text": "你喝了一口已經涼掉的水。今天的第四十七通，系統正在接通。" },
+        { "speaker": "sfx", "style": "sfx", "text": "嘟——" }
+      ],
+      "next_node_id": "n_02_call"
+    },
+    {
+      "node_id": "n_02_call",
+      "node_type": "narration",
+      "title": "接通",
+      "scene": { "location": "客服中心", "time": "星期二 16:51", "mood": "照著腳本開始" },
+      "dialogue": [
+        { "speaker": "you",  "style": "line", "text": "您好，很高興為您服務，請問有什麼可以幫您——" },
+        { "speaker": "chen", "style": "line", "text": "你們到底是在幹嘛？四天了！第四天了你知道嗎！" },
+        { "speaker": "you",  "style": "line", "text": "陳先生您好，非常抱歉造成您的不便，我馬上幫您查訂單狀態——" },
+        { "speaker": "chen", "style": "line", "text": "每次都說馬上！上一個也說馬上！" },
+        { "speaker": "narration", "style": "narration", "text": "你一邊聽，一邊把訂單調出來。物流端卡住，第四天，系統顯示「調查中」。" },
+        { "speaker": "chen", "style": "line", "text": "你們這種公司是怎麼活下來的？你是新來的喔？這麼簡單的事都處理不好，你是不是腦袋有問題？" },
+        { "speaker": "narration", "style": "narration", "text": "最後那句，和前面不一樣了。" },
+        { "speaker": "inner", "style": "inner", "text": "前面那些是在罵事情。這一句，是在罵你。" }
+      ],
+      "next_node_id": "n_02_d1"
+    },
+    {
+      "node_id": "n_02_d1",
+      "node_type": "decision",
+      "title": "決策點一：那句話落下來的時候",
+      "scene": { "location": "客服中心", "time": "星期二 16:54", "mood": "胸口一緊" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "鍵盤的手停了一下。桌上有一張貼紙，是公司發的：「微笑，客戶聽得見。」" }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_02_d1_apologize",
+          "text": "繼續道歉，先讓他講完",
+          "hint": "他氣消了，事情才好辦",
+          "immediate": [
+            { "speaker": "you",  "style": "line", "text": "真的非常抱歉，陳先生，我理解您的心情，請讓我幫您——" },
+            { "speaker": "chen", "style": "line", "text": "你理解什麼？你東西有沒有晚到過？啊？" },
+            { "speaker": "narration", "style": "narration", "text": "你讓他講。三分鐘、五分鐘。你的手一直放在鍵盤上，沒有再打字。" },
+            { "speaker": "narration", "style": "narration", "text": "等他喘氣的時候，你把物流的補償方案講完了。他掛掉電話，沒有說再見。" }
+          ],
+          "consequence": "你讓他把話講完，訂單處理好了，那幾句話留在你身上。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_absorb",
+            "title": "心聲線索",
+            "text": "你把情緒吸收下來，讓事情得以往前。這是一種專業，而且很有效。只是「吸收」這個動作是有重量的——它會留在身體裡，不會因為通話結束就消失。"
+          },
+          "state_effects": [
+            { "var": "endure", "op": "add", "value": 2 },
+            { "var": "protect", "op": "add", "value": -1 }
+          ],
+          "tags": ["endure"],
+          "next_node_id": "n_02_a1"
+        },
+        {
+          "choice_id": "c_02_d1_policy",
+          "text": "依流程提醒他：請不要人身攻擊",
+          "hint": "守住線，流程站在你這邊",
+          "immediate": [
+            { "speaker": "you",  "style": "line", "text": "陳先生，訂單的問題我一定會幫您處理到底。" },
+            { "speaker": "you",  "style": "line", "text": "但依照我們的服務規範，如果有人身攻擊的內容，我會需要先結束這通電話。我們可以回到訂單上嗎？" },
+            { "speaker": "narration", "style": "narration", "text": "電話那頭安靜了兩秒。那兩秒很長。" },
+            { "speaker": "chen", "style": "line", "text": "⋯⋯那你就處理啊。" },
+            { "speaker": "narration", "style": "narration", "text": "音量降下來了。接下來的對話，回到訂單編號和到貨日期。" }
+          ],
+          "consequence": "你把線畫出來了，而對話還是走完了。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_line_held",
+            "title": "心聲線索",
+            "text": "你同時做了兩件事：守住自己，也沒有放掉工作。很多人以為這兩件事只能選一個——「要嘛忍、要嘛翻臉」。中間其實還有一句話的位置。"
+          },
+          "state_effects": [
+            { "var": "protect", "op": "add", "value": 2 },
+            { "var": "voice", "op": "add", "value": 1 }
+          ],
+          "tags": ["protect", "speak"],
+          "next_node_id": "n_02_b1"
+        },
+        {
+          "choice_id": "c_02_d1_transfer",
+          "text": "按下求助鍵，請組長接手",
+          "hint": "這通不用一個人扛",
+          "immediate": [
+            { "speaker": "narration", "style": "narration", "text": "你按下桌上那顆橘色的鍵。螢幕右上角跳出「已通知」。" },
+            { "speaker": "you",  "style": "line", "text": "陳先生，為了讓您的問題更快解決，我幫您轉接我們的主管，請稍候。" },
+            { "speaker": "narration", "style": "narration", "text": "小薇從隔壁過來，戴上耳機，比了一個手勢：我接。" },
+            { "speaker": "narration", "style": "narration", "text": "你把耳機摘下來，耳朵上方那條壓痕突然有感覺了。" }
+          ],
+          "consequence": "這通電話換人接了，而且是你自己按下那顆鍵的。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_orange_button",
+            "title": "心聲線索",
+            "text": "那顆鍵一直都在桌上。按下去最難的部分通常不是流程，是心裡那句「這樣會不會顯得我不行」。求援是制度給你的工具，不是你的失分。"
+          },
+          "state_effects": [
+            { "var": "support", "op": "add", "value": 2 },
+            { "var": "voice", "op": "add", "value": 1 }
+          ],
+          "tags": ["seek_help"],
+          "next_node_id": "n_02_c1"
+        }
+      ]
+    },
+    {
+      "node_id": "n_02_a1",
+      "node_type": "narration",
+      "title": "分支 A：掛掉之後",
+      "scene": { "location": "客服中心", "time": "星期二 17:03", "mood": "耳朵還在嗡" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "通話時長 11 分 28 秒。你在紀錄欄打上「已說明補償方案，客戶知悉」。" },
+        { "speaker": "narration", "style": "narration", "text": "「你是不是腦袋有問題」這句話沒有出現在任何欄位裡。系統沒有這個欄位。" }
+      ],
+      "next_node_id": "n_02_merge1"
+    },
+    {
+      "node_id": "n_02_b1",
+      "node_type": "narration",
+      "title": "分支 B：線畫出來之後",
+      "scene": { "location": "客服中心", "time": "星期二 17:01", "mood": "手有點抖，但站著" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "通話時長 9 分 06 秒。掛斷前，他說了一句「好啦，麻煩你了」。" },
+        { "speaker": "narration", "style": "narration", "text": "你把耳機拉下來一點。手指在發抖，你自己才發現。" },
+        { "speaker": "inner", "style": "inner", "text": "原來說那句話，身體要付這麼多。" }
+      ],
+      "next_node_id": "n_02_merge1"
+    },
+    {
+      "node_id": "n_02_c1",
+      "node_type": "narration",
+      "title": "分支 C：換人接之後",
+      "scene": { "location": "客服中心", "time": "星期二 17:05", "mood": "鬆了，又有點懸著" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "小薇講了七分鐘，掛掉，摘下耳機。" },
+        { "speaker": "wei", "style": "line", "text": "處理好了。他罵你什麼？" },
+        { "speaker": "you", "style": "line", "text": "⋯⋯沒有啦，就一般的。" },
+        { "speaker": "narration", "style": "narration", "text": "小薇看了你兩秒，點點頭，回去自己的位子。" }
+      ],
+      "next_node_id": "n_02_merge1"
+    },
+    {
+      "node_id": "n_02_merge1",
+      "node_type": "converge",
+      "title": "匯流一：下一通正在排隊",
+      "converge_from": ["n_02_a1", "n_02_b1", "n_02_c1"],
+      "scene": { "location": "客服中心", "time": "星期二 17:08", "mood": "心跳還沒回去" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "螢幕右下角跳出一行小字：下一通待接入，等待中 14 通。" },
+        { "speaker": "narration", "style": "narration", "text": "你的心跳還在剛剛那個速度。身體不知道通話已經結束了。" }
+      ],
+      "conditional_dialogue": [
+        {
+          "condition": { "tag": "endure", "op": ">=", "count": 1 },
+          "dialogue": [ { "speaker": "inner", "style": "inner", "text": "那句話還在耳朵裡，像一個沒關掉的背景音。" } ]
+        },
+        {
+          "condition": { "tag": "protect", "op": ">=", "count": 1 },
+          "dialogue": [ { "speaker": "inner", "style": "inner", "text": "你有點想知道：如果他投訴，會怎麼樣。" } ]
+        },
+        {
+          "condition": { "tag": "seek_help", "op": ">=", "count": 1 },
+          "dialogue": [ { "speaker": "inner", "style": "inner", "text": "小薇剛剛那兩秒的眼神，你還在想。" } ]
+        }
+      ],
+      "next_node_id": "n_02_d2"
+    },
+    {
+      "node_id": "n_02_d2",
+      "node_type": "decision",
+      "title": "決策點二：按下接聽之前",
+      "scene": { "location": "客服中心", "time": "星期二 17:09", "mood": "三秒的空檔" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "系統給你三秒。三秒之後，下一通會自動接進來。" }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_02_d2_next",
+          "text": "直接接下一通",
+          "hint": "停下來反而更難開始",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "您好，很高興為您服務。" },
+            { "speaker": "narration", "style": "narration", "text": "這一通是問退貨流程，兩分鐘就解決了。很簡單。" },
+            { "speaker": "narration", "style": "narration", "text": "但你講到一半的時候，發現自己的聲音比平常低了半度。" }
+          ],
+          "consequence": "你沒有停。數字很漂亮，身體沒有被通知到。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_no_gap",
+            "title": "心聲線索",
+            "text": "不停下來，有時候是因為停下來那一刻，感覺會追上來。繼續動比較安全。這招短期有效，代價是那些感覺會改天再來找你，通常挑在你最沒力氣的時候。"
+          },
+          "state_effects": [
+            { "var": "endure", "op": "add", "value": 2 },
+            { "var": "protect", "op": "add", "value": -1 }
+          ],
+          "tags": ["endure"],
+          "next_node_id": "n_02_a2"
+        },
+        {
+          "choice_id": "c_02_d2_breathe",
+          "text": "按下離席，去洗手間待兩分鐘",
+          "hint": "給身體一點時間落地",
+          "immediate": [
+            { "speaker": "narration", "style": "narration", "text": "你按下「離席・短暫」。狀態燈從綠色變成黃色。" },
+            { "speaker": "narration", "style": "narration", "text": "洗手間的水很冰。你洗了手，抬頭看鏡子。" },
+            { "speaker": "narration", "style": "narration", "text": "吸氣四秒、吐氣六秒，做了六輪。第四輪的時候，肩膀自己掉下來了。" },
+            { "speaker": "narration", "style": "narration", "text": "兩分十秒後，你走回座位。黃燈轉綠。" }
+          ],
+          "consequence": "你花了兩分十秒把自己接回來，看板上的數字因此慢了一點。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_two_minutes",
+            "title": "心聲線索",
+            "text": "情緒跑完一輪，身體大約需要一到兩分鐘。你給了它這段時間。這不是偷懶——是讓接下一通電話的那個人，還是完整的。"
+          },
+          "state_effects": [
+            { "var": "protect", "op": "add", "value": 2 }
+          ],
+          "tags": ["protect"],
+          "next_node_id": "n_02_b2"
+        },
+        {
+          "choice_id": "c_02_d2_talk",
+          "text": "轉頭跟阿駿講一下剛剛那通",
+          "hint": "講出來，就不只是自己的事",
+          "immediate": [
+            { "speaker": "you",  "style": "line", "text": "欸，剛剛那個⋯⋯罵我腦袋有問題。" },
+            { "speaker": "ajun", "style": "line", "text": "欸幹。" },
+            { "speaker": "ajun", "style": "line", "text": "我上禮拜也被講過。那個人說我『連高中生都不如』。" },
+            { "speaker": "ajun", "style": "line", "text": "我後來想，他根本不認識我，他是在罵那四天。" },
+            { "speaker": "narration", "style": "narration", "text": "阿駿把椅子轉回去。這段對話總共四十秒。" },
+            { "speaker": "narration", "style": "narration", "text": "但你發現，剛剛那句話在你身上的重量，變了一點。" }
+          ],
+          "consequence": "你把它說出口了，於是它不再只是你一個人的事。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_said_aloud",
+            "title": "心聲線索",
+            "text": "說出來和忍下去，差別不在事情有沒有解決——事情一樣沒解決。差別在於，被罵的那個人現在不是一個人了。這件事對神經系統來說，是有效的。"
+          },
+          "state_effects": [
+            { "var": "support", "op": "add", "value": 2 }
+          ],
+          "tags": ["seek_help"],
+          "next_node_id": "n_02_c2"
+        }
+      ]
+    },
+    {
+      "node_id": "n_02_a2",
+      "node_type": "narration",
+      "title": "分支：五點半的數字",
+      "scene": { "location": "客服中心", "time": "星期二 17:30", "mood": "自動駕駛" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "五點半，你今天接了五十一通。看板上你的平均處理時間是全組第二快。" },
+        { "speaker": "narration", "style": "narration", "text": "你不太記得第四十八通到第五十一通講了什麼。" }
+      ],
+      "next_node_id": "n_02_merge2"
+    },
+    {
+      "node_id": "n_02_b2",
+      "node_type": "narration",
+      "title": "分支：慢了兩分鐘的那天",
+      "scene": { "location": "客服中心", "time": "星期二 17:30", "mood": "回到身體裡" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "五點半，你今天接了四十九通。比平常少兩通。" },
+        { "speaker": "narration", "style": "narration", "text": "但後面那幾通，你記得客戶的名字。" }
+      ],
+      "next_node_id": "n_02_merge2"
+    },
+    {
+      "node_id": "n_02_c2",
+      "node_type": "narration",
+      "title": "分支：四十秒之後",
+      "scene": { "location": "客服中心", "time": "星期二 17:30", "mood": "沒有變好，但變得可以放著" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "五點半。阿駿站起來伸懶腰，順手把你桌上空掉的水瓶拿去裝水。" },
+        { "speaker": "narration", "style": "narration", "text": "他沒說什麼，把水放回你桌上就走了。" }
+      ],
+      "next_node_id": "n_02_merge2"
+    },
+    {
+      "node_id": "n_02_merge2",
+      "node_type": "converge",
+      "title": "匯流二：下班前十分鐘",
+      "converge_from": ["n_02_a2", "n_02_b2", "n_02_c2"],
+      "scene": { "location": "客服中心", "time": "星期二 17:50", "mood": "快要結束了" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "小薇走過來，手上拿著平板。" },
+        { "speaker": "wei", "style": "line", "text": "你那通十一點多的通話，客戶有填滿意度，給三顆星。" },
+        { "speaker": "wei", "style": "line", "text": "我剛剛聽了一下錄音。" },
+        { "speaker": "narration", "style": "narration", "text": "她把平板放下，拉了一張椅子坐在你旁邊。" }
+      ],
+      "next_node_id": "n_02_wei_check"
+    },
+    {
+      "node_id": "n_02_wei_check",
+      "node_type": "conditional",
+      "title": "條件分流：小薇聽到的版本",
+      "conditions": [
+        { "condition": { "tag": "protect", "op": ">=", "count": 1 }, "next_node_id": "n_02_w_line", "note": "有在當下畫線" },
+        { "condition": { "tag": "seek_help", "op": ">=", "count": 1 }, "next_node_id": "n_02_w_known", "note": "有讓別人知道" }
+      ],
+      "default_next_node_id": "n_02_w_quiet"
+    },
+    {
+      "node_id": "n_02_w_line",
+      "node_type": "narration",
+      "title": "小薇 A：那句提醒",
+      "scene": { "location": "客服中心", "time": "星期二 17:52", "mood": "被看見了一點" },
+      "dialogue": [
+        { "speaker": "wei", "style": "line", "text": "你那句『依照服務規範』講得很好。標準用語，一個字都沒錯。" },
+        { "speaker": "wei", "style": "line", "text": "不過我要問一下——你講那句話的時候，還好嗎？" },
+        { "speaker": "narration", "style": "narration", "text": "她問的不是流程。" }
+      ],
+      "next_node_id": "n_02_d3"
+    },
+    {
+      "node_id": "n_02_w_known",
+      "node_type": "narration",
+      "title": "小薇 B：那顆橘色的鍵",
+      "scene": { "location": "客服中心", "time": "星期二 17:52", "mood": "她知道" },
+      "dialogue": [
+        { "speaker": "wei", "style": "line", "text": "你今天按了求助鍵。這個月第一次。" },
+        { "speaker": "wei", "style": "line", "text": "我是覺得按得好。這組按最多次的是我自己，你知道嗎。" },
+        { "speaker": "narration", "style": "narration", "text": "她笑了一下，然後收起笑。" },
+        { "speaker": "wei", "style": "line", "text": "我聽了前面那段。他講的那句，不應該。" }
+      ],
+      "next_node_id": "n_02_d3"
+    },
+    {
+      "node_id": "n_02_w_quiet",
+      "node_type": "narration",
+      "title": "小薇 C：錄音裡的安靜",
+      "scene": { "location": "客服中心", "time": "星期二 17:52", "mood": "有東西在水面下" },
+      "dialogue": [
+        { "speaker": "wei", "style": "line", "text": "你處理得很完整，補償方案該講的都講了。" },
+        { "speaker": "wei", "style": "line", "text": "但中間有一段，你安靜了快十秒。" },
+        { "speaker": "narration", "style": "narration", "text": "你記得那十秒。那是你聽完那句話、決定不要有反應的十秒。" }
+      ],
+      "next_node_id": "n_02_d3"
+    },
+    {
+      "node_id": "n_02_d3",
+      "node_type": "decision",
+      "title": "決策點三：下班前的那把椅子",
+      "scene": { "location": "客服中心", "time": "星期二 17:53", "mood": "一個可以說、也可以不說的時刻" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "小薇坐在旁邊，沒有要走的意思。" }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_02_d3_tell",
+          "text": "說出被罵的那句話，還有自己的感覺",
+          "hint": "把它講成一件發生過的事",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "他說我腦袋有問題。" },
+            { "speaker": "you", "style": "line", "text": "我知道他是在氣那四天。但那一瞬間我真的⋯⋯有點想掉眼淚，然後我又覺得自己這樣很奇怪，才一句話而已。" },
+            { "speaker": "narration", "style": "narration", "text": "小薇沒有馬上回話。" },
+            { "speaker": "wei", "style": "line", "text": "不奇怪。" },
+            { "speaker": "wei", "style": "line", "text": "我做第三年的時候，被一個客人罵完，在停車場坐了四十分鐘。那時候我也覺得自己很奇怪。" },
+            { "speaker": "wei", "style": "line", "text": "後來我才知道，身體就是會這樣反應，它分不出那是不是真的。" }
+          ],
+          "consequence": "你把那句話說出口了，而且說的時候，有人在。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_not_strange",
+            "title": "心聲線索",
+            "text": "「才一句話而已，我幹嘛這樣」——這個念頭本身，是第二層傷。被罵已經很累了，還要再花力氣說服自己不該難過。那句難過是正常反應，不需要先通過審查才能存在。"
+          },
+          "state_effects": [
+            { "var": "voice", "op": "add", "value": 2 },
+            { "var": "protect", "op": "add", "value": 1 }
+          ],
+          "tags": ["protect", "speak"],
+          "next_node_id": "n_02_a3"
+        },
+        {
+          "choice_id": "c_02_d3_report",
+          "text": "只報告處理結果",
+          "hint": "講工作就好",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "物流那邊我有催，補償券也發了。客戶知悉。" },
+            { "speaker": "wei", "style": "line", "text": "嗯。" },
+            { "speaker": "narration", "style": "narration", "text": "小薇等了一下，等一個沒有出現的句子。" },
+            { "speaker": "wei", "style": "line", "text": "好，那你趕快下班。" },
+            { "speaker": "narration", "style": "narration", "text": "她把椅子推回去。" }
+          ],
+          "consequence": "這通電話在系統裡結案了，在你身上還沒有。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_case_closed",
+            "title": "心聲線索",
+            "text": "你很會結案。工作上這是優點。只是人不是工單——沒有講出來的部分不會自動關閉，它會留在待處理清單上，只是那張清單只有你看得到。"
+          },
+          "state_effects": [
+            { "var": "endure", "op": "add", "value": 1 }
+          ],
+          "tags": ["endure"],
+          "next_node_id": "n_02_b3"
+        },
+        {
+          "choice_id": "c_02_d3_process",
+          "text": "提出流程建議：什麼情況可以結束通話",
+          "hint": "讓下一個人不用自己判斷",
+          "immediate": [
+            { "speaker": "you", "style": "line", "text": "我想問一件事。如果客戶開始人身攻擊，我們到底可不可以結束通話？" },
+            { "speaker": "you", "style": "line", "text": "手冊上寫『必要時』，但沒有寫什麼是必要時。每次都要自己判斷，判斷錯了又怕被投訴。" },
+            { "speaker": "narration", "style": "narration", "text": "小薇拿出平板，開始打字。" },
+            { "speaker": "wei", "style": "line", "text": "這個問題問得很好。我下禮拜開會提。" },
+            { "speaker": "wei", "style": "line", "text": "在那之前，你先用這個版本：提醒一次，再有第二次就轉給我，責任算我的。" }
+          ],
+          "consequence": "你把一個人的為難，變成一條大家可以用的規則。",
+          "inner_voice_clue": {
+            "clue_id": "clue_02_make_it_rule",
+            "title": "心聲線索",
+            "text": "你問的不是「我該不該忍」，而是「這件事的標準在哪裡」。當標準不清楚，壓力就會落到最前線的人身上，然後被叫做「應變能力」。你把它問出來了。"
+          },
+          "state_effects": [
+            { "var": "voice", "op": "add", "value": 2 },
+            { "var": "support", "op": "add", "value": 1 }
+          ],
+          "tags": ["seek_help", "speak"],
+          "next_node_id": "n_02_c3"
+        }
+      ]
+    },
+    {
+      "node_id": "n_02_a3",
+      "node_type": "narration",
+      "title": "分支：停車場那四十分鐘",
+      "scene": { "location": "客服中心門口", "time": "星期二 18:05", "mood": "輕了一點" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "你們一起走到門口。小薇按電梯。" },
+        { "speaker": "wei", "style": "line", "text": "我剛剛講停車場那件事，你是第一個知道的。" },
+        { "speaker": "narration", "style": "narration", "text": "電梯門開了。" }
+      ],
+      "next_node_id": "n_02_ending_check"
+    },
+    {
+      "node_id": "n_02_b3",
+      "node_type": "narration",
+      "title": "分支：回家的捷運上",
+      "scene": { "location": "捷運", "time": "星期二 18:40", "mood": "空" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "捷運上，你滑手機，但什麼都沒看進去。" },
+        { "speaker": "narration", "style": "narration", "text": "到站前兩分鐘，那句話突然又跳出來。你把音樂調大聲。" }
+      ],
+      "next_node_id": "n_02_ending_check"
+    },
+    {
+      "node_id": "n_02_c3",
+      "node_type": "narration",
+      "title": "分支：下禮拜的會議",
+      "scene": { "location": "客服中心", "time": "下週三", "mood": "有東西動了" },
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "下禮拜三，群組裡發了一份更新的服務規範，第 4.2 條加了兩行。" },
+        { "speaker": "narration", "style": "narration", "text": "沒有人知道那兩行是從哪裡來的。阿駿看了一眼，說：「喔，這樣比較好懂。」" }
+      ],
+      "next_node_id": "n_02_ending_check"
+    },
+    {
+      "node_id": "n_02_ending_check",
+      "node_type": "conditional",
+      "title": "結局判定",
+      "conditions": [
+        { "condition": { "all": [ { "var": "voice", "op": ">=", "value": 3 }, { "var": "support", "op": ">=", "value": 2 } ] }, "next_node_id": "n_02_e_rule", "note": "把個人困境變成規則" },
+        { "condition": { "var": "protect", "op": ">=", "value": 4 }, "next_node_id": "n_02_e_shield", "note": "全程守住自己" },
+        { "condition": { "var": "support", "op": ">=", "value": 4 }, "next_node_id": "n_02_e_echo", "note": "讓別人進來" },
+        { "condition": { "all": [ { "tag": "endure", "op": ">=", "count": 2 }, { "var": "protect", "op": "<=", "value": -1 } ] }, "next_node_id": "n_02_e_quota", "note": "全程獨自吸收" }
+      ],
+      "default_next_node_id": "n_02_e_road"
+    },
+    { "node_id": "n_02_e_rule",   "node_type": "ending", "title": "結局：寫進手冊的兩行", "ending_id": "e_02_rule" },
+    { "node_id": "n_02_e_shield", "node_type": "ending", "title": "結局：掛上耳機之前",     "ending_id": "e_02_shield" },
+    { "node_id": "n_02_e_echo",   "node_type": "ending", "title": "結局：有人聽見",         "ending_id": "e_02_echo" },
+    { "node_id": "n_02_e_quota",  "node_type": "ending", "title": "結局：第五十一通",       "ending_id": "e_02_quota" },
+    { "node_id": "n_02_e_road",   "node_type": "ending", "title": "結局：回家的路上",       "ending_id": "e_02_road" }
+  ],
+  "endings": [
+    {
+      "ending_id": "e_02_rule",
+      "title": "寫進手冊的兩行",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "服務規範 4.2 條後面多了兩行字，寫著什麼情況下可以結束通話，責任歸誰。" },
+        { "speaker": "narration", "style": "narration", "text": "那兩行很普通，普通到不會有人記得它們是怎麼來的。" },
+        { "speaker": "narration", "style": "narration", "text": "但從那天起，四十幾個座位上的人，不用再自己判斷了。" }
+      ],
+      "recap": { "summary": "這一次，你把一個人的為難，說成了一件制度的事。", "closing": "當標準不清楚，壓力就會落到最前線的人身上，然後被叫做「抗壓性」。你把它問出來了——這比忍過去難，也比忍過去有用。" },
+      "tags": ["systemic", "spoken"]
+    },
+    {
+      "ending_id": "e_02_shield",
+      "title": "掛上耳機之前",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "下班，你把耳機放回桌上。耳朵上方那條壓痕，明天早上就會消失。" },
+        { "speaker": "narration", "style": "narration", "text": "今天有人對你說了很難聽的話。你沒有反擊，也沒有吞下去。" },
+        { "speaker": "narration", "style": "narration", "text": "你只是在中間放了一句話，然後繼續把事情做完。" }
+      ],
+      "recap": { "summary": "這一次，你在被攻擊的當下，為自己留了位置。", "closing": "保護自己不是把對方推開，是不讓那些話直接落在身上。這一步通常要練很多次，而你今天做到了。" },
+      "tags": ["protect"]
+    },
+    {
+      "ending_id": "e_02_echo",
+      "title": "有人聽見",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "回家的路上，你想起阿駿那句「欸幹」，還有小薇拉椅子坐下來的聲音。" },
+        { "speaker": "narration", "style": "narration", "text": "事情沒有被解決。那個客戶明天可能還會打來。" },
+        { "speaker": "narration", "style": "narration", "text": "但今天發生在你身上的事，有兩個人知道。這跟零個人知道，是不一樣的重量。" }
+      ],
+      "recap": { "summary": "這一次，你讓別人進來了。", "closing": "被理解不會讓問題消失，但它會改變問題的重量。這兩件事都需要，而你可以自己決定順序。" },
+      "tags": ["support"]
+    },
+    {
+      "ending_id": "e_02_quota",
+      "title": "第五十一通",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "今天五十一通，全組第二快。看板上的數字很好看。" },
+        { "speaker": "narration", "style": "narration", "text": "你不太記得第四十八通到第五十一通講了什麼。" },
+        { "speaker": "narration", "style": "narration", "text": "回到家，你坐在玄關換鞋，坐了比平常久一點。沒有特別想什麼。" }
+      ],
+      "recap": { "summary": "這一次，你一個人把它全部吸收了。", "closing": "你撐完了，這是真的。只是被吸收的東西不會消失，它會改天回來——通常挑在你最沒力氣的時候。這不是你的錯，是它的運作方式。" },
+      "tags": ["endure", "invisible_cost"]
+    },
+    {
+      "ending_id": "e_02_road",
+      "title": "回家的路上",
+      "dialogue": [
+        { "speaker": "narration", "style": "narration", "text": "捷運搖晃。你看著窗外的燈一條一條往後跑。" },
+        { "speaker": "narration", "style": "narration", "text": "今天過去了。有一些話留著，有一些話說了。" },
+        { "speaker": "narration", "style": "narration", "text": "明天還是會有第一通電話。但明天還沒到。" }
+      ],
+      "recap": { "summary": "這一次，有些你接住了，有些你留著。", "closing": "不是每一天都要有結論。撐過去、說一點、留一點——這也是一種處理方式。" },
+      "tags": ["mixed"]
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "r_02_protect",
+      "name": "自我保護航線",
+      "priority": 1,
+      "meaning": "在事發當下就為自己做了處置——畫線、離席、調節呼吸。重點是「在現場」，不是事後才補。",
+      "narrative_explain": "你走的是「自我保護航線」。\n這條航線的特徵是：你沒有等到下班才處理自己。你在事情還在發生的時候，就為自己做了一件事。\n這很難，因為當下所有的壓力都在叫你繼續。你還是停了一下。",
+      "rule": { "any": [ { "var": "protect", "op": ">=", "value": 3 }, { "tag": "protect", "op": ">=", "count": 2 } ] },
+      "practice_card_id": "pc_02_protect",
+      "island_growth_id": "ig_02_protect"
+    },
+    {
+      "route_id": "r_02_support",
+      "name": "求援航線",
+      "priority": 2,
+      "meaning": "讓第二個人知道、或請人接手。重點是「不再只有自己」，不論是按下求助鍵、找同事說、或把問題提到制度層面。",
+      "narrative_explain": "你走的是「求援航線」。\n你讓事情離開了自己一個人的範圍——交給別人、說給別人聽、或請制度接手。\n求援常常被誤認成示弱。其實它是一種判斷：判斷這件事不該只由一個人承擔。",
+      "rule": { "any": [ { "tag": "seek_help", "op": ">=", "count": 1 }, { "var": "support", "op": ">=", "value": 2 } ] },
+      "practice_card_id": "pc_02_support",
+      "island_growth_id": "ig_02_support"
+    },
+    {
+      "route_id": "r_02_endure",
+      "name": "撐住航線",
+      "priority": 3,
+      "meaning": "保底航線。以吸收、繼續、不聲張為主的所有組合。不代表錯，代表這一次的重量主要由你自己承接。",
+      "narrative_explain": "你走的是「撐住航線」。\n今天的每一通電話你都接完了，事情也都處理了。從外面看，今天是完整的一天。\n只有一件事沒有被記錄下來：撐住它花了你多少。那些重量還在你身上，它們只是還沒找到放下的地方。",
+      "rule": { "always": true },
+      "practice_card_id": "pc_02_endure",
+      "island_growth_id": "ig_02_endure"
+    }
+  ],
+  "replay_hints": [
+    "第一個決策點如果換一種回應，陳先生的音量會往不同方向走，通話時長也不一樣。",
+    "小薇在下班前說的話有三個版本，取決於她在錄音裡聽到了什麼。",
+    "阿駿只有在你主動開口的時候才會講他自己被罵的那次。",
+    "這篇故事有五個固定結局與三條航線，其中「寫進手冊的兩行」需要你把問題從個人層次帶到制度層次。"
+  ]
+}
