@@ -230,7 +230,7 @@ export class ResultView {
       <div class="card card--growth">
         <div class="card__kicker">島嶼探索成果 ・ ${esc(islandName)}</div>
         ${growthHtml}
-        <p class="card__note">已發現航線 ${o.discovered} ／ ${o.total}。剩下的航線要換一種走法才會出現。</p>
+        <p class="card__note">已發現航線 ${o.discovered}／${o.total}。剩下的航線要換一種走法才會出現。</p>
       </div>`);
 
     if (o.needsNaming) {

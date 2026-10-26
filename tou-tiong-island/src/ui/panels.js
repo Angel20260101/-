@@ -326,7 +326,7 @@ export function atlasPanel(sheet, { state, onPlay }) {
   const found = state.atlas().reduce((s, a) => s + a.routes.filter((r) => r.found).length, 0);
   const el = sheet.open({
     title: '航海圖',
-    subtitle: `已發現航線 ${found} ／ 18`,
+    subtitle: `已發現航線 ${found}／18`,
     body: rows + '<p class="tiny" style="margin-top:14px">每座島有三條航線。航線由故事的固定規則判定，不同的選擇組合可能走到同一條。</p>',
   });
   el.querySelectorAll('[data-story]').forEach((b) =>
