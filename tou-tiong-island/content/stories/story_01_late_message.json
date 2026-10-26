@@ -1449,6 +1449,11 @@
             "tag": "speak",
             "op": ">=",
             "count": 2
+          },
+          {
+            "tag": "seek_support",
+            "op": ">=",
+            "count": 1
           }
         ]
       },

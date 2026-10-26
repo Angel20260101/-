@@ -112,12 +112,12 @@
     "version": "1.0.0",
     "routes": [
       {
-        "route_id": "r_04_speak",
-        "name": "表達航線"
-      },
-      {
         "route_id": "r_04_rules",
         "name": "建立規則航線"
+      },
+      {
+        "route_id": "r_04_speak",
+        "name": "表達航線"
       },
       {
         "route_id": "r_04_keep",
