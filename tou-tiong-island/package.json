@@ -1,0 +1,22 @@
+{
+  "name": "tou-tiong-island",
+  "version": "1.0.0",
+  "private": true,
+  "description": "《透中島》3D 島嶼養成與互動劇情遊戲",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run validate && vite build",
+    "preview": "vite preview",
+    "validate": "node tools/validate.mjs",
+    "test": "node tools/validate.mjs && node tools/route-cases.mjs",
+    "docs": "node tools/build-scripts.mjs"
+  },
+  "devDependencies": {
+    "vite": "5.4.11"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "engines": { "node": ">=20" }
+}

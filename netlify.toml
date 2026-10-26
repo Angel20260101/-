@@ -1,0 +1,37 @@
+# Netlify 設定：GitHub push 後自動建置與部署《透中島》。
+# 這個 repo 根目錄另有一個 GitHub Pages 的行銷頁（index.html），
+# 因此用 base 指定建置目錄，兩邊互不影響。
+
+[build]
+  base    = "tou-tiong-island"
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# 單頁應用：所有前端路徑都回到 index.html
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
+  force = false
+
+# 靜態資源長期快取；index.html 不快取，確保改版後立刻生效
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"

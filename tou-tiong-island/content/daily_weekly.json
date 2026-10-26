@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0.0",
+  "daily": {
+    "task_id": "daily_weather",
+    "title": "今天的天氣",
+    "landmark": "pier",
+    "prompt": "如果今天的心情是一種天氣，會是哪一種？",
+    "sub_prompt": "沒有正確答案，選最接近的就好。",
+    "estimated_seconds": 30,
+    "optional": true,
+    "streak_penalty": false,
+    "streak_note": "沒有連續紀錄的壓力。沒打卡的日子，島上什麼都不會消失。",
+    "options": [
+      { "mood_id": "sunny",   "label": "晴",   "icon": "sun",       "palette": "#F5C76E", "description": "有力氣，事情推得動" },
+      { "mood_id": "cloudy",  "label": "多雲", "icon": "cloud_sun", "palette": "#CFD8DC", "description": "還可以，就是悶悶的" },
+      { "mood_id": "overcast","label": "陰",   "icon": "cloud",     "palette": "#A8B5BD", "description": "提不太起勁" },
+      { "mood_id": "drizzle", "label": "小雨", "icon": "drizzle",   "palette": "#8FB6D1", "description": "有點難過，但撐得住" },
+      { "mood_id": "storm",   "label": "雷雨", "icon": "storm",     "palette": "#6E7FA3", "description": "今天很不好過" },
+      { "mood_id": "fog",     "label": "起霧", "icon": "fog",       "palette": "#D6D9DC", "description": "說不上來，整個人霧霧的" },
+      { "mood_id": "rainbow", "label": "彩虹", "icon": "rainbow",   "palette": "#E7A6B8", "description": "雨過了，有一點好事" }
+    ],
+    "energy": {
+      "enabled": true,
+      "prompt": "今天的力氣大概剩多少？",
+      "scale": [
+        { "value": 1, "label": "快沒電" },
+        { "value": 2, "label": "有點低" },
+        { "value": 3, "label": "普通" },
+        { "value": 4, "label": "還不錯" },
+        { "value": 5, "label": "充飽" }
+      ]
+    },
+    "note": {
+      "enabled": true,
+      "optional": true,
+      "placeholder": "想記一句話嗎？（可以跳過）",
+      "max_length": 140
+    },
+    "reward": {
+      "type": "weather_log",
+      "copy": "今天的天氣記下來了。碼頭的木板上又多了一筆。"
+    },
+    "closing_lines": {
+      "sunny":   "好天氣值得被記得。",
+      "cloudy":  "悶悶的也是一種天氣，它會過去。",
+      "overcast":"提不起勁的日子，光是有來打卡就夠了。",
+      "drizzle": "撐得住，不代表不辛苦。",
+      "storm":   "今天很不好過。你還是來了，這件事本身就算數。",
+      "fog":     "說不上來也沒關係，不是每種感覺都有名字。",
+      "rainbow": "記得這個，之後翻回來看會很有用。"
+    }
+  },
+  "weekly": {
+    "task_id": "weekly_thermometer",
+    "title": "心情溫度計",
+    "landmark": "lighthouse",
+    "subtitle": "每週一次，自願，隨時可以中途離開",
+    "estimated_seconds": 90,
+    "optional": true,
+    "instrument": {
+      "instrument_id": "tti_mood_thermometer_v1",
+      "name": "透中島心情溫度計",
+      "origin": "本量表為《透中島》自行編寫，用於遊戲內的自我覺察回顧，不是臨床篩檢工具，也不產生任何診斷。",
+      "clinical_note": "若產品日後要改用 BSRS-5（簡式健康量表）等正式篩檢工具，必須取得授權、保留原始題目與計分方式、由具資格的專業人員設計後續流程，並遵守該量表的使用規範。不可自行改寫題目後仍宣稱為該量表。",
+      "recall_period": "最近七天",
+      "scale": [
+        { "value": 0, "label": "完全沒有" },
+        { "value": 1, "label": "偶爾" },
+        { "value": 2, "label": "有時候" },
+        { "value": 3, "label": "經常" },
+        { "value": 4, "label": "幾乎每天" }
+      ],
+      "items": [
+        { "item_id": "t1", "text": "睡不好，或睡醒還是很累" },
+        { "item_id": "t2", "text": "容易煩躁、或一點小事就上火" },
+        { "item_id": "t3", "text": "提不起勁，連本來喜歡的事也不太想做" },
+        { "item_id": "t4", "text": "覺得心裡悶悶的、或想哭" },
+        { "item_id": "t5", "text": "覺得自己不夠好、或撐得很辛苦" }
+      ],
+      "score_range": { "min": 0, "max": 20 },
+      "bands": [
+        { "band_id": "low",  "min": 0,  "max": 5,  "label": "這一週還算穩", "copy": "這一週大致撐得住。把現在在做的、有用的那些事記下來，之後會派上用場。" },
+        { "band_id": "mid",  "min": 6,  "max": 11, "label": "有壓力累積",   "copy": "這一週有一些東西在累積。這很常見，也值得你多留一點時間給自己。" },
+        { "band_id": "high", "min": 12, "max": 20, "label": "負荷偏重",     "copy": "這一週的負荷看起來偏重。這不是診斷，只是一個提醒：這種程度的辛苦，不需要一個人處理。" }
+      ],
+      "disclaimer": "這份回顧不是心理測驗，也不會判斷你有沒有任何狀況。它只是把這一週的感覺放成一個可以看見的形狀。"
+    },
+    "safety_item": {
+      "item_id": "s1",
+      "enabled": true,
+      "text": "最近七天，有沒有出現過『不想活下去』或是傷害自己的念頭？",
+      "options": [
+        { "value": 0, "label": "完全沒有" },
+        { "value": 1, "label": "偶爾閃過" },
+        { "value": 2, "label": "經常出現" },
+        { "value": 3, "label": "有，而且想過怎麼做" }
+      ],
+      "trigger_threshold": 1,
+      "note": "這一題的任何非零回答都會直接進入關懷流程，不計入總分，也不會改變島嶼或獎勵。"
+    },
+    "reward": {
+      "type": "keepsake",
+      "rule": "完成即獲得，與分數高低無關。",
+      "copy": "燈塔的紀錄本上多了一頁。這是給你來過一趟，不是給分數。",
+      "keepsakes": [
+        { "keepsake_id": "ks_shell",    "name": "一枚貝殼",     "description": "撿來的，沒有特別的理由。" },
+        { "keepsake_id": "ks_glass",    "name": "一塊海玻璃",   "description": "被海磨了很久，邊緣已經不割手了。" },
+        { "keepsake_id": "ks_feather",  "name": "一根羽毛",     "description": "從燈塔的窗邊飄進來的。" },
+        { "keepsake_id": "ks_stone",    "name": "一顆扁石頭",   "description": "很適合打水漂，但你捨不得丟。" },
+        { "keepsake_id": "ks_driftwood","name": "一段浮木",     "description": "漂了很遠才到這裡。" },
+        { "keepsake_id": "ks_lamp",     "name": "一盞小燈",     "description": "燈塔備品。亮度不高，但不會熄。" }
+      ]
+    }
+  },
+  "safety": {
+    "version": "1.0.0",
+    "region": "TW",
+    "intro": "看起來這陣子很不好過。這不是遊戲能處理的事，但有人可以。",
+    "body": "以下是台灣可以馬上打的電話。打過去不用準備好要說什麼，接電話的人會幫你。",
+    "resources": [
+      { "name": "1925 安心專線",   "contact": "1925", "hours": "24 小時",        "note": "衛福部設置，免付費" },
+      { "name": "1995 生命線",     "contact": "1995", "hours": "24 小時",        "note": "" },
+      { "name": "1980 張老師專線", "contact": "1980", "hours": "週一至週六",     "note": "" },
+      { "name": "110 / 119",       "contact": "110",  "hours": "24 小時",        "note": "有立即危險時請直接撥打" }
+    ],
+    "closing": "如果現在不想打電話，也可以先告訴身邊一個人。一個就好。",
+    "trigger_keywords": [
+      "不想活", "活不下去", "自殺", "結束生命", "想死", "去死", "輕生",
+      "傷害自己", "自殘", "割腕", "跳下去", "一了百了", "撐不下去了", "解脫"
+    ],
+    "trigger_note": "關鍵字僅用於在本機（裝置端）即時顯示求助資源，不會因此單獨上傳或標記任何個人資料。",
+    "ai_rule": "AI 回饋服務偵測到風險訊號時，必須停止一般回饋，改為輸出 safety 類型回應，內容固定不生成。"
+  }
+}

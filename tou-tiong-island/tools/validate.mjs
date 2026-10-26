@@ -13,7 +13,7 @@
  *   8. state_effects / 條件運算式只引用 state_vars 宣告過的變數
  *   9. 航線的 practice_card_id 與 island_growth_id 在內容庫中存在
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { validate } from './jsonschema.mjs';
@@ -203,6 +203,22 @@ for (const file of storyFiles) {
 for (const c of practiceCards.cards) if (!usedCards.has(c.card_id)) problems.push(`[practice_cards] ${c.card_id} 沒有任何航線使用`);
 for (const i of islandMap.islands) {
   for (const g of i.growth) if (!usedGrowth.has(g.growth_id)) problems.push(`[island_map] ${g.growth_id} 沒有任何航線使用`);
+}
+
+// 產生故事索引（前端首屏用；由驗證器產生，確保永遠與劇本同步）
+if (!problems.length) {
+  const index = storyFiles.map((file) => {
+    const s = read(join('content/stories', file));
+    return {
+      story_id: s.story_id, file, title: s.title, subtitle: s.subtitle ?? '',
+      island_id: s.island_id, order: s.order ?? 99, theme: s.theme,
+      logline: s.logline ?? '', estimated_minutes: s.estimated_minutes ?? 3,
+      content_notes: s.content_notes ?? [], version: s.version,
+      routes: s.routes.map((r) => ({ route_id: r.route_id, name: r.name })),
+      endings: s.endings.length,
+    };
+  }).sort((a, b) => a.order - b.order);
+  writeFileSync(join(ROOT, 'content/story_index.json'), JSON.stringify(index, null, 2) + '\n');
 }
 
 console.log('\n=== 透中島 劇情資料驗收 ===\n');

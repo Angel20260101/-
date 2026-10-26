@@ -1,0 +1,26 @@
+name: 透中島 CI
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["tou-tiong-island/**", ".github/workflows/tou-tiong-island.yml"]
+  pull_request:
+    paths: ["tou-tiong-island/**"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tou-tiong-island
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 安裝相依套件
+        run: npm ci || npm install
+      - name: 劇情資料驗收與航線測試
+        run: npm test
+      - name: 建置
+        run: npx vite build

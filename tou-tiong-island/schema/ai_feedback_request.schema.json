@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tou-tiong-island.app/schema/ai_feedback_request.schema.json",
+  "title": "AI 個人化回饋・請求",
+  "description": "送進 AI 回饋服務的全部內容。除了這些欄位以外，不得傳送任何其他玩家資料（包含每日心情紀錄、每週溫度計分數、裝置識別碼）。",
+  "type": "object",
+  "required": ["version", "locale", "story", "ending", "route", "choices", "practice_card", "consent"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "1.0.0" },
+    "locale":  { "type": "string", "enum": ["zh-TW"] },
+    "request_id": { "type": "string", "description": "伺服器端追蹤用的隨機識別碼，與玩家身分無關" },
+    "story": {
+      "type": "object",
+      "required": ["story_id", "title", "theme"],
+      "additionalProperties": false,
+      "properties": {
+        "story_id": { "type": "string" },
+        "title":    { "type": "string" },
+        "theme":    { "type": "string" }
+      }
+    },
+    "ending": {
+      "type": "object",
+      "required": ["ending_id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "ending_id": { "type": "string" },
+        "title":     { "type": "string" },
+        "summary":   { "type": "string" },
+        "tags":      { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": ["route_id", "name", "meaning"],
+      "additionalProperties": false,
+      "properties": {
+        "route_id": { "type": "string" },
+        "name":     { "type": "string" },
+        "meaning":  { "type": "string" }
+      }
+    },
+    "choices": {
+      "type": "array", "minItems": 1, "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["node_title", "choice_text", "consequence"],
+        "additionalProperties": false,
+        "properties": {
+          "node_title":  { "type": "string" },
+          "choice_text": { "type": "string" },
+          "consequence": { "type": "string" },
+          "tags":        { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "clues": {
+      "type": "array", "maxItems": 6,
+      "description": "本次遊玩看過的心聲線索。供 AI 避免重複，不是讓 AI 改寫。",
+      "items": {
+        "type": "object",
+        "required": ["title", "text"],
+        "additionalProperties": false,
+        "properties": { "title": { "type": "string" }, "text": { "type": "string" } }
+      }
+    },
+    "practice_card": {
+      "type": "object",
+      "required": ["card_id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "card_id": { "type": "string" },
+        "title":   { "type": "string" },
+        "steps":   { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "player_note": {
+      "type": "string", "maxLength": 500,
+      "description": "玩家自願填寫的一段話。沒有填就不要帶這個欄位。"
+    },
+    "consent": {
+      "type": "object",
+      "required": ["ai_feedback"],
+      "additionalProperties": false,
+      "properties": {
+        "ai_feedback":     { "type": "boolean", "description": "玩家是否同意這一次產生 AI 回饋" },
+        "use_player_note": { "type": "boolean", "description": "玩家是否同意把自填內容送出；false 時伺服器必須剝除 player_note" }
+      }
+    }
+  }
+}

@@ -1,42 +1,190 @@
 {
   "schema_version": "1.0.0",
   "description": "群島佈局與島嶼養成資料。3D 場景完全由這份檔案生成；新增島嶼＝新增一筆 islands[]。座標為 flat-top 軸向座標 (q, r)，island.origin 會加到各 hex 之上。",
-  "hex": { "size": 1.0, "orientation": "flat-top", "level_height": 0.42, "base_depth": 0.55 },
+  "hex": {
+    "size": 1.0,
+    "orientation": "flat-top",
+    "level_height": 0.42,
+    "base_depth": 0.55
+  },
   "camera": {
-    "default_target": [0, 0, 0],
-    "default_distance": 26,
-    "min_distance": 10,
-    "max_distance": 46,
-    "polar_deg": { "min": 22, "max": 68, "default": 42 },
-    "azimuth_deg": { "default": -38 }
+    "default_target": [
+      0,
+      0,
+      0
+    ],
+    "default_distance": 44,
+    "min_distance": 9,
+    "max_distance": 140,
+    "polar_deg": {
+      "min": 22,
+      "max": 68,
+      "default": 42
+    },
+    "azimuth_deg": {
+      "default": -38
+    }
   },
   "home": {
     "island_id": "island_home",
     "name": "透中島",
     "tagline": "中午十二點的島。太陽最高的時候，影子最短。",
-    "origin": { "q": 0, "r": 0 },
+    "origin": {
+      "q": 0,
+      "r": 0
+    },
     "flora": "temperate",
     "hexes": [
-      { "q": 0,  "r": 0,  "level": 2, "surface": "grass",      "flora": "none" },
-      { "q": 1,  "r": 0,  "level": 1, "surface": "grass_light","flora": "round_grove" },
-      { "q": 0,  "r": 1,  "level": 1, "surface": "sand",       "flora": "grass_tufts" },
-      { "q": -1, "r": 1,  "level": 1, "surface": "grass",      "flora": "pine_grove" },
-      { "q": -1, "r": 0,  "level": 0, "surface": "sand",       "flora": "grass_tufts" },
-      { "q": 0,  "r": -1, "level": 1, "surface": "grass_light","flora": "round_grove" },
-      { "q": 1,  "r": -1, "level": 0, "surface": "sand",       "flora": "palm_pair" }
+      {
+        "q": 0,
+        "r": 0,
+        "level": 2,
+        "surface": "grass",
+        "flora": "none"
+      },
+      {
+        "q": 1,
+        "r": 0,
+        "level": 1,
+        "surface": "grass_light",
+        "flora": "round_grove"
+      },
+      {
+        "q": 0,
+        "r": 1,
+        "level": 1,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      },
+      {
+        "q": -1,
+        "r": 1,
+        "level": 1,
+        "surface": "grass",
+        "flora": "pine_grove"
+      },
+      {
+        "q": -1,
+        "r": 0,
+        "level": 0,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      },
+      {
+        "q": 0,
+        "r": -1,
+        "level": 1,
+        "surface": "grass_light",
+        "flora": "round_grove"
+      },
+      {
+        "q": 1,
+        "r": -1,
+        "level": 0,
+        "surface": "sand",
+        "flora": "palm_pair"
+      }
     ],
     "landmarks": [
-      { "type": "lighthouse",  "hex": [0, 0],  "offset": [0, 0],      "scale": 1.0, "rot": 0.3,  "interaction": "weekly", "label": "燈塔" },
-      { "type": "pier",        "hex": [0, 1],  "offset": [0.3, 0.9],  "scale": 1.0, "rot": 0.9,  "interaction": "daily",  "label": "碼頭" },
-      { "type": "signpost",    "hex": [-1, 0], "offset": [0, 0.2],    "scale": 1.0, "rot": -0.4, "interaction": "atlas",  "label": "航海圖" },
-      { "type": "bench",       "hex": [1, -1], "offset": [0.2, -0.3], "scale": 1.0, "rot": 1.2,  "interaction": "collection", "label": "長椅" },
-      { "type": "flower_patch","hex": [-1, 1], "offset": [0.4, 0.3],  "scale": 1.0, "rot": 0 }
+      {
+        "type": "lighthouse",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "scale": 1.0,
+        "rot": 0.3,
+        "interaction": "weekly",
+        "label": "燈塔"
+      },
+      {
+        "type": "pier",
+        "hex": [
+          0,
+          1
+        ],
+        "offset": [
+          0.3,
+          0.9
+        ],
+        "scale": 1.0,
+        "rot": 0.9,
+        "interaction": "daily",
+        "label": "碼頭"
+      },
+      {
+        "type": "signpost",
+        "hex": [
+          -1,
+          0
+        ],
+        "offset": [
+          0,
+          0.2
+        ],
+        "scale": 1.0,
+        "rot": -0.4,
+        "interaction": "atlas",
+        "label": "航海圖"
+      },
+      {
+        "type": "bench",
+        "hex": [
+          1,
+          -1
+        ],
+        "offset": [
+          0.2,
+          -0.3
+        ],
+        "scale": 1.0,
+        "rot": 1.2,
+        "interaction": "collection",
+        "label": "長椅"
+      },
+      {
+        "type": "flower_patch",
+        "hex": [
+          -1,
+          1
+        ],
+        "offset": [
+          0.4,
+          0.3
+        ],
+        "scale": 1.0,
+        "rot": 0
+      }
     ],
     "interactions": [
-      { "id": "daily",      "landmark": "pier",       "title": "碼頭｜今天的天氣", "subtitle": "每日任務・約 30 秒" },
-      { "id": "weekly",     "landmark": "lighthouse", "title": "燈塔｜心情溫度計", "subtitle": "每週任務・自願" },
-      { "id": "atlas",      "landmark": "signpost",   "title": "航海圖｜探索進度", "subtitle": "看看你走過哪些航線" },
-      { "id": "collection", "landmark": "bench",      "title": "長椅｜收藏",       "subtitle": "紀念物與情緒練習卡" }
+      {
+        "id": "daily",
+        "landmark": "pier",
+        "title": "碼頭｜今天的天氣",
+        "subtitle": "每日任務・約 30 秒"
+      },
+      {
+        "id": "weekly",
+        "landmark": "lighthouse",
+        "title": "燈塔｜心情溫度計",
+        "subtitle": "每週任務・自願"
+      },
+      {
+        "id": "atlas",
+        "landmark": "signpost",
+        "title": "航海圖｜探索進度",
+        "subtitle": "看看你走過哪些航線"
+      },
+      {
+        "id": "collection",
+        "landmark": "bench",
+        "title": "長椅｜收藏",
+        "subtitle": "紀念物與情緒練習卡"
+      }
     ]
   },
   "islands": [
@@ -47,17 +195,59 @@
       "default_name": "界線島",
       "name_hint": "你可以替它取名字，隨時能改。",
       "locked_label": "未標記的海域",
-      "origin": { "q": -7, "r": 3 },
+      "origin": {
+        "q": -5,
+        "r": 2
+      },
       "flora": "temperate",
-      "sea_route_from_home": [[-2, 1], [-4, 2], [-6, 2]],
+      "sea_route_from_home": [
+        [
+          -2,
+          1
+        ],
+        [
+          -3,
+          1
+        ]
+      ],
       "base": {
         "hexes": [
-          { "q": 0, "r": 0, "level": 1, "surface": "grass",       "flora": "round_grove" },
-          { "q": 1, "r": 0, "level": 0, "surface": "sand",        "flora": "grass_tufts" },
-          { "q": 0, "r": 1, "level": 0, "surface": "sand",        "flora": "none" }
+          {
+            "q": 0,
+            "r": 0,
+            "level": 1,
+            "surface": "grass",
+            "flora": "round_grove"
+          },
+          {
+            "q": 1,
+            "r": 0,
+            "level": 0,
+            "surface": "sand",
+            "flora": "grass_tufts"
+          },
+          {
+            "q": 0,
+            "r": 1,
+            "level": 0,
+            "surface": "sand",
+            "flora": "none"
+          }
         ],
         "landmarks": [
-          { "type": "hut", "hex": [0, 0], "offset": [0, 0], "scale": 0.9, "rot": 0.4 }
+          {
+            "type": "hut",
+            "hex": [
+              0,
+              0
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "scale": 0.9,
+            "rot": 0.4
+          }
         ]
       },
       "growth": [
@@ -67,10 +257,42 @@
           "label": "界線石徑",
           "description": "一條用石頭鋪出來的小路，從屋子一直走到島的邊緣。走到底會看到海。",
           "unlock_line": "島上多了一條石徑。它沒有通往任何地方，只是清楚地標示出：這裡是邊界。",
-          "hexes": [ { "q": 1, "r": -1, "level": 1, "surface": "grass_light", "flora": "pine_grove" } ],
+          "hexes": [
+            {
+              "q": 1,
+              "r": -1,
+              "level": 1,
+              "surface": "grass_light",
+              "flora": "pine_grove"
+            }
+          ],
           "landmarks": [
-            { "type": "stone_path", "hex": [0, 0],  "offset": [0, 0.5],  "scale": 1.0, "rot": 0.5 },
-            { "type": "lamp_post",  "hex": [1, -1], "offset": [0.3, 0],  "scale": 1.0, "rot": 0 }
+            {
+              "type": "stone_path",
+              "hex": [
+                0,
+                0
+              ],
+              "offset": [
+                0,
+                0.5
+              ],
+              "scale": 1.0,
+              "rot": 0.5
+            },
+            {
+              "type": "lamp_post",
+              "hex": [
+                1,
+                -1
+              ],
+              "offset": [
+                0.3,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 0
+            }
           ]
         },
         {
@@ -79,9 +301,29 @@
           "label": "兩岸木橋",
           "description": "一座把兩塊地連起來的木橋。本來隔著水的地方，現在走得過去了。",
           "unlock_line": "島的另一邊浮出一塊地，中間架起一座木橋。走過去要花一點時間，但它通了。",
-          "hexes": [ { "q": 2, "r": 0, "level": 1, "surface": "grass", "flora": "round_grove" } ],
+          "hexes": [
+            {
+              "q": 2,
+              "r": 0,
+              "level": 1,
+              "surface": "grass",
+              "flora": "round_grove"
+            }
+          ],
           "landmarks": [
-            { "type": "rope_bridge", "hex": [1, 0], "offset": [0.7, 0], "scale": 1.0, "rot": 0 }
+            {
+              "type": "rope_bridge",
+              "hex": [
+                1,
+                0
+              ],
+              "offset": [
+                0.7,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 0
+            }
           ]
         },
         {
@@ -90,10 +332,42 @@
           "label": "夜間的燈",
           "description": "屋子旁邊亮起一盞燈。不管多晚回來，它都還亮著。",
           "unlock_line": "屋子旁邊多了一盞燈，和一張面向海的長椅。給那些很晚才結束的日子。",
-          "hexes": [ { "q": -1, "r": 1, "level": 0, "surface": "sand", "flora": "palm_pair" } ],
+          "hexes": [
+            {
+              "q": -1,
+              "r": 1,
+              "level": 0,
+              "surface": "sand",
+              "flora": "palm_pair"
+            }
+          ],
           "landmarks": [
-            { "type": "lamp_post", "hex": [0, 0],  "offset": [-0.5, 0.3], "scale": 1.1, "rot": 0 },
-            { "type": "bench",     "hex": [-1, 1], "offset": [0, 0],      "scale": 0.9, "rot": 2.1 }
+            {
+              "type": "lamp_post",
+              "hex": [
+                0,
+                0
+              ],
+              "offset": [
+                -0.5,
+                0.3
+              ],
+              "scale": 1.1,
+              "rot": 0
+            },
+            {
+              "type": "bench",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 0.9,
+              "rot": 2.1
+            }
           ]
         }
       ]
@@ -105,17 +379,59 @@
       "default_name": "回聲島",
       "name_hint": "你可以替它取名字，隨時能改。",
       "locked_label": "未標記的海域",
-      "origin": { "q": -6, "r": -5 },
+      "origin": {
+        "q": -3,
+        "r": -3
+      },
       "flora": "pink",
-      "sea_route_from_home": [[-2, -1], [-4, -3], [-5, -4]],
+      "sea_route_from_home": [
+        [
+          -1,
+          -1
+        ],
+        [
+          -2,
+          -1
+        ]
+      ],
       "base": {
         "hexes": [
-          { "q": 0, "r": 0, "level": 1, "surface": "grass",  "flora": "pink_grove" },
-          { "q": 1, "r": 0, "level": 0, "surface": "sand",   "flora": "grass_tufts" },
-          { "q": 0, "r": 1, "level": 0, "surface": "sand",   "flora": "none" }
+          {
+            "q": 0,
+            "r": 0,
+            "level": 1,
+            "surface": "grass",
+            "flora": "pink_grove"
+          },
+          {
+            "q": 1,
+            "r": 0,
+            "level": 0,
+            "surface": "sand",
+            "flora": "grass_tufts"
+          },
+          {
+            "q": 0,
+            "r": 1,
+            "level": 0,
+            "surface": "sand",
+            "flora": "none"
+          }
         ],
         "landmarks": [
-          { "type": "hut", "hex": [0, 0], "offset": [0.1, 0.1], "scale": 0.9, "rot": -0.6 }
+          {
+            "type": "hut",
+            "hex": [
+              0,
+              0
+            ],
+            "offset": [
+              0.1,
+              0.1
+            ],
+            "scale": 0.9,
+            "rot": -0.6
+          }
         ]
       },
       "growth": [
@@ -125,8 +441,30 @@
           "label": "防風林",
           "description": "沿著迎風面長出一排樹。風還是會來，只是不會直接打在屋子上。",
           "unlock_line": "島的迎風面長出一排樹。風沒有停，但屋子前面安靜下來了。",
-          "hexes": [ { "q": 0, "r": -1, "level": 1, "surface": "grass_light", "flora": "pine_grove" } ],
-          "landmarks": [ { "type": "rock", "hex": [0, -1], "offset": [0.5, 0.4], "scale": 1.3, "rot": 0.7 } ]
+          "hexes": [
+            {
+              "q": 0,
+              "r": -1,
+              "level": 1,
+              "surface": "grass_light",
+              "flora": "pine_grove"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "rock",
+              "hex": [
+                0,
+                -1
+              ],
+              "offset": [
+                0.5,
+                0.4
+              ],
+              "scale": 1.3,
+              "rot": 0.7
+            }
+          ]
         },
         {
           "growth_id": "ig_02_endure",
@@ -134,8 +472,30 @@
           "label": "退潮的淺灘",
           "description": "一片退潮後露出來的淺灘。水退了，地就出現了。",
           "unlock_line": "潮水退下去，露出一片淺灘。那片地一直都在，只是之前看不見。",
-          "hexes": [ { "q": 1, "r": 1, "level": 0, "surface": "sand", "flora": "grass_tufts" } ],
-          "landmarks": [ { "type": "buoy", "hex": [1, 1], "offset": [0.6, 0.5], "scale": 1.0, "rot": 0 } ]
+          "hexes": [
+            {
+              "q": 1,
+              "r": 1,
+              "level": 0,
+              "surface": "sand",
+              "flora": "grass_tufts"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "buoy",
+              "hex": [
+                1,
+                1
+              ],
+              "offset": [
+                0.6,
+                0.5
+              ],
+              "scale": 1.0,
+              "rot": 0
+            }
+          ]
         },
         {
           "growth_id": "ig_02_support",
@@ -143,10 +503,42 @@
           "label": "兩張椅子",
           "description": "海邊多了兩張面對面的椅子，中間一張小桌。",
           "unlock_line": "海邊出現兩張面對面的椅子。不是一張，是兩張。",
-          "hexes": [ { "q": -1, "r": 1, "level": 1, "surface": "grass", "flora": "pink_grove" } ],
+          "hexes": [
+            {
+              "q": -1,
+              "r": 1,
+              "level": 1,
+              "surface": "grass",
+              "flora": "pink_grove"
+            }
+          ],
           "landmarks": [
-            { "type": "bench", "hex": [-1, 1], "offset": [-0.2, 0],   "scale": 0.85, "rot": 0.4 },
-            { "type": "bench", "hex": [-1, 1], "offset": [0.5, 0.4],  "scale": 0.85, "rot": 3.5 }
+            {
+              "type": "bench",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                -0.2,
+                0
+              ],
+              "scale": 0.85,
+              "rot": 0.4
+            },
+            {
+              "type": "bench",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                0.5,
+                0.4
+              ],
+              "scale": 0.85,
+              "rot": 3.5
+            }
           ]
         }
       ]
@@ -158,17 +550,59 @@
       "default_name": "夜哨島",
       "name_hint": "你可以替它取名字，隨時能改。",
       "locked_label": "未標記的海域",
-      "origin": { "q": 1, "r": -8 },
+      "origin": {
+        "q": 2,
+        "r": -5
+      },
       "flora": "pine",
-      "sea_route_from_home": [[0, -2], [0, -4], [1, -6]],
+      "sea_route_from_home": [
+        [
+          1,
+          -2
+        ],
+        [
+          1,
+          -3
+        ]
+      ],
       "base": {
         "hexes": [
-          { "q": 0, "r": 0, "level": 2, "surface": "rock",  "flora": "none" },
-          { "q": 1, "r": 0, "level": 1, "surface": "grass", "flora": "pine_grove" },
-          { "q": 0, "r": 1, "level": 0, "surface": "sand",  "flora": "none" }
+          {
+            "q": 0,
+            "r": 0,
+            "level": 2,
+            "surface": "rock",
+            "flora": "none"
+          },
+          {
+            "q": 1,
+            "r": 0,
+            "level": 1,
+            "surface": "grass",
+            "flora": "pine_grove"
+          },
+          {
+            "q": 0,
+            "r": 1,
+            "level": 0,
+            "surface": "sand",
+            "flora": "none"
+          }
         ],
         "landmarks": [
-          { "type": "hut", "hex": [1, 0], "offset": [0, 0], "scale": 0.9, "rot": 1.1 }
+          {
+            "type": "hut",
+            "hex": [
+              1,
+              0
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "scale": 0.9,
+            "rot": 1.1
+          }
         ]
       },
       "growth": [
@@ -178,8 +612,30 @@
           "label": "無線電塔",
           "description": "岩頂立起一座塔。它的用途只有一個：讓訊號出得去。",
           "unlock_line": "岩頂立起一座塔。從這裡發出去的訊號，別的島收得到。",
-          "hexes": [ { "q": -1, "r": 1, "level": 1, "surface": "rock", "flora": "none" } ],
-          "landmarks": [ { "type": "lamp_post", "hex": [0, 0], "offset": [0, 0], "scale": 1.6, "rot": 0 } ]
+          "hexes": [
+            {
+              "q": -1,
+              "r": 1,
+              "level": 1,
+              "surface": "rock",
+              "flora": "none"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "lamp_post",
+              "hex": [
+                0,
+                0
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.6,
+              "rot": 0
+            }
+          ]
         },
         {
           "growth_id": "ig_03_hold",
@@ -187,8 +643,30 @@
           "label": "避風的凹岸",
           "description": "岩壁被海挖出一個凹口，剛好擋住主要的風向。",
           "unlock_line": "岩壁被海挖出一個凹口。不大，但剛好可以躲一下。",
-          "hexes": [ { "q": 1, "r": -1, "level": 1, "surface": "rock", "flora": "grass_tufts" } ],
-          "landmarks": [ { "type": "rock", "hex": [1, -1], "offset": [0.3, 0.3], "scale": 1.5, "rot": 2.0 } ]
+          "hexes": [
+            {
+              "q": 1,
+              "r": -1,
+              "level": 1,
+              "surface": "rock",
+              "flora": "grass_tufts"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "rock",
+              "hex": [
+                1,
+                -1
+              ],
+              "offset": [
+                0.3,
+                0.3
+              ],
+              "scale": 1.5,
+              "rot": 2.0
+            }
+          ]
         },
         {
           "growth_id": "ig_03_safety",
@@ -196,10 +674,42 @@
           "label": "警示燈與欄杆",
           "description": "危險的邊緣架起欄杆，轉角裝上一盞燈。事故不會因此消失，但下一個人看得到。",
           "unlock_line": "島的邊緣架起欄杆，轉角裝上一盞燈。給下一個走這條路的人。",
-          "hexes": [ { "q": 1, "r": 1, "level": 0, "surface": "sand", "flora": "grass_tufts" } ],
+          "hexes": [
+            {
+              "q": 1,
+              "r": 1,
+              "level": 0,
+              "surface": "sand",
+              "flora": "grass_tufts"
+            }
+          ],
           "landmarks": [
-            { "type": "stone_path", "hex": [0, 1],  "offset": [0, 0],    "scale": 1.0, "rot": 1.0 },
-            { "type": "lamp_post",  "hex": [1, 1],  "offset": [0.2, 0],  "scale": 1.0, "rot": 0 }
+            {
+              "type": "stone_path",
+              "hex": [
+                0,
+                1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 1.0
+            },
+            {
+              "type": "lamp_post",
+              "hex": [
+                1,
+                1
+              ],
+              "offset": [
+                0.2,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 0
+            }
           ]
         }
       ]
@@ -211,16 +721,60 @@
       "default_name": "署名島",
       "name_hint": "你可以替它取名字，隨時能改。",
       "locked_label": "未標記的海域",
-      "origin": { "q": 8, "r": -6 },
+      "origin": {
+        "q": 6,
+        "r": -3
+      },
       "flora": "temperate",
-      "sea_route_from_home": [[2, -1], [4, -3], [6, -5]],
+      "sea_route_from_home": [
+        [
+          2,
+          -1
+        ],
+        [
+          4,
+          -2
+        ]
+      ],
       "base": {
         "hexes": [
-          { "q": 0, "r": 0, "level": 1, "surface": "grass",      "flora": "round_grove" },
-          { "q": 1, "r": 0, "level": 1, "surface": "grass_light","flora": "grass_tufts" },
-          { "q": 0, "r": 1, "level": 0, "surface": "sand",       "flora": "none" }
+          {
+            "q": 0,
+            "r": 0,
+            "level": 1,
+            "surface": "grass",
+            "flora": "round_grove"
+          },
+          {
+            "q": 1,
+            "r": 0,
+            "level": 1,
+            "surface": "grass_light",
+            "flora": "grass_tufts"
+          },
+          {
+            "q": 0,
+            "r": 1,
+            "level": 0,
+            "surface": "sand",
+            "flora": "none"
+          }
         ],
-        "landmarks": [ { "type": "hut", "hex": [0, 0], "offset": [0, 0], "scale": 0.9, "rot": -0.2 } ]
+        "landmarks": [
+          {
+            "type": "hut",
+            "hex": [
+              0,
+              0
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "scale": 0.9,
+            "rot": -0.2
+          }
+        ]
       },
       "growth": [
         {
@@ -229,8 +783,30 @@
           "label": "島名牌",
           "description": "島的入口立起一塊牌子，上面寫著這座島的名字。",
           "unlock_line": "島的入口立起一塊牌子。從海上過來的人，現在知道這裡叫什麼。",
-          "hexes": [ { "q": 1, "r": -1, "level": 1, "surface": "grass", "flora": "round_grove" } ],
-          "landmarks": [ { "type": "signpost", "hex": [0, 1], "offset": [0.2, 0.3], "scale": 1.0, "rot": 0.3 } ]
+          "hexes": [
+            {
+              "q": 1,
+              "r": -1,
+              "level": 1,
+              "surface": "grass",
+              "flora": "round_grove"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "signpost",
+              "hex": [
+                0,
+                1
+              ],
+              "offset": [
+                0.2,
+                0.3
+              ],
+              "scale": 1.0,
+              "rot": 0.3
+            }
+          ]
         },
         {
           "growth_id": "ig_04_keep",
@@ -238,8 +814,30 @@
           "label": "倉庫",
           "description": "一間小倉庫。東西放進去不會不見，什麼時候要拿出來，由你決定。",
           "unlock_line": "島上蓋起一間小倉庫。你做過的東西，現在有地方放了。",
-          "hexes": [ { "q": -1, "r": 1, "level": 0, "surface": "sand", "flora": "grass_tufts" } ],
-          "landmarks": [ { "type": "hut", "hex": [-1, 1], "offset": [0, 0], "scale": 0.7, "rot": 1.4 } ]
+          "hexes": [
+            {
+              "q": -1,
+              "r": 1,
+              "level": 0,
+              "surface": "sand",
+              "flora": "grass_tufts"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "hut",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 0.7,
+              "rot": 1.4
+            }
+          ]
         },
         {
           "growth_id": "ig_04_rules",
@@ -247,8 +845,30 @@
           "label": "共用碼頭",
           "description": "一座大家都能停靠的碼頭，每個泊位都有編號。",
           "unlock_line": "海邊築起一座碼頭，每個泊位都標了號碼。誰停哪裡，一眼就看得出來。",
-          "hexes": [ { "q": 2, "r": 0, "level": 0, "surface": "sand", "flora": "none" } ],
-          "landmarks": [ { "type": "pier", "hex": [2, 0], "offset": [0.4, 0.4], "scale": 0.9, "rot": 0.6 } ]
+          "hexes": [
+            {
+              "q": 2,
+              "r": 0,
+              "level": 0,
+              "surface": "sand",
+              "flora": "none"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "pier",
+              "hex": [
+                2,
+                0
+              ],
+              "offset": [
+                0.4,
+                0.4
+              ],
+              "scale": 0.9,
+              "rot": 0.6
+            }
+          ]
         }
       ]
     },
@@ -259,16 +879,60 @@
       "default_name": "歸返島",
       "name_hint": "你可以替它取名字，隨時能改。",
       "locked_label": "未標記的海域",
-      "origin": { "q": 9, "r": 1 },
+      "origin": {
+        "q": 4,
+        "r": 2
+      },
       "flora": "coral",
-      "sea_route_from_home": [[2, 0], [5, 0], [7, 1]],
+      "sea_route_from_home": [
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ]
+      ],
       "base": {
         "hexes": [
-          { "q": 0, "r": 0, "level": 1, "surface": "grass",  "flora": "coral_grove" },
-          { "q": 1, "r": 0, "level": 0, "surface": "sand",   "flora": "palm_pair" },
-          { "q": 0, "r": 1, "level": 0, "surface": "sand",   "flora": "none" }
+          {
+            "q": 0,
+            "r": 0,
+            "level": 1,
+            "surface": "grass",
+            "flora": "coral_grove"
+          },
+          {
+            "q": 1,
+            "r": 0,
+            "level": 0,
+            "surface": "sand",
+            "flora": "palm_pair"
+          },
+          {
+            "q": 0,
+            "r": 1,
+            "level": 0,
+            "surface": "sand",
+            "flora": "none"
+          }
         ],
-        "landmarks": [ { "type": "hut", "hex": [0, 0], "offset": [0, 0], "scale": 1.0, "rot": 0.8 } ]
+        "landmarks": [
+          {
+            "type": "hut",
+            "hex": [
+              0,
+              0
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "scale": 1.0,
+            "rot": 0.8
+          }
+        ]
       },
       "growth": [
         {
@@ -277,8 +941,30 @@
           "label": "自己的房間",
           "description": "主屋旁邊多了一間小屋，門是朝外開的。",
           "unlock_line": "主屋旁邊多了一間小屋。它很小，但門朝外開，而且鑰匙在你手上。",
-          "hexes": [ { "q": 1, "r": -1, "level": 1, "surface": "grass_light", "flora": "coral_grove" } ],
-          "landmarks": [ { "type": "hut", "hex": [1, -1], "offset": [0, 0], "scale": 0.65, "rot": -0.5 } ]
+          "hexes": [
+            {
+              "q": 1,
+              "r": -1,
+              "level": 1,
+              "surface": "grass_light",
+              "flora": "coral_grove"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "hut",
+              "hex": [
+                1,
+                -1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 0.65,
+              "rot": -0.5
+            }
+          ]
         },
         {
           "growth_id": "ig_05_comply",
@@ -286,10 +972,42 @@
           "label": "長桌",
           "description": "院子裡擺了一張很長的桌子，位置夠坐下所有人。",
           "unlock_line": "院子裡擺了一張長桌，位置夠所有人坐。包括你的那一個。",
-          "hexes": [ { "q": -1, "r": 1, "level": 1, "surface": "grass", "flora": "grass_tufts" } ],
+          "hexes": [
+            {
+              "q": -1,
+              "r": 1,
+              "level": 1,
+              "surface": "grass",
+              "flora": "grass_tufts"
+            }
+          ],
           "landmarks": [
-            { "type": "bench", "hex": [-1, 1], "offset": [-0.3, 0],  "scale": 1.0, "rot": 0 },
-            { "type": "bench", "hex": [-1, 1], "offset": [0.5, 0.2], "scale": 1.0, "rot": 3.14 }
+            {
+              "type": "bench",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                -0.3,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 0
+            },
+            {
+              "type": "bench",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                0.5,
+                0.2
+              ],
+              "scale": 1.0,
+              "rot": 3.14
+            }
           ]
         },
         {
@@ -298,10 +1016,42 @@
           "label": "回家的路",
           "description": "一條從碼頭通到屋子的路。走得進來，也走得出去。",
           "unlock_line": "碼頭和屋子之間鋪出一條路。它是雙向的——走得進來，也走得出去。",
-          "hexes": [ { "q": 1, "r": 1, "level": 0, "surface": "sand", "flora": "palm_pair" } ],
+          "hexes": [
+            {
+              "q": 1,
+              "r": 1,
+              "level": 0,
+              "surface": "sand",
+              "flora": "palm_pair"
+            }
+          ],
           "landmarks": [
-            { "type": "stone_path", "hex": [0, 1], "offset": [0, 0],   "scale": 1.0, "rot": 1.6 },
-            { "type": "pier",       "hex": [1, 1], "offset": [0.5, 0.4], "scale": 0.8, "rot": 1.2 }
+            {
+              "type": "stone_path",
+              "hex": [
+                0,
+                1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 1.6
+            },
+            {
+              "type": "pier",
+              "hex": [
+                1,
+                1
+              ],
+              "offset": [
+                0.5,
+                0.4
+              ],
+              "scale": 0.8,
+              "rot": 1.2
+            }
           ]
         }
       ]
@@ -313,16 +1063,60 @@
       "default_name": "歇腳島",
       "name_hint": "你可以替它取名字，隨時能改。",
       "locked_label": "未標記的海域",
-      "origin": { "q": 1, "r": 7 },
+      "origin": {
+        "q": -1,
+        "r": 5
+      },
       "flora": "temperate",
-      "sea_route_from_home": [[0, 2], [0, 4], [1, 6]],
+      "sea_route_from_home": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ]
+      ],
       "base": {
         "hexes": [
-          { "q": 0, "r": 0, "level": 1, "surface": "grass",  "flora": "round_grove" },
-          { "q": 1, "r": 0, "level": 0, "surface": "sand",   "flora": "grass_tufts" },
-          { "q": 0, "r": 1, "level": 0, "surface": "sand",   "flora": "none" }
+          {
+            "q": 0,
+            "r": 0,
+            "level": 1,
+            "surface": "grass",
+            "flora": "round_grove"
+          },
+          {
+            "q": 1,
+            "r": 0,
+            "level": 0,
+            "surface": "sand",
+            "flora": "grass_tufts"
+          },
+          {
+            "q": 0,
+            "r": 1,
+            "level": 0,
+            "surface": "sand",
+            "flora": "none"
+          }
         ],
-        "landmarks": [ { "type": "hut", "hex": [0, 0], "offset": [0, 0], "scale": 0.9, "rot": 2.4 } ]
+        "landmarks": [
+          {
+            "type": "hut",
+            "hex": [
+              0,
+              0
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "scale": 0.9,
+            "rot": 2.4
+          }
+        ]
       },
       "growth": [
         {
@@ -331,8 +1125,30 @@
           "label": "樹蔭與吊床",
           "description": "兩棵樹之間掛起一張吊床。它什麼功能都沒有。",
           "unlock_line": "兩棵樹之間掛起一張吊床。它不生產任何東西，這就是它的用途。",
-          "hexes": [ { "q": 1, "r": -1, "level": 1, "surface": "grass_light", "flora": "round_grove" } ],
-          "landmarks": [ { "type": "bench", "hex": [1, -1], "offset": [0, 0], "scale": 1.1, "rot": 0.7 } ]
+          "hexes": [
+            {
+              "q": 1,
+              "r": -1,
+              "level": 1,
+              "surface": "grass_light",
+              "flora": "round_grove"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "bench",
+              "hex": [
+                1,
+                -1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.1,
+              "rot": 0.7
+            }
+          ]
         },
         {
           "growth_id": "ig_06_burn",
@@ -340,8 +1156,30 @@
           "label": "不滅的燈",
           "description": "一盞整夜亮著的燈，旁邊放著一個計時的沙漏。",
           "unlock_line": "島上亮起一盞整夜不滅的燈，旁邊放著一個沙漏。燈會亮，但沙會流完。",
-          "hexes": [ { "q": 0, "r": -1, "level": 1, "surface": "rock", "flora": "none" } ],
-          "landmarks": [ { "type": "lamp_post", "hex": [0, -1], "offset": [0, 0], "scale": 1.3, "rot": 0 } ]
+          "hexes": [
+            {
+              "q": 0,
+              "r": -1,
+              "level": 1,
+              "surface": "rock",
+              "flora": "none"
+            }
+          ],
+          "landmarks": [
+            {
+              "type": "lamp_post",
+              "hex": [
+                0,
+                -1
+              ],
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.3,
+              "rot": 0
+            }
+          ]
         },
         {
           "growth_id": "ig_06_adjust",
@@ -349,21 +1187,152 @@
           "label": "三塊田",
           "description": "島上整出三小塊田，不多不少，剛好三塊。",
           "unlock_line": "島上整出三小塊田。不是全部開墾，就三塊——這是今天的份。",
-          "hexes": [ { "q": -1, "r": 1, "level": 1, "surface": "grass", "flora": "grass_tufts" } ],
+          "hexes": [
+            {
+              "q": -1,
+              "r": 1,
+              "level": 1,
+              "surface": "grass",
+              "flora": "grass_tufts"
+            }
+          ],
           "landmarks": [
-            { "type": "flower_patch", "hex": [-1, 1], "offset": [-0.3, 0],  "scale": 1.0, "rot": 0 },
-            { "type": "flower_patch", "hex": [-1, 1], "offset": [0.3, 0.3], "scale": 1.0, "rot": 1.0 },
-            { "type": "flower_patch", "hex": [-1, 1], "offset": [0.1, -0.4],"scale": 1.0, "rot": 2.0 }
+            {
+              "type": "flower_patch",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                -0.3,
+                0
+              ],
+              "scale": 1.0,
+              "rot": 0
+            },
+            {
+              "type": "flower_patch",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                0.3,
+                0.3
+              ],
+              "scale": 1.0,
+              "rot": 1.0
+            },
+            {
+              "type": "flower_patch",
+              "hex": [
+                -1,
+                1
+              ],
+              "offset": [
+                0.1,
+                -0.4
+              ],
+              "scale": 1.0,
+              "rot": 2.0
+            }
           ]
         }
       ]
     }
   ],
   "flora_table": {
-    "temperate":  { "round_grove": ["tree_round", "tree_blob"], "pine_grove": ["tree_pine"], "pink_grove": ["tree_pink"], "coral_grove": ["tree_coral"], "palm_pair": ["palm"], "grass_tufts": ["grass_tuft"] },
-    "pink":       { "round_grove": ["tree_pink", "tree_blob"], "pine_grove": ["tree_pine"], "pink_grove": ["tree_pink"], "coral_grove": ["tree_coral"], "palm_pair": ["palm"], "grass_tufts": ["grass_tuft"] },
-    "pine":       { "round_grove": ["tree_pine"], "pine_grove": ["tree_pine"], "pink_grove": ["tree_pink"], "coral_grove": ["tree_coral"], "palm_pair": ["palm"], "grass_tufts": ["grass_tuft"] },
-    "coral":      { "round_grove": ["tree_coral", "tree_round"], "pine_grove": ["tree_pine"], "pink_grove": ["tree_pink"], "coral_grove": ["tree_coral"], "palm_pair": ["palm"], "grass_tufts": ["grass_tuft"] }
+    "temperate": {
+      "round_grove": [
+        "tree_round",
+        "tree_blob"
+      ],
+      "pine_grove": [
+        "tree_pine"
+      ],
+      "pink_grove": [
+        "tree_pink"
+      ],
+      "coral_grove": [
+        "tree_coral"
+      ],
+      "palm_pair": [
+        "palm"
+      ],
+      "grass_tufts": [
+        "grass_tuft"
+      ]
+    },
+    "pink": {
+      "round_grove": [
+        "tree_pink",
+        "tree_blob"
+      ],
+      "pine_grove": [
+        "tree_pine"
+      ],
+      "pink_grove": [
+        "tree_pink"
+      ],
+      "coral_grove": [
+        "tree_coral"
+      ],
+      "palm_pair": [
+        "palm"
+      ],
+      "grass_tufts": [
+        "grass_tuft"
+      ]
+    },
+    "pine": {
+      "round_grove": [
+        "tree_pine"
+      ],
+      "pine_grove": [
+        "tree_pine"
+      ],
+      "pink_grove": [
+        "tree_pink"
+      ],
+      "coral_grove": [
+        "tree_coral"
+      ],
+      "palm_pair": [
+        "palm"
+      ],
+      "grass_tufts": [
+        "grass_tuft"
+      ]
+    },
+    "coral": {
+      "round_grove": [
+        "tree_coral",
+        "tree_round"
+      ],
+      "pine_grove": [
+        "tree_pine"
+      ],
+      "pink_grove": [
+        "tree_pink"
+      ],
+      "coral_grove": [
+        "tree_coral"
+      ],
+      "palm_pair": [
+        "palm"
+      ],
+      "grass_tufts": [
+        "grass_tuft"
+      ]
+    }
   },
-  "flora_density": { "round_grove": 5, "pine_grove": 4, "pink_grove": 4, "coral_grove": 3, "palm_pair": 2, "grass_tufts": 6, "none": 0 }
+  "flora_density": {
+    "round_grove": 5,
+    "pine_grove": 4,
+    "pink_grove": 4,
+    "coral_grove": 3,
+    "palm_pair": 2,
+    "grass_tufts": 6,
+    "none": 0
+  }
 }
