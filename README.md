@@ -1,4 +1,18 @@
-# 心情AED Landing Page
+# 心情AED
+
+企業員工心理健康專案。這個 repo 目前有兩個部分：
+
+| 目錄 | 專案 | 說明 |
+|---|---|---|
+| 根目錄 | 心情AED Landing Page | 行銷落地頁（GitHub Pages） |
+| [`tou-tiong-island/`](./tou-tiong-island/) | **《透中島》** | 3D 島嶼養成 × 互動劇情的療癒系網頁遊戲（Netlify） |
+
+兩者各自獨立部署，互不影響。以下是落地頁的說明；《透中島》請看
+[`tou-tiong-island/README.md`](./tou-tiong-island/README.md)。
+
+---
+
+## 心情AED Landing Page
 
 企業員工心理健康即時預警平台的行銷落地頁。訪客在頁面上直接填表，資料進 Google
 試算表，系統自動寄出兩封信 —— 全程看不到 Google 介面。

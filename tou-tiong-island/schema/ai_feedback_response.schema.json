@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tou-tiong-island.app/schema/ai_feedback_response.schema.json",
+  "title": "AI 個人化回饋・回應",
+  "description": "AI 回饋服務的輸出。前端只接受符合此 schema 的回應；驗證失敗一律改用固定文案備援。",
+  "type": "object",
+  "required": ["version", "type", "meta"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "1.0.0" },
+    "type": {
+      "type": "string",
+      "enum": ["feedback", "safety"],
+      "description": "feedback 為一般回饋；safety 表示偵測到風險訊號，改為輸出固定的關懷內容"
+    },
+    "possible_inner_voice": {
+      "type": "array", "minItems": 1, "maxItems": 3,
+      "description": "可能的心聲。必須用「可能／也許／會不會」等推測語氣，不得斷言玩家的感受。",
+      "items": { "type": "string", "minLength": 4, "maxLength": 160 }
+    },
+    "another_view": {
+      "type": "string", "minLength": 10, "maxLength": 240,
+      "description": "另一個觀點。描述同一件事的不同看法，不評價玩家的選擇好壞。"
+    },
+    "small_practice": {
+      "type": "object",
+      "required": ["title", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "maxLength": 30 },
+        "steps": { "type": "array", "minItems": 1, "maxItems": 3, "items": { "type": "string", "maxLength": 120 } },
+        "duration_minutes": { "type": "number", "minimum": 0.5, "maximum": 15 }
+      }
+    },
+    "closing": { "type": "string", "maxLength": 160 },
+    "safety": {
+      "type": "object",
+      "description": "type 為 safety 時必填。內容來自 content/daily_weekly.json 的 safety 區塊，不由模型生成。",
+      "required": ["message", "resources"],
+      "additionalProperties": false,
+      "properties": {
+        "message":   { "type": "string" },
+        "resources": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "contact"],
+            "additionalProperties": false,
+            "properties": {
+              "name":    { "type": "string" },
+              "contact": { "type": "string" },
+              "hours":   { "type": "string" },
+              "note":    { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source":       { "type": "string", "enum": ["ai", "fallback"] },
+        "model":        { "type": "string" },
+        "generated_at": { "type": "string" },
+        "fallback_reason": { "type": "string" },
+        "request_id":   { "type": "string" }
+      }
+    }
+  }
+}

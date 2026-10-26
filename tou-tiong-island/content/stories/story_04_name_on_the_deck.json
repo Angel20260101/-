@@ -1,0 +1,1439 @@
+{
+  "story_id": "story_04_name_on_the_deck",
+  "version": "1.0.0",
+  "schema_version": "1.0.0",
+  "title": "那份簡報的名字",
+  "subtitle": "工作成果未被看見",
+  "island_id": "island_credit",
+  "order": 4,
+  "theme": "公平、人際關係與溝通",
+  "logline": "投影幕上是你做了三個禮拜的東西。上台報告的人，從頭到尾沒有提到你。",
+  "estimated_minutes": 3,
+  "content_notes": [
+    "職場人際",
+    "功勞歸屬"
+  ],
+  "setting": {
+    "location": "公司大會議室，二十幾個人，投影幕，季度檢討",
+    "time": "星期五下午 14:30",
+    "conflict": "你知道那是你做的。但指出來要花的力氣，比做那份簡報還多。"
+  },
+  "characters": [
+    {
+      "character_id": "you",
+      "name": "你",
+      "role": "行銷企劃",
+      "profile": "三週前接到市場分析的任務，資料自己跑、圖自己拉、架構自己排。",
+      "voice": "會先想「這樣講會不會不好」"
+    },
+    {
+      "character_id": "zihan",
+      "name": "子涵",
+      "role": "同組同事",
+      "profile": "口條好、台風穩，部門有對外報告通常找她。她不是壞人，她只是習慣了。",
+      "voice": "流利、自然，講到數字會停一拍加強語氣"
+    },
+    {
+      "character_id": "zhou",
+      "name": "周協理",
+      "role": "部門主管",
+      "profile": "看結果不看過程。不是不在乎，是沒時間在乎。",
+      "voice": "短句，問題直接"
+    },
+    {
+      "character_id": "kai",
+      "name": "阿凱",
+      "role": "隔壁組同事",
+      "profile": "坐你旁邊三年。會在群組裡丟很爛的梗圖。",
+      "voice": "嘴上沒正經，但看得很準"
+    }
+  ],
+  "state_vars": [
+    {
+      "key": "speak",
+      "label": "表達",
+      "init": 0,
+      "description": "你把自己做的事講出來的程度"
+    },
+    {
+      "key": "rules",
+      "label": "建立規則",
+      "init": 0,
+      "description": "你把事情變成可依循規則的程度"
+    },
+    {
+      "key": "keep",
+      "label": "留著",
+      "init": 0,
+      "description": "你選擇先不說、自己收著的部分"
+    },
+    {
+      "key": "relation",
+      "label": "關係",
+      "init": 0,
+      "description": "你與子涵之間直接溝通的程度"
+    }
+  ],
+  "start_node_id": "n_04_open",
+  "nodes": [
+    {
+      "node_id": "n_04_open",
+      "node_type": "narration",
+      "title": "開場",
+      "scene": {
+        "location": "大會議室",
+        "time": "星期五 14:30",
+        "mood": "有點悶的冷氣"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "季度檢討。二十幾個人，冷氣開得很強，後排有人在滑手機。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "輪到行銷組。子涵走到前面，接上投影線。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "投影幕亮起來。那是你的封面——你調了四次的配色，右下角那條細線也是你加的。"
+        }
+      ],
+      "next_node_id": "n_04_report"
+    },
+    {
+      "node_id": "n_04_report",
+      "node_type": "narration",
+      "title": "報告",
+      "scene": {
+        "location": "大會議室",
+        "time": "星期五 14:38",
+        "mood": "越聽越安靜"
+      },
+      "dialogue": [
+        {
+          "speaker": "zihan",
+          "style": "line",
+          "text": "這一季我們針對 25 到 34 歲族群做了比較完整的分析——"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "第三頁。那張交叉比對的圖，你跑了兩天的資料。"
+        },
+        {
+          "speaker": "zihan",
+          "style": "line",
+          "text": "這邊大家可以看到，回購率的轉折點其實落在第三次購買，不是我們原本以為的第二次。"
+        },
+        {
+          "speaker": "zhou",
+          "style": "line",
+          "text": "這個發現不錯。誰做的？"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你的心跳快了一拍。"
+        },
+        {
+          "speaker": "zihan",
+          "style": "line",
+          "text": "我們組這次花蠻多時間在資料上的，有特別去拉三年的紀錄。"
+        },
+        {
+          "speaker": "zhou",
+          "style": "line",
+          "text": "嗯，很好。繼續。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "「我們組」。"
+        },
+        {
+          "speaker": "inner",
+          "style": "inner",
+          "text": "她沒有說謊。那確實是這一組做的。"
+        }
+      ],
+      "next_node_id": "n_04_d1"
+    },
+    {
+      "node_id": "n_04_d1",
+      "node_type": "decision",
+      "title": "決策點一：會議當下",
+      "scene": {
+        "location": "大會議室",
+        "time": "星期五 14:41",
+        "mood": "手放在桌子下面"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "還有三頁。阿凱在旁邊用手肘頂了你一下，沒有看你。"
+        }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_04_d1_add",
+          "text": "舉手補充",
+          "hint": "現在不說，等一下就沒有位置了",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你把手舉到一半，又覺得太高，改成抬了一下。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "協理，我補充一下第三頁。那個轉折點是我在拉三年資料的時候發現的，原本模型沒有跑出來，是手動交叉比對才看到。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "如果要延伸，我這邊還有分齡的版本。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "會議室安靜了一秒。子涵的手停在翻頁器上。"
+            },
+            {
+              "speaker": "zhou",
+              "style": "line",
+              "text": "喔，那個分齡的版本給我看一下。下週。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "line",
+              "text": "對，這部分是他做的，我剛剛講太快。"
+            }
+          ],
+          "consequence": "房間裡的人知道了那張圖是誰做的，氣氛也變了一點。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_raise_hand",
+            "title": "心聲線索",
+            "text": "你講的是事實，不是情緒——「我在拉資料的時候發現的」。這種說法很難被當成爭功，因為它只是在補資訊。那一秒的安靜不是尷尬，是房間在更新資料。"
+          },
+          "state_effects": [
+            {
+              "var": "speak",
+              "op": "add",
+              "value": 2
+            }
+          ],
+          "tags": [
+            "speak"
+          ],
+          "next_node_id": "n_04_a1"
+        },
+        {
+          "choice_id": "c_04_d1_silent",
+          "text": "不動，等會後再說",
+          "hint": "當場打斷太尷尬了",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你沒有動。手指在桌子底下把筆蓋套上、拔開、套上。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "後面三頁你一句都沒聽進去。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "報告結束，大家鼓掌。你也鼓了。"
+            },
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "手掌拍在一起的時候，你在想自己為什麼要拍。"
+            }
+          ],
+          "consequence": "會議紀錄上，這份分析屬於「行銷組」。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_the_clap",
+            "title": "心聲線索",
+            "text": "當場不說，通常不是因為不在乎，是因為同時要承擔太多東西——打斷的尷尬、被當成計較、把場面弄僵。你一個人在三秒內評估完這些，然後決定自己吸收。這很耗力氣，雖然沒有人看得到。"
+          },
+          "state_effects": [
+            {
+              "var": "keep",
+              "op": "add",
+              "value": 2
+            }
+          ],
+          "tags": [
+            "keep"
+          ],
+          "next_node_id": "n_04_b1"
+        },
+        {
+          "choice_id": "c_04_d1_dm",
+          "text": "私訊子涵：那頁我有更新版",
+          "hint": "用側面的方式提一下",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "message",
+              "text": "第三頁那個圖我後來有更新版，分齡的，等等傳給你"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "子涵在台上看了一眼手機，比了一個 OK 的手勢，繼續講。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "message",
+              "text": "好 感謝～"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "「感謝」。你看著那兩個字，看了一下。"
+            }
+          ],
+          "consequence": "你提醒了她那是你做的，用一種她可以不用回應的方式。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_side_door",
+            "title": "心聲線索",
+            "text": "側面的提醒最安全，也最容易被接收成另一個意思。你心裡想的是「那是我做的」，傳出去的版本是「我有更新檔」。對方只會回應她收到的那個版本。"
+          },
+          "state_effects": [
+            {
+              "var": "relation",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "var": "keep",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "keep"
+          ],
+          "next_node_id": "n_04_c1"
+        }
+      ]
+    },
+    {
+      "node_id": "n_04_a1",
+      "node_type": "narration",
+      "title": "分支 A：散會的走廊",
+      "scene": {
+        "location": "走廊",
+        "time": "星期五 15:20",
+        "mood": "有點僵"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "散會，子涵收線材的動作比平常慢。"
+        },
+        {
+          "speaker": "kai",
+          "style": "line",
+          "text": "欸，剛剛那個。"
+        },
+        {
+          "speaker": "kai",
+          "style": "line",
+          "text": "講得好。我上次就沒講，到現在還在想。"
+        }
+      ],
+      "next_node_id": "n_04_merge1"
+    },
+    {
+      "node_id": "n_04_b1",
+      "node_type": "narration",
+      "title": "分支 B：散會的走廊",
+      "scene": {
+        "location": "走廊",
+        "time": "星期五 15:20",
+        "mood": "悶"
+      },
+      "dialogue": [
+        {
+          "speaker": "kai",
+          "style": "line",
+          "text": "第三頁那個是你做的吧。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你愣了一下。"
+        },
+        {
+          "speaker": "kai",
+          "style": "line",
+          "text": "你那個配色我認得。右下角那條線，很你。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "有人認出來了。這件事讓你好過一點，也讓你更難過一點。"
+        }
+      ],
+      "next_node_id": "n_04_merge1"
+    },
+    {
+      "node_id": "n_04_c1",
+      "node_type": "narration",
+      "title": "分支 C：散會的走廊",
+      "scene": {
+        "location": "走廊",
+        "time": "星期五 15:20",
+        "mood": "說不上來"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "子涵走過來，拍了一下你的肩膀。"
+        },
+        {
+          "speaker": "zihan",
+          "style": "line",
+          "text": "更新版記得傳我喔，下禮拜要給協理的我再整理。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "她說完就往茶水間走了。語氣很正常，正常到你找不到地方接話。"
+        }
+      ],
+      "next_node_id": "n_04_merge1"
+    },
+    {
+      "node_id": "n_04_merge1",
+      "node_type": "converge",
+      "title": "匯流一：回到座位",
+      "converge_from": [
+        "n_04_a1",
+        "n_04_b1",
+        "n_04_c1"
+      ],
+      "scene": {
+        "location": "座位",
+        "time": "星期五 15:35",
+        "mood": "下班前的兩小時"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "回到座位，螢幕上還開著那份簡報的原始檔。檔名是「市場分析_v7_final_真的final」。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "修改紀錄裡，從 v1 到 v7，只有一個人的名字。"
+        }
+      ],
+      "conditional_dialogue": [
+        {
+          "condition": {
+            "tag": "speak",
+            "op": ">=",
+            "count": 1
+          },
+          "dialogue": [
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "剛剛講完之後，心跳到現在還沒完全下來。但不是後悔的那種。"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "var": "keep",
+            "op": ">=",
+            "value": 2
+          },
+          "dialogue": [
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "從 v1 到 v7。這件事只有這個檔案知道。"
+            }
+          ]
+        }
+      ],
+      "next_node_id": "n_04_d2"
+    },
+    {
+      "node_id": "n_04_d2",
+      "node_type": "decision",
+      "title": "決策點二：會後",
+      "scene": {
+        "location": "座位",
+        "time": "星期五 15:40",
+        "mood": "還有時間做點什麼"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "子涵在茶水間。周協理的辦公室門開著。你的備忘錄是空白的。"
+        }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_04_d2_talk",
+          "text": "直接找子涵談",
+          "hint": "把話講開，比猜來猜去好",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "子涵，我想跟你講一下今天的簡報。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "第三到第六頁是我做的。協理問『誰做的』的時候，我其實蠻希望你講我的名字。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "子涵放下杯子。她的表情是真的愣住。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "line",
+              "text": "⋯⋯我以為講『我們組』比較好。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "line",
+              "text": "我之前被說過太愛講誰誰誰做的，好像在分。所以我後來都講組。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "line",
+              "text": "對不起，我沒想到這樣會讓你⋯⋯對不起。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你們兩個站在茶水間，都有點不知道手要放哪裡。"
+            }
+          ],
+          "consequence": "你知道了她不是故意的，她知道了這件事對你有重量。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_she_didnt_know",
+            "title": "心聲線索",
+            "text": "很多「被忽略」不是有人決定要忽略你，是兩個人用不同的規則在運作。把規則講出來，比猜對方的動機有用。不過要提醒自己：知道她不是故意的，不代表你的不舒服就不算數。兩件事可以同時成立。"
+          },
+          "state_effects": [
+            {
+              "var": "speak",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "relation",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "speak"
+          ],
+          "next_node_id": "n_04_a2"
+        },
+        {
+          "choice_id": "c_04_d2_boss",
+          "text": "找周協理說明自己做了什麼",
+          "hint": "讓決定資源的人知道",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你拿著筆電走進去。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "協理，你剛剛說要分齡的版本，我現在給你看。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你打開檔案，順手把修改紀錄也拉出來。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "這份從三週前開始做的，資料清洗跟交叉比對是我處理的。這是過程檔。"
+            },
+            {
+              "speaker": "zhou",
+              "style": "line",
+              "text": "喔。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "他看了螢幕三秒。"
+            },
+            {
+              "speaker": "zhou",
+              "style": "line",
+              "text": "那下一季這塊你負責。報告也你來。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "就這樣。沒有安慰，沒有評論，直接給了下一件事。"
+            }
+          ],
+          "consequence": "決定資源的人現在知道了，而且他的反應是給你更多工作。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_show_the_log",
+            "title": "心聲線索",
+            "text": "你用檔案說話，沒有用情緒。這在很多主管面前最有效——因為他要的不是誰委屈，是誰能交付。只是值得留意：被看見之後，通常跟著來的是更多責任，而不是更多照顧。"
+          },
+          "state_effects": [
+            {
+              "var": "speak",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "rules",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "speak"
+          ],
+          "next_node_id": "n_04_b2"
+        },
+        {
+          "choice_id": "c_04_d2_log",
+          "text": "自己記錄下來，先不說",
+          "hint": "留著，以後再說",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你開了一個新資料夾，名字取得很無聊：「專案備份」。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "把原始資料、過程檔、你跟子涵的對話截圖，都丟進去。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "再開一個文字檔，寫了日期和三行字。"
+            },
+            {
+              "speaker": "inner",
+              "style": "inner",
+              "text": "不是要告誰。只是不想有一天連自己都開始懷疑這件事是不是我做的。"
+            }
+          ],
+          "consequence": "東西留下來了，但房間裡的人還是不知道。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_the_folder",
+            "title": "心聲線索",
+            "text": "「不想連自己都開始懷疑」——這句話很重要。被長期略過的人，最後會懷疑的往往不是別人，是自己的記憶。先把證據留著，是在保護這個。至於要不要拿出來，什麼時候拿，都還是你的選擇。"
+          },
+          "state_effects": [
+            {
+              "var": "keep",
+              "op": "add",
+              "value": 2
+            }
+          ],
+          "tags": [
+            "keep"
+          ],
+          "next_node_id": "n_04_c2"
+        }
+      ]
+    },
+    {
+      "node_id": "n_04_a2",
+      "node_type": "narration",
+      "title": "分支：茶水間之後",
+      "scene": {
+        "location": "座位",
+        "time": "星期五 16:10",
+        "mood": "鬆了一些"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "下午四點十分，子涵傳來一則訊息。"
+        },
+        {
+          "speaker": "zihan",
+          "style": "message",
+          "text": "我剛剛跟協理說第三到第六頁是你做的。他說他知道了。"
+        },
+        {
+          "speaker": "zihan",
+          "style": "message",
+          "text": "下次我會講名字。真的抱歉。"
+        }
+      ],
+      "next_node_id": "n_04_merge2"
+    },
+    {
+      "node_id": "n_04_b2",
+      "node_type": "narration",
+      "title": "分支：被看見之後",
+      "scene": {
+        "location": "座位",
+        "time": "星期五 16:10",
+        "mood": "複雜"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你回到座位，行事曆上多了一個下週的會議：市場分析・下季規劃（主責）。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "阿凱探頭過來看了一眼。"
+        },
+        {
+          "speaker": "kai",
+          "style": "line",
+          "text": "恭喜升官，薪水有沒有一起升？"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "他說完自己先笑了。你沒有笑。"
+        }
+      ],
+      "next_node_id": "n_04_merge2"
+    },
+    {
+      "node_id": "n_04_c2",
+      "node_type": "narration",
+      "title": "分支：資料夾建好之後",
+      "scene": {
+        "location": "座位",
+        "time": "星期五 16:10",
+        "mood": "安靜"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "資料夾建好了，二十七個檔案。你把它拖到最不顯眼的位置。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "然後你繼續做下一件事。效率很好，今天的進度超前。"
+        }
+      ],
+      "next_node_id": "n_04_merge2"
+    },
+    {
+      "node_id": "n_04_merge2",
+      "node_type": "converge",
+      "title": "匯流二：兩週後的啟動會",
+      "converge_from": [
+        "n_04_a2",
+        "n_04_b2",
+        "n_04_c2"
+      ],
+      "scene": {
+        "location": "小會議室",
+        "time": "兩週後 10:00",
+        "mood": "新的開始"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "兩週後，下一個專案啟動會。小會議室，六個人。"
+        },
+        {
+          "speaker": "zhou",
+          "style": "line",
+          "text": "這個案子三個月，分工自己喬。報告人先定一下，我要排上層的時間。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "白板上寫著四個工作項目，下面都還是空的。"
+        }
+      ],
+      "next_node_id": "n_04_kick_check"
+    },
+    {
+      "node_id": "n_04_kick_check",
+      "node_type": "conditional",
+      "title": "條件分流：房間裡的氣氛",
+      "conditions": [
+        {
+          "condition": {
+            "var": "relation",
+            "op": ">=",
+            "value": 1
+          },
+          "next_node_id": "n_04_k_open",
+          "note": "跟子涵之間已經講開"
+        },
+        {
+          "condition": {
+            "var": "speak",
+            "op": ">=",
+            "value": 2
+          },
+          "next_node_id": "n_04_k_known",
+          "note": "主管已經知道你做了什麼"
+        }
+      ],
+      "default_next_node_id": "n_04_k_blank"
+    },
+    {
+      "node_id": "n_04_k_open",
+      "node_type": "narration",
+      "title": "啟動會 A：子涵先開口",
+      "scene": {
+        "location": "小會議室",
+        "time": "兩週後 10:03",
+        "mood": "有人幫你撐著"
+      },
+      "dialogue": [
+        {
+          "speaker": "zihan",
+          "style": "line",
+          "text": "我先講，資料那塊上次是他做的，這次應該也是他比較熟。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "她看了你一眼，等你接。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "白板上的筆被遞過來，在你手上。"
+        }
+      ],
+      "next_node_id": "n_04_d3"
+    },
+    {
+      "node_id": "n_04_k_known",
+      "node_type": "narration",
+      "title": "啟動會 B：協理直接點名",
+      "scene": {
+        "location": "小會議室",
+        "time": "兩週後 10:03",
+        "mood": "被放上去了"
+      },
+      "dialogue": [
+        {
+          "speaker": "zhou",
+          "style": "line",
+          "text": "資料那塊你來，上次那個轉折點抓得不錯。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "他說完就低頭看手機。其他人看著白板。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "筆在桌子中間，沒有人去拿。"
+        }
+      ],
+      "next_node_id": "n_04_d3"
+    },
+    {
+      "node_id": "n_04_k_blank",
+      "node_type": "narration",
+      "title": "啟動會 C：空白的白板",
+      "scene": {
+        "location": "小會議室",
+        "time": "兩週後 10:03",
+        "mood": "重來一次"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "沒有人先講話。大家在等一個人開口。"
+        },
+        {
+          "speaker": "zihan",
+          "style": "line",
+          "text": "那⋯⋯我報告好了？反正我比較習慣。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "筆在桌子中間。離你大概三十公分。"
+        }
+      ],
+      "next_node_id": "n_04_d3"
+    },
+    {
+      "node_id": "n_04_d3",
+      "node_type": "decision",
+      "title": "決策點三：這一次怎麼分",
+      "scene": {
+        "location": "小會議室",
+        "time": "兩週後 10:05",
+        "mood": "可以不一樣"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "白板空著。三個月的案子，現在決定的事，三個月後會變成結果。"
+        }
+      ],
+      "choices": [
+        {
+          "choice_id": "c_04_d3_rules",
+          "text": "開工前就把分工和報告人寫清楚",
+          "hint": "事前講，比事後講容易",
+          "immediate": [
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你拿起筆，在白板上畫了三欄：做什麼、誰做、誰報告。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "我先列一版，大家看看對不對。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "寫到一半，阿凱說「等等我那欄寫錯了」，站起來自己改。然後是子涵。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "十分鐘後，白板上每一格都有名字。"
+            },
+            {
+              "speaker": "zhou",
+              "style": "line",
+              "text": "這個拍一下傳群組。以後都這樣。"
+            }
+          ],
+          "consequence": "這個案子從第一天就有分工表，而且成了部門的新做法。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_three_columns",
+            "title": "心聲線索",
+            "text": "同一件事，事後講叫爭功勞，事前講叫流程。你把時間點換掉了，難度就完全不同。這不是小聰明，這是在改變遊戲的規則，而不是在規則裡辛苦。"
+          },
+          "state_effects": [
+            {
+              "var": "rules",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "speak",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "rules"
+          ],
+          "next_node_id": "n_04_a3"
+        },
+        {
+          "choice_id": "c_04_d3_present",
+          "text": "主動爭取這次由自己上台",
+          "hint": "站到前面去",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "這次我報告。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "你自己也有點驚訝這句話這麼快就出來了。"
+            },
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "資料我最熟，問答的部分我接得住。台風我會練。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "line",
+              "text": "可以啊。要練的話我陪你跑一次。"
+            },
+            {
+              "speaker": "zhou",
+              "style": "line",
+              "text": "好。下次換你。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "就這樣決定了。花了十五秒。"
+            }
+          ],
+          "consequence": "下一次站在投影幕前面的人是你。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_i_will_present",
+            "title": "心聲線索",
+            "text": "你以為會很難，結果花了十五秒。很多位置不是被搶走的，是空著沒有人要——因為大家都以為要先被肯定，才有資格舉手。順序其實常常是反過來的。"
+          },
+          "state_effects": [
+            {
+              "var": "speak",
+              "op": "add",
+              "value": 2
+            },
+            {
+              "var": "rules",
+              "op": "add",
+              "value": 1
+            }
+          ],
+          "tags": [
+            "speak"
+          ],
+          "next_node_id": "n_04_b3"
+        },
+        {
+          "choice_id": "c_04_d3_same",
+          "text": "照舊，做好自己的部分",
+          "hint": "把事情做好，總會有人看到",
+          "immediate": [
+            {
+              "speaker": "you",
+              "style": "line",
+              "text": "我做資料就好。"
+            },
+            {
+              "speaker": "zihan",
+              "style": "line",
+              "text": "好，那報告我來。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "白板上「誰報告」那一欄，寫上了子涵。"
+            },
+            {
+              "speaker": "narration",
+              "style": "narration",
+              "text": "會議五分鐘就結束了。效率很高。"
+            }
+          ],
+          "consequence": "分工跟上次一樣。三個月後，大概也會一樣。",
+          "inner_voice_clue": {
+            "clue_id": "clue_04_same_again",
+            "title": "心聲線索",
+            "text": "「把事情做好總會有人看到」——這在有些環境是真的，在有些環境不是。差別不在你努不努力，在那個環境有沒有讓貢獻被看見的機制。如果沒有，那就不是你的問題，而是一個需要被處理的條件。"
+          },
+          "state_effects": [
+            {
+              "var": "keep",
+              "op": "add",
+              "value": 2
+            }
+          ],
+          "tags": [
+            "keep"
+          ],
+          "next_node_id": "n_04_c3"
+        }
+      ]
+    },
+    {
+      "node_id": "n_04_a3",
+      "node_type": "narration",
+      "title": "分支：那張表傳開了",
+      "scene": {
+        "location": "公司群組",
+        "time": "當天下午",
+        "mood": "有東西擴散出去"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "白板的照片被傳到部門群組。隔天，另一組的啟動會也畫了一樣的三欄。"
+        },
+        {
+          "speaker": "kai",
+          "style": "message",
+          "text": "欸你那個表我偷走了"
+        },
+        {
+          "speaker": "kai",
+          "style": "message",
+          "text": "我們組吵三個月的事，十分鐘寫完"
+        }
+      ],
+      "next_node_id": "n_04_ending_check"
+    },
+    {
+      "node_id": "n_04_b3",
+      "node_type": "narration",
+      "title": "分支：練習的那個週末",
+      "scene": {
+        "location": "空會議室",
+        "time": "週六下午",
+        "mood": "緊張但往前"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你跑了四次。子涵在台下當觀眾，第三次的時候她說「這邊停一下，讓數字落地」。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你照做，果然不一樣。"
+        }
+      ],
+      "next_node_id": "n_04_ending_check"
+    },
+    {
+      "node_id": "n_04_c3",
+      "node_type": "narration",
+      "title": "分支：三個月後",
+      "scene": {
+        "location": "大會議室",
+        "time": "三個月後",
+        "mood": "似曾相識"
+      },
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "三個月後的季度檢討。投影幕亮起來，封面是你排的。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "子涵站在前面。協理問了一句「這個誰做的」。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你的手指在桌子底下，把筆蓋套上、拔開。"
+        }
+      ],
+      "next_node_id": "n_04_ending_check"
+    },
+    {
+      "node_id": "n_04_ending_check",
+      "node_type": "conditional",
+      "title": "結局判定",
+      "conditions": [
+        {
+          "condition": {
+            "all": [
+              {
+                "var": "rules",
+                "op": ">=",
+                "value": 3
+              },
+              {
+                "var": "speak",
+                "op": ">=",
+                "value": 3
+              }
+            ]
+          },
+          "next_node_id": "n_04_e_table",
+          "note": "建立規則並且說出口"
+        },
+        {
+          "condition": {
+            "var": "speak",
+            "op": ">=",
+            "value": 4
+          },
+          "next_node_id": "n_04_e_name",
+          "note": "多次明確表達"
+        },
+        {
+          "condition": {
+            "tag": "keep",
+            "op": ">=",
+            "count": 3
+          },
+          "next_node_id": "n_04_e_folder",
+          "note": "全程選擇留著"
+        },
+        {
+          "condition": {
+            "var": "relation",
+            "op": ">=",
+            "value": 2
+          },
+          "next_node_id": "n_04_e_two",
+          "note": "以關係為主軸處理"
+        }
+      ],
+      "default_next_node_id": "n_04_e_next"
+    },
+    {
+      "node_id": "n_04_e_table",
+      "node_type": "ending",
+      "title": "結局：那張表",
+      "ending_id": "e_04_table"
+    },
+    {
+      "node_id": "n_04_e_name",
+      "node_type": "ending",
+      "title": "結局：名字被唸出來",
+      "ending_id": "e_04_name"
+    },
+    {
+      "node_id": "n_04_e_folder",
+      "node_type": "ending",
+      "title": "結局：資料夾",
+      "ending_id": "e_04_folder"
+    },
+    {
+      "node_id": "n_04_e_two",
+      "node_type": "ending",
+      "title": "結局：兩個人的版本",
+      "ending_id": "e_04_two"
+    },
+    {
+      "node_id": "n_04_e_next",
+      "node_type": "ending",
+      "title": "結局：下一次",
+      "ending_id": "e_04_next"
+    }
+  ],
+  "endings": [
+    {
+      "ending_id": "e_04_table",
+      "title": "那張表",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "半年後，部門的啟動會都會先畫那三欄。沒有人記得是誰開始的。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "但每一次有人在「誰報告」那一欄寫下自己的名字，就有一個人不用再經歷你那天下午。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你沒有去爭那一次，你改掉了下一百次。",
+        "closing": "個人的委屈很難講，流程的缺口很好講。你把問題換了一個層次，於是它從「你計較」變成「我們之前沒定」。"
+      },
+      "tags": [
+        "systemic",
+        "spoken"
+      ]
+    },
+    {
+      "ending_id": "e_04_name",
+      "title": "名字被唸出來",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "下一季的檢討會，投影幕亮起來，站在前面的是你。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "講到第三頁的時候，你停了一拍，讓數字落地——這是子涵教你的。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "後排有人抬起頭。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你把自己放到了被看見的位置。",
+        "closing": "被看見這件事，有一部分要靠別人，有一部分要靠自己站過去。你做了可以做的那一部分。"
+      },
+      "tags": [
+        "speak"
+      ]
+    },
+    {
+      "ending_id": "e_04_folder",
+      "title": "資料夾",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "那個叫「專案備份」的資料夾，後來有六十幾個檔案。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "你沒有打開過，也沒有給誰看過。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "但它在那裡。每次有人說「這是我們組做的」，你都知道還有另一個版本。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你選擇先留著。",
+        "closing": "留著不是輸。被長期略過的人最後會懷疑自己的記憶，而你把證據留下來了——要不要拿出來、什麼時候拿，都還是你的選擇。"
+      },
+      "tags": [
+        "keep"
+      ]
+    },
+    {
+      "ending_id": "e_04_two",
+      "title": "兩個人的版本",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "後來你跟子涵之間有了一種新的習慣：東西交出去之前，兩個人會先對一次「這是誰的部分」。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "不是每次都記得。但記得的那幾次，都比較好過。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你把話跟當事人講開了。",
+        "closing": "多數「被忽略」不是惡意，是兩個人用不同的規則在運作。把規則講開不會讓不舒服消失，但它會讓下一次有機會不一樣。"
+      },
+      "tags": [
+        "relation"
+      ]
+    },
+    {
+      "ending_id": "e_04_next",
+      "title": "下一次",
+      "dialogue": [
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "這一季過去了。投影幕暗下來，大家收東西。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "有些話你說了一半，有些留著。"
+        },
+        {
+          "speaker": "narration",
+          "style": "narration",
+          "text": "三個月後還會有一次季度檢討。那時候的你，可以是另一個版本。"
+        }
+      ],
+      "recap": {
+        "summary": "這一次，你做了一部分，留了一部分。",
+        "closing": "不是每件事都要一次處理完。知道自己卡在哪裡，就已經和完全沒有察覺不一樣了。"
+      },
+      "tags": [
+        "mixed"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "r_04_rules",
+      "name": "建立規則航線",
+      "priority": 1,
+      "meaning": "把個別的委屈，轉成事前就講清楚的流程——分工表、報告人、署名方式。重點是改變的是下一次，不是這一次。",
+      "narrative_explain": "你走的是「建立規則航線」。\n你沒有把力氣花在爭這一次，而是去改下一次的玩法。\n同一句話，事後講叫計較，事前講叫流程。你換掉了時間點，於是難度整個不一樣了。",
+      "rule": {
+        "any": [
+          {
+            "tag": "rules",
+            "op": ">=",
+            "count": 1
+          },
+          {
+            "var": "rules",
+            "op": ">=",
+            "value": 3
+          }
+        ]
+      },
+      "practice_card_id": "pc_04_rules",
+      "island_growth_id": "ig_04_rules"
+    },
+    {
+      "route_id": "r_04_speak",
+      "name": "表達航線",
+      "priority": 2,
+      "meaning": "至少兩次把自己做了什麼直接講出來——當場補充、找當事人談、找主管說明、或爭取上台。重點是用事實而非情緒。",
+      "narrative_explain": "你走的是「表達航線」。\n你把房間裡缺的那塊資訊補上去了，而且用的是可以查證的說法，不是感受。\n講出自己做了什麼，常常被自己誤認成「在邀功」。其實那只是把事實放回桌上——房間裡的人沒辦法看見沒有被說出口的東西。",
+      "rule": {
+        "any": [
+          {
+            "var": "speak",
+            "op": ">=",
+            "value": 4
+          },
+          {
+            "tag": "speak",
+            "op": ">=",
+            "count": 2
+          }
+        ]
+      },
+      "practice_card_id": "pc_04_speak",
+      "island_growth_id": "ig_04_speak"
+    },
+    {
+      "route_id": "r_04_keep",
+      "name": "留著航線",
+      "priority": 3,
+      "meaning": "保底航線。以沉默、側面提醒、自己留紀錄為主的所有組合。不代表錯，代表這一次你選擇先不花那個力氣。",
+      "narrative_explain": "你走的是「留著航線」。\n你把它收起來了。可能是因為太累，可能是因為評估過開口的代價，也可能只是因為那天沒有力氣。\n收著不等於沒事發生。那些沒說出口的，還在原來的地方——它們會等你哪一天準備好。",
+      "rule": {
+        "always": true
+      },
+      "practice_card_id": "pc_04_keep",
+      "island_growth_id": "ig_04_keep"
+    }
+  ],
+  "replay_hints": [
+    "在會議當場舉手，和會後再找人談，子涵的反應完全不同——她在第二個決策點會說出一句她自己的理由。",
+    "周協理對「被看見」的回應方式可能跟你想的不一樣。",
+    "兩週後的啟動會有三個版本，取決於你和子涵之間、你和主管之間，當時發生了什麼。",
+    "這篇故事有五個固定結局與三條航線，其中「那張表」需要你同時開口並且把它變成流程。"
+  ]
+}

@@ -1,0 +1,193 @@
+[
+  {
+    "story_id": "story_01_late_message",
+    "file": "story_01_late_message.json",
+    "title": "晚上九點十七分",
+    "subtitle": "主管下班後傳訊",
+    "island_id": "island_boundary",
+    "order": 1,
+    "theme": "工作責任與個人界線",
+    "logline": "泡麵還冒著熱氣，手機亮了。明天早上十點要用的簡報，現在要改。",
+    "estimated_minutes": 3,
+    "content_notes": [
+      "職場壓力",
+      "加班",
+      "界線議題"
+    ],
+    "version": "1.0.0",
+    "routes": [
+      {
+        "route_id": "r_01_boundary",
+        "name": "立界線航線"
+      },
+      {
+        "route_id": "r_01_dialogue",
+        "name": "協商航線"
+      },
+      {
+        "route_id": "r_01_carry",
+        "name": "接住航線"
+      }
+    ],
+    "endings": 5
+  },
+  {
+    "story_id": "story_02_forty_seventh_call",
+    "file": "story_02_forty_seventh_call.json",
+    "title": "第四十七通電話",
+    "subtitle": "客服面對情緒激動的顧客",
+    "island_id": "island_voice",
+    "order": 2,
+    "theme": "委屈與自我保護",
+    "logline": "離下班還有一小時十分。這是今天第四十七通，而他第一句話就不是在講訂單。",
+    "estimated_minutes": 3,
+    "content_notes": [
+      "言語攻擊",
+      "情緒勞動",
+      "客服現場"
+    ],
+    "version": "1.0.0",
+    "routes": [
+      {
+        "route_id": "r_02_protect",
+        "name": "自我保護航線"
+      },
+      {
+        "route_id": "r_02_support",
+        "name": "求援航線"
+      },
+      {
+        "route_id": "r_02_endure",
+        "name": "撐住航線"
+      }
+    ],
+    "endings": 5
+  },
+  {
+    "story_id": "story_03_three_am_alarm",
+    "file": "story_03_three_am_alarm.json",
+    "title": "凌晨三點的警示燈",
+    "subtitle": "輪班現場突發狀況",
+    "island_id": "island_night",
+    "order": 3,
+    "theme": "壓力、責任與求援",
+    "logline": "黃燈轉起來的時候，線上只有三個人。原本應該有五個。",
+    "estimated_minutes": 3,
+    "content_notes": [
+      "夜班",
+      "工安風險",
+      "人力不足"
+    ],
+    "version": "1.0.0",
+    "routes": [
+      {
+        "route_id": "r_03_help",
+        "name": "求援航線"
+      },
+      {
+        "route_id": "r_03_safety",
+        "name": "安全優先航線"
+      },
+      {
+        "route_id": "r_03_hold",
+        "name": "獨撐航線"
+      }
+    ],
+    "endings": 5
+  },
+  {
+    "story_id": "story_04_name_on_the_deck",
+    "file": "story_04_name_on_the_deck.json",
+    "title": "那份簡報的名字",
+    "subtitle": "工作成果未被看見",
+    "island_id": "island_credit",
+    "order": 4,
+    "theme": "公平、人際關係與溝通",
+    "logline": "投影幕上是你做了三個禮拜的東西。上台報告的人，從頭到尾沒有提到你。",
+    "estimated_minutes": 3,
+    "content_notes": [
+      "職場人際",
+      "功勞歸屬"
+    ],
+    "version": "1.0.0",
+    "routes": [
+      {
+        "route_id": "r_04_rules",
+        "name": "建立規則航線"
+      },
+      {
+        "route_id": "r_04_speak",
+        "name": "表達航線"
+      },
+      {
+        "route_id": "r_04_keep",
+        "name": "留著航線"
+      }
+    ],
+    "endings": 5
+  },
+  {
+    "story_id": "story_05_before_the_reunion_dinner",
+    "file": "story_05_before_the_reunion_dinner.json",
+    "title": "年夜飯前的那通電話",
+    "subtitle": "親友期待與拒絕",
+    "island_id": "island_kin",
+    "order": 5,
+    "theme": "關係與自主",
+    "logline": "媽媽說「就三天而已」。你心裡算的不是三天，是那三天裡要被問幾次。",
+    "estimated_minutes": 3,
+    "content_notes": [
+      "家庭關係",
+      "節慶壓力",
+      "被追問私事"
+    ],
+    "version": "1.0.0",
+    "routes": [
+      {
+        "route_id": "r_05_autonomy",
+        "name": "自主航線"
+      },
+      {
+        "route_id": "r_05_connect",
+        "name": "靠近航線"
+      },
+      {
+        "route_id": "r_05_comply",
+        "name": "順應航線"
+      }
+    ],
+    "endings": 5
+  },
+  {
+    "story_id": "story_06_sunday_eleven_pm",
+    "file": "story_06_sunday_eleven_pm.json",
+    "title": "週日晚上十一點",
+    "subtitle": "明明疲累卻無法休息",
+    "island_id": "island_rest",
+    "order": 6,
+    "theme": "自我要求與休息焦慮",
+    "logline": "你很累。清單上還有三項。這兩件事在你身上同時成立，而且互不相讓。",
+    "estimated_minutes": 3,
+    "content_notes": [
+      "過勞",
+      "睡眠困難",
+      "自我要求"
+    ],
+    "version": "1.0.0",
+    "routes": [
+      {
+        "route_id": "r_06_allow",
+        "name": "允許休息航線"
+      },
+      {
+        "route_id": "r_06_adjust",
+        "name": "調節航線"
+      },
+      {
+        "route_id": "r_06_burn",
+        "name": "燃燒航線"
+      }
+    ],
+    "endings": 5
+  }
+]

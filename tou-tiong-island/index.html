@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#A9DCE2" />
+<title>透中島</title>
+<meta name="description" content="《透中島》：3D 群島探索、日常心情紀錄、人生重來模擬器。每天 30 秒，想探索的時候再走一趟 3 分鐘的故事。" />
+<link rel="icon" href="./favicon.svg" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="map" aria-label="透中島群島地圖"></canvas>
+    <div id="labels" class="label-layer"></div>
+
+    <header class="hud">
+      <div class="hud__brand">
+        <span class="hud__title">透中島</span>
+        <span class="hud__sub">中午十二點的島</span>
+      </div>
+      <div class="hud__actions">
+        <button type="button" class="hud__btn" data-action="reset-view" aria-label="重設視角">視角</button>
+        <button type="button" class="hud__btn" data-action="about" aria-label="關於這款遊戲">關於</button>
+      </div>
+    </header>
+
+    <div class="hud__hint" id="hint">用手指拖曳可以轉動群島，雙指縮放。點島嶼開始。</div>
+
+    <div id="overlay" class="overlay" hidden></div>
+    <div id="toast" class="toast" hidden></div>
+  </div>
+  <noscript>《透中島》需要啟用 JavaScript 才能執行。</noscript>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
