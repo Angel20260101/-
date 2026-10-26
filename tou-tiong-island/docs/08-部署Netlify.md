@@ -31,7 +31,10 @@ Netlify 自動建置
      functions = "netlify/functions"
 
    [build.environment]
-     NODE_VERSION = "20"
+     NODE_VERSION = "22"
+
+   [functions]
+     node_bundler = "esbuild"
    ```
 
 4. **Deploy site**。第一次約 1–2 分鐘。

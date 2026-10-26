@@ -9,7 +9,11 @@
   functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # Node 22：Functions 用 import attributes（with { type: "json" }）載入劇本
+  NODE_VERSION = "22"
+
+[functions]
+  node_bundler = "esbuild"
 
 # 單頁應用：所有前端路徑都回到 index.html
 [[redirects]]

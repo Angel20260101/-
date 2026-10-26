@@ -11,9 +11,6 @@
  * 隱私：player_id 是匿名識別碼，不含個資。任何給雇主或團隊看的統計，
  * 都必須經過 aggregate() 的 k 匿名門檻，個人層級的資料不開放查詢。
  */
-import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import {
   createSession, presentNode, advance, choose, indexNodes, buildRecap,
 } from '../../src/core/storyEngine.js';
@@ -21,21 +18,22 @@ import storyIndex from '../../content/story_index.json' with { type: 'json' };
 import islandMap from '../../content/island_map.json' with { type: 'json' };
 import practiceCards from '../../content/practice_cards.json' with { type: 'json' };
 import dailyWeekly from '../../content/daily_weekly.json' with { type: 'json' };
+// 六篇劇本靜態 import：打包後的 Function 不含專案檔案，執行時讀不到 content/stories/
+import story01 from '../../content/stories/story_01_late_message.json' with { type: 'json' };
+import story02 from '../../content/stories/story_02_forty_seventh_call.json' with { type: 'json' };
+import story03 from '../../content/stories/story_03_three_am_alarm.json' with { type: 'json' };
+import story04 from '../../content/stories/story_04_name_on_the_deck.json' with { type: 'json' };
+import story05 from '../../content/stories/story_05_before_the_reunion_dinner.json' with { type: 'json' };
+import story06 from '../../content/stories/story_06_sunday_eleven_pm.json' with { type: 'json' };
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const API = '/api/v1';
 const K_ANONYMITY_MIN = 10; // 團隊統計的最小人數門檻
 
-// ── 劇本（伺服器端快取） ──────────────────────────────────
-const storyCache = new Map();
-function getStory(storyId) {
-  if (storyCache.has(storyId)) return storyCache.get(storyId);
-  const entry = storyIndex.find((s) => s.story_id === storyId);
-  if (!entry) return null;
-  const story = JSON.parse(readFileSync(join(ROOT, 'content/stories', entry.file), 'utf8'));
-  storyCache.set(storyId, story);
-  return story;
-}
+// ── 劇本 ──────────────────────────────────────────────────
+const STORIES = Object.fromEntries(
+  [story01, story02, story03, story04, story05, story06].map((s) => [s.story_id, s]),
+);
+const getStory = (storyId) => STORIES[storyId] ?? null;
 
 // ── Store 介面 ────────────────────────────────────────────
 /**

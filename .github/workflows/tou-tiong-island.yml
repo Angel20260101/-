@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: 安裝相依套件
         run: npm ci || npm install
       - name: 劇情資料驗收與航線測試
