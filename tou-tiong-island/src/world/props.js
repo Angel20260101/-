@@ -10,6 +10,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { PALETTE } from './palette.js';
 
 function paint(geo, hex) {
@@ -25,8 +26,24 @@ function paint(geo, hex) {
   return geo;
 }
 
+/**
+ * 方塊一律帶圓角。
+ *
+ * 銳利的直角在低多邊形風格裡會顯得廉價——因為真實世界沒有完美的直角，
+ * 邊緣永遠會抓到一條高光。倒一點角，光就有地方落下，量體立刻變厚實。
+ * 這是整個道具庫裡最便宜的質感來源：幾何是共用的，成本被 instancing 攤掉。
+ *
+ * 半徑取最短邊的比例而不是固定值，因為道具裡有很多薄片（欄杆、招牌、葉片），
+ * 固定半徑會超過半邊長而讓 RoundedBoxGeometry 生出破掉的幾何。
+ */
+const BEVEL_RATIO = 0.15;
+const BEVEL_SEGMENTS = 2;
+
 const box = (w, h, d, color, x = 0, y = 0, z = 0, rotY = 0) => {
-  const g = new THREE.BoxGeometry(w, h, d);
+  const r = Math.min(w, h, d) * BEVEL_RATIO;
+  const g = r > 0.0005
+    ? new RoundedBoxGeometry(w, h, d, BEVEL_SEGMENTS, r)
+    : new THREE.BoxGeometry(w, h, d);   // 極薄的片狀物倒角反而會糊掉，維持直角
   paint(g, color);
   if (rotY) g.rotateY(rotY);
   g.translate(x, y, z);

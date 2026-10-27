@@ -40,6 +40,11 @@ export class App {
       onSelectInteraction: (id) => this.openInteraction(id),
     });
 
+    // 開發用出口。調光線、陰影、材質的時候需要能在 console 直接量到
+    // renderer.info 與各物件的 shadow 旗標，否則只能靠肉眼猜。
+    // vite build 會把 import.meta.env.DEV 常數摺疊成 false，整段被搖掉，不會進到產物。
+    if (import.meta.env.DEV) window.__island = this.scene;
+
     this.storyView = new StoryView({
       mount: this.app,
       onFinish: (payload) => this.finishStory(payload),

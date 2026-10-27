@@ -74,8 +74,20 @@ console.log(`    還可以再加 ${room} 種新道具型別。不夠用的時候
 console.log('    要嘛重新檢討 BUDGET，不要偷偷超過。');
 
 check('沒有使用貼圖（BUDGET.maxTextureSize = 0）', BUDGET.maxTextureSize === 0);
-check('沒有陰影、後製、粒子、動態光源',
-  !BUDGET.shadows && !BUDGET.postProcessing && !BUDGET.particles && BUDGET.dynamicLights === 0);
+check('沒有後製、粒子、動態光源',
+  !BUDGET.postProcessing && !BUDGET.particles && BUDGET.dynamicLights === 0);
+
+/**
+ * 陰影自 2026-10 起是開的，但它便宜的唯一理由是「只烘焙一次」。
+ * 哪天有人把 autoUpdate 打開，每幀都會多跑一次完整的陰影 pass，
+ * 成本直接翻倍而且不會有任何錯誤訊息——所以在這裡把它釘死。
+ */
+const sceneSrc = readFileSync(join(ROOT, 'src/world/sceneManager.js'), 'utf8');
+check('陰影是靜態烘焙的（shadowMap.autoUpdate = false）',
+  /shadowMap\.autoUpdate\s*=\s*false/.test(sceneSrc));
+check('會動的物件不投影（島民、小船、雲用 cast: false）',
+  /MOVING_SHADOW\s*=\s*\{\s*cast:\s*false/.test(sceneSrc)
+  && /NO_SHADOW\s*=\s*\{\s*cast:\s*false/.test(sceneSrc));
 
 // 實例總數：三角形幾乎是免費的，但矩陣更新是 CPU 成本，還是要盯著
 const instances = [...full.props.values()].reduce((n, m) => n + m.length, 0);

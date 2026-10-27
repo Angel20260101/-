@@ -2,9 +2,13 @@
  * WebGL 場景管理。
  *
  * 效能守則（都在這個檔案裡被執行，不是口號）：
- *   1. 沒有即時陰影：shadowMap 關閉。
- *   2. 只有兩盞靜態光：HemisphereLight ＋ 一盞不投影的 DirectionalLight。
+ *   1. 陰影是靜態烘焙的：shadowMap.autoUpdate = false，只在世界重建或光源
+ *      改變時重算一次。島不會動，所以沒有必要每幀重算。
+ *   2. 三盞靜態光：HemisphereLight（天空冷／地面暖）＋ 投影的主太陽
+ *      ＋ 一盞不投影的冷色補光。三者的冷暖對比就是立體感的來源。
  *   3. 沒有後製、沒有模糊濾鏡、不使用任何貼圖（顏色全走頂點色）。
+ *      tone mapping 不算後製：它沒有額外的 render pass，只是最終著色器
+ *      寫出顏色前的一次轉換，不佔 draw call。
  *   4. 天空是 CSS 漸層，不是 3D 物件——換天氣只是改兩個色碼，零 draw call。
  *   5. 同型別道具與島民各收成一個 InstancedMesh；雲與雨各只有一個。
  *   6. 動畫迴圈只在地圖可見時跑，並依裝置分級限制幀率；
@@ -18,6 +22,32 @@ import { PROP_FACTORIES } from './props.js';
 import { buildWorld } from './islandBuilder.js';
 import { CameraController } from './cameraController.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
+
+/**
+ * 光比。這兩個值分開調，因為畫面平不平取決於「太陽／環境」的比值，
+ * 而不是總亮度。
+ *
+ * palette.js 原本的 sunny 是 hemi 1.15、dir 1.45——半球光幾乎跟太陽一樣強。
+ * 半球光不會被陰影遮擋，所以它等於是均勻打亮整座島的底光：它愈強，
+ * 亮面與暗面的差距就愈小，畫面就愈平。這裡把 sunny 的比值從 1.26 拉到約 4.9。
+ *
+ * 絕對值刻意壓得比原本低，這點反直覺，值得寫下來免得有人又把它調高：
+ * ACES 在高光段會把對比壓掉。強度拉太高時，亮面與暗面雙雙被推進曲線的肩部，
+ * 線性空間 3.46 : 1.06 的差距，過完 ACES 只剩 0.96 : 0.80——陰影等於白做。
+ * 要讓陰影看得見，畫面必須待在曲線的線性段，也就是強度要低、不是要高。
+ *
+ * 調整順序：先用比值決定立體感，再用 toneMappingExposure 決定明暗。
+ * 不要用拉高強度的方式調亮，那會把對比一起吃掉。
+ */
+const HEMI_GAIN = 0.35;
+const SUN_GAIN = 1.35;
+/** 補光固定，不隨天氣起伏——它的工作是托住背光面，不是參與表演。 */
+const FILL_INTENSITY = 0.21;
+
+/** 會動的物件：不投影（影子會卡住），但照常受影。 */
+const MOVING_SHADOW = { cast: false, receive: true };
+/** 雲與雨：兩者都不要。 */
+const NO_SHADOW = { cast: false, receive: false };
 
 const MAX_CLOUDS = 10;
 const MAX_RAIN = 90;
@@ -43,23 +73,66 @@ export class SceneManager {
       alpha: true,                 // 天空交給 CSS 漸層，WebGL 只畫島
       powerPreference: 'high-performance', stencil: false, depth: true,
     });
-    this.renderer.shadowMap.enabled = false;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.profile.pixelRatio));
     this.renderer.setClearAlpha(0);
+
+    // 色彩管線。這兩行幾乎不花成本，但沒有它們，所有顏色都會偏灰偏淡：
+    // 頂點色是 sRGB，沒宣告的話 three 會當成線性空間直接送進著色器。
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
+
+    // 靜態陰影：開著，但不每幀更新。invalidate() 會在需要時補一次。
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(PALETTE.haze, 60, 150);
     this.camera = new THREE.PerspectiveCamera(34, 1, 1, 160);
 
-    this.hemi = new THREE.HemisphereLight(0xffffff, PALETTE.sandSide, 1.1);
-    this.dir = new THREE.DirectionalLight(0xfff6e2, 1.3);
+    this.hemi = new THREE.HemisphereLight(0xffffff, PALETTE.sandSide, 1.1 * HEMI_GAIN);
+    this.dir = new THREE.DirectionalLight(0xfff6e2, 1.3 * SUN_GAIN);
     this.dir.position.set(-14, 22, 10);
-    this.dir.castShadow = false;
-    this.scene.add(this.hemi, this.dir);
 
-    this.terrainMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    this.propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    this.cloudMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.95 });
+    // 主太陽是唯一投影的光源。shadow.camera 的範圍要剛好包住整座群島：
+    // 開太大，陰影貼圖的解析度會被稀釋成糊的；開太小，邊緣的島會沒有陰影。
+    this.dir.castShadow = true;
+    const sm = this.profile.shadowMapSize;
+    this.dir.shadow.mapSize.set(sm, sm);
+    Object.assign(this.dir.shadow.camera, {
+      left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 90,
+    });
+    // 這行是必要的，不是保險：three 的 LightShadow.updateMatrices() 只會更新
+    // matrixWorld，不會重算投影矩陣。少了它，上面那六個值完全不生效，
+    // 陰影相機會停在預設的 ±5，整座島都落在框外，陰影一個都看不到。
+    this.dir.shadow.camera.updateProjectionMatrix();
+    this.dir.shadow.bias = -0.0006;
+    this.dir.shadow.normalBias = 0.045;   // 低多邊形＋flatShading 不加這個會長出陰影痤瘡
+    this.dir.shadow.radius = 3;
+
+    // 冷色補光，不投影。它負責把背光面從死黑拉回來，
+    // 跟暖色的主太陽形成冷暖對比——這是塊面感的來源，不是亮度問題。
+    this.fill = new THREE.DirectionalLight(0xbfd6ff, FILL_INTENSITY);
+    this.fill.position.set(12, 14, -16);
+    this.fill.castShadow = false;
+
+    this.scene.add(this.hemi, this.dir, this.fill);
+
+    // Lambert 的表面沒有粗糙度概念，光打上去是平的；Standard 走 PBR，
+    // 同一個面會隨法線產生細微的明暗過渡，塊面之間才分得出來。
+    // 全部維持 metalness = 0：這座島上沒有金屬，給了只會變髒。
+    this.terrainMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0,
+    });
+    this.propMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: 0.82, metalness: 0,
+    });
+    this.cloudMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: 1, metalness: 0,
+      transparent: true, opacity: 0.95,
+    });
     this.rainMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.foam, transparent: true, opacity: 0.55 });
     this.pickMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
@@ -78,7 +151,10 @@ export class SceneManager {
     this._buildRain();
 
     this.weather = WEATHER.sunny;
-    this._lightTarget = { hemi: this.weather.hemiIntensity, dir: this.weather.dirIntensity };
+    this._lightTarget = {
+      hemi: this.weather.hemiIntensity * HEMI_GAIN,
+      dir: this.weather.dirIntensity * SUN_GAIN,
+    };
     this._colourTarget = this._targetsFor(this.weather);
 
     this._raycaster = new THREE.Raycaster();
@@ -173,7 +249,7 @@ export class SceneManager {
     this._paintSky(w);
     if (this.veilLayer) this.veilLayer.style.background = w.veil ?? 'transparent';
     this._colourTarget = this._targetsFor(w);
-    this._lightTarget = { hemi: w.hemiIntensity, dir: w.dirIntensity };
+    this._lightTarget = { hemi: w.hemiIntensity * HEMI_GAIN, dir: w.dirIntensity * SUN_GAIN };
     if (this.clouds) {
       this.clouds.count = Math.min(w.clouds, MAX_CLOUDS);
       // 雲高跟著天氣走：晴天高而少，陰雨天低而密，低下來才進得了鏡頭
@@ -193,9 +269,11 @@ export class SceneManager {
       this.hemi.color.copy(this._colourTarget.hemiSky);
       this.hemi.groundColor.copy(this._colourTarget.hemiGround);
       this.cloudMaterial.color.copy(this._colourTarget.cloud);
-      this.hemi.intensity = w.hemiIntensity;
-      this.dir.intensity = w.dirIntensity;
+      this.hemi.intensity = this._lightTarget.hemi;
+      this.dir.intensity = this._lightTarget.dir;
     }
+    // 太陽的顏色與強度變了，烘焙好的陰影要重算一次
+    this.renderer.shadowMap.needsUpdate = true;
     this.invalidate();
     return w;
   }
@@ -211,6 +289,8 @@ export class SceneManager {
       if (island.geometry) {
         const mesh = new THREE.Mesh(island.geometry, this.terrainMaterial);
         mesh.matrixAutoUpdate = false;
+        mesh.castShadow = true;      // 島的側壁要在鄰島與海面上落下影子
+        mesh.receiveShadow = true;
         this.worldGroup.add(mesh);
       }
       const b = island.bounds;
@@ -254,12 +334,21 @@ export class SceneManager {
     return islands;
   }
 
-  _instanced(type, count, material = this.propMaterial) {
+  /**
+   * 陰影的 cast 與 receive 要分開看，差別在成本與正確性：
+   *   cast    烘焙進陰影貼圖，只在 needsUpdate 時算一次 → 會動的東西不能投影，
+   *           否則影子會留在原地。所以島民、小船、雲一律 cast = false。
+   *   receive 在主 pass 每幀計算 → 會動的東西受影完全正確。
+   *           島民走進樹蔭下會變暗，這是免費的。
+   */
+  _instanced(type, count, material = this.propMaterial, shadow = { cast: true, receive: true }) {
     const factory = PROP_FACTORIES[type];
     if (!factory || !count) return null;
     if (!this.propGeometryCache.has(type)) this.propGeometryCache.set(type, factory());
     const mesh = new THREE.InstancedMesh(this.propGeometryCache.get(type), material, count);
     mesh.frustumCulled = false;
+    mesh.castShadow = shadow.cast;
+    mesh.receiveShadow = shadow.receive;
     this.worldGroup.add(mesh);
     this.instancedMeshes.push(mesh);
     return mesh;
@@ -289,7 +378,7 @@ export class SceneManager {
       byType.get(form.type).push({ ...a, ...form });
     }
     for (const [type, group] of byType) {
-      const mesh = this._instanced(type, group.length);
+      const mesh = this._instanced(type, group.length, this.propMaterial, MOVING_SHADOW);
       if (!mesh) continue;
       this._animalMeshes.push(mesh);
       group.forEach((a, i) => this.animals.push({ ...a, mesh, index: i }));
@@ -311,7 +400,7 @@ export class SceneManager {
     }
     this._boats = list;
     if (!list.length) return;
-    this._boatMesh = this._instanced('boat', list.length);
+    this._boatMesh = this._instanced('boat', list.length, this.propMaterial, MOVING_SHADOW);
     this._stepBoats(this._clock ?? 0);
   }
 
@@ -341,7 +430,7 @@ export class SceneManager {
           interaction: home.sky_anchor.interaction, label: home.sky_anchor.label }
       : null;
 
-    this.clouds = this._instanced('cloud', MAX_CLOUDS, this.cloudMaterial);
+    this.clouds = this._instanced('cloud', MAX_CLOUDS, this.cloudMaterial, NO_SHADOW);
     this._cloudState = Array.from({ length: MAX_CLOUDS }, (_, i) => {
       // 第 0 朵是打卡用的那一朵，固定在主島上空
       if (i === 0 && this.skyAnchor) {
