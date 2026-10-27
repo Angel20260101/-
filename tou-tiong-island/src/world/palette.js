@@ -76,6 +76,15 @@ export const PALETTE = {
   cloth:      '#8fb3a3',
   clothWarm:  '#e3a08a',
   teaCup:     '#fdf8ee',
+
+  // 地面細節（拉近才看得到的那一層）
+  mushroomCap:'#e0a088',
+  pebbleWarm: '#cfc6b2',
+  pebbleWarmD:'#b5a98f',
+  cloverDark: '#6b9478',
+  bushLeaf:   '#86b283',
+  shellIvory: '#fdf0e2',
+  shellPink:  '#f1cfc8',
 };
 
 /** 低多邊形在靜態光下的層次：側面一律比頂面暗一階。 */

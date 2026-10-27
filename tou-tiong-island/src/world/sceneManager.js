@@ -544,6 +544,12 @@ export class SceneManager {
       v.set(a.x, a.y, a.z).project(this.camera);
       return { x: (v.x * 0.5 + 0.5) * rect.width, y: (-v.y * 0.5 + 0.5) * rect.height, behind: v.z > 1 };
     };
+    // 鏡頭拉近是為了看島上的細節，這時候五個名牌壓在上面最礙事。
+    // 近了就淡掉、縮小，但還是可以點；滑過或鍵盤聚焦會回到全不透明（CSS 處理）。
+    const near = THREE.MathUtils.clamp((this.controls.distance - 10) / 7, 0, 1);
+    const fade = 0.34 + near * 0.66;
+    const shrink = 0.8 + near * 0.2;
+
     const place = (el, x, y, hidden) => {
       // 跑到畫面外的標籤就藏起來；硬擠回邊緣只會讓它們疊在一起、點錯
       const off = x < -30 || x > rect.width + 30 || y < -30 || y > rect.height + 30;
@@ -555,8 +561,8 @@ export class SceneManager {
       const w = el.offsetWidth || 72;
       const cx = Math.min(Math.max(x, w / 2 + 8), rect.width - w / 2 - 8);
       const cy = Math.min(Math.max(y, (el.offsetHeight || 30) + 8), rect.height - 8);
-      el.style.transform = `translate(-50%, -100%) translate(${cx}px, ${cy}px)`;
-      el.style.opacity = '1';
+      el.style.transform = `translate(-50%, -100%) translate(${cx}px, ${cy}px) scale(${shrink.toFixed(3)})`;
+      el.style.opacity = fade.toFixed(3);
       el.style.pointerEvents = 'auto';
     };
 

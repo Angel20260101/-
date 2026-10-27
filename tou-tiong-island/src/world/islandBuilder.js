@@ -57,6 +57,14 @@ export function buildWorld(map, progress = {}, wish = {}) {
     }
   };
 
+  /**
+   * 佔位半徑。散佈時用「兩者半徑相加」判斷太不太近，所以大東西讓得多、
+   * 小東西可以擠在一起——地面細節本來就該密。
+   */
+  const R = { landmark: 0.40, flora: 0.26, clutter: 0.085 };
+  const clashes = (occupied, x, z, r) =>
+    occupied.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < (p.r + r) ** 2);
+
   const scatterFlora = (hexes, origin, floraKind, seedKey, occupied) => {
     const rand = seeded(seedKey);
     for (const hex of hexes) {
@@ -71,10 +79,43 @@ export function buildWorld(map, progress = {}, wish = {}) {
         const radius = 0.18 + rand() * 0.6;
         const x = base.x + Math.cos(angle) * radius;
         const z = base.z + Math.sin(angle) * radius;
-        const tooClose = occupied.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < 0.26);
-        if (tooClose) continue;
+        if (clashes(occupied, x, z, R.flora)) continue;
         const type = kinds[Math.floor(rand() * kinds.length)];
         addProp(type, matrixOf(x, base.y, z, rand() * Math.PI * 2, 0.8 + rand() * 0.45));
+        // 樹也要彼此讓開，不然同一格裡會長成一叢分不開的團塊
+        occupied.push({ x, z, r: R.flora });
+      }
+    }
+  };
+
+  /**
+   * 地面細節：石子、三葉草、小花、蘑菇、貝殼、漂流木。
+   *
+   * 鏡頭可以拉到看得見單一棵樹的距離，草地與沙灘不能是一整片空的色塊。
+   * 這一道照 hex 的 surface 鋪，所以連 flora 設成 none 的空地也有東西看。
+   * 跟著同一組種子亂數，位置每次重建都一樣。
+   */
+  const scatterClutter = (hexes, origin, seedKey, occupied) => {
+    const table = map.ground_clutter;
+    if (!table) return;
+    const rand = seeded(seedKey);
+    for (const hex of hexes) {
+      const spec = table[hex.surface];
+      if (!spec?.count || !spec.types?.length) continue;
+      const base = hexTopPosition(hex, cfg, origin);
+      // 亂丟點會越丟越容易撞到已經放好的東西，丟 count 次大概只會成功一半。
+      // 所以「嘗試次數」要和「目標數量」分開：最多丟三倍，放滿就停。
+      let placed = 0;
+      for (let i = 0; i < spec.count * 3 && placed < spec.count; i++) {
+        const angle = rand() * Math.PI * 2;
+        const radius = 0.1 + rand() * 0.72;
+        const x = base.x + Math.cos(angle) * radius;
+        const z = base.z + Math.sin(angle) * radius;
+        if (clashes(occupied, x, z, R.clutter)) continue;
+        const type = spec.types[Math.floor(rand() * spec.types.length)];
+        addProp(type, matrixOf(x, base.y, z, rand() * Math.PI * 2, 0.75 + rand() * 0.5));
+        occupied.push({ x, z, r: R.clutter });
+        placed += 1;
       }
     }
   };
@@ -114,7 +155,7 @@ export function buildWorld(map, progress = {}, wish = {}) {
       if (!hex) return [];
       const base = hexTopPosition(hex, cfg, origin);
       const [dx, dz] = lm.offset ?? [0, 0];
-      return [{ x: base.x + dx, z: base.z + dz }];
+      return [{ x: base.x + dx, z: base.z + dz, r: R.landmark }];
     });
 
   // ── 透中島（主島，永遠存在） ─────────────────────────────
@@ -125,7 +166,9 @@ export function buildWorld(map, progress = {}, wish = {}) {
     const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
     const landmarks = home.landmarks;
     placeLandmarks(landmarks, home.hexes, origin);
-    scatterFlora(home.hexes, origin, home.flora, `${home.island_id}-flora`, occupiedOf(landmarks, home.hexes, origin));
+    const homeOccupied = occupiedOf(landmarks, home.hexes, origin);
+    scatterFlora(home.hexes, origin, home.flora, `${home.island_id}-flora`, homeOccupied);
+    scatterClutter(home.hexes, origin, `${home.island_id}-clutter`, homeOccupied);
 
     const anchors = {};
     for (const lm of landmarks) {
@@ -182,6 +225,7 @@ export function buildWorld(map, progress = {}, wish = {}) {
       trees++;
     }
     scatterFlora(w.hexes, origin, w.flora, `${w.island_id}-flora`, occupied);
+    scatterClutter(w.hexes, origin, `${w.island_id}-clutter`, occupied);
 
     const centre = axialToWorld(origin.q, origin.r, cfg.size);
     placeAnimals(w.animals, w.hexes, origin, centre);
@@ -275,8 +319,9 @@ export function buildWorld(map, progress = {}, wish = {}) {
     const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
     const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
     placeLandmarks(localLandmarks, localHexes, origin);
-    scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-${grown.length}`,
-      occupiedOf(localLandmarks, localHexes, origin));
+    const occupied = occupiedOf(localLandmarks, localHexes, origin);
+    scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-${grown.length}`, occupied);
+    scatterClutter(localHexes, origin, `${island.island_id}-clutter-${grown.length}`, occupied);
     placeAnimals(island.animals, localHexes, origin, axialToWorld(origin.q, origin.r, cfg.size));
 
     islands.push({

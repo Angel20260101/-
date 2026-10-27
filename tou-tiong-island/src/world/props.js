@@ -132,6 +132,61 @@ export const PROP_FACTORIES = {
     return merge(parts);
   },
 
+  // ── 地面細節 ──────────────────────────────────────────
+  // 鏡頭可以拉到很近，草地與沙灘不能是一整片沒東西的色塊。
+  // 這幾個刻意做得極小（每個幾十個三角形），靠數量鋪出質感；
+  // 同型別收成一個 InstancedMesh，鋪幾百個也只多一個 draw call。
+
+  pebble: () => merge([
+    blob(0.062, PALETTE.pebbleWarm, 0, 0.028, 0),
+    blob(0.038, PALETTE.pebbleWarmD, 0.085, 0.018, 0.045),
+  ]),
+
+  clover: () => merge([
+    blob(0.062, PALETTE.cloverDark, 0, 0.04, 0),
+    blob(0.048, PALETTE.leafPine, 0.072, 0.03, 0.045),
+    blob(0.044, PALETTE.bushLeaf, -0.058, 0.028, -0.05),
+  ]),
+
+  bush: () => merge([
+    blob(0.16, PALETTE.bushLeaf, 0, 0.13, 0),
+    blob(0.11, PALETTE.leafRound, 0.13, 0.09, 0.05),
+    blob(0.085, PALETTE.leafPine, -0.10, 0.08, -0.07),
+  ]),
+
+  flower_sm: () => merge([
+    cyl(0.009, 0.009, 0.13, 3, PALETTE.grassDark, 0, 0.065, 0),
+    blob(0.047, PALETTE.flowerA, 0, 0.15, 0),
+  ]),
+
+  flower_sm_gold: () => merge([
+    cyl(0.009, 0.009, 0.115, 3, PALETTE.grassDark, 0, 0.058, 0),
+    blob(0.043, PALETTE.flowerB, 0, 0.135, 0),
+  ]),
+
+  mushroom: () => merge([
+    cyl(0.026, 0.033, 0.10, 5, PALETTE.hutWall, 0, 0.05, 0),
+    cone(0.095, 0.085, 6, PALETTE.mushroomCap, 0, 0.125, 0),
+  ]),
+
+  shell: () => merge([
+    cone(0.085, 0.065, 5, PALETTE.shellIvory, 0, 0.032, 0),
+    blob(0.03, PALETTE.shellPink, 0, 0.024, 0.045),
+  ]),
+
+  driftwood: () => {
+    // cyl() 是先上色再位移，躺下來要自己轉，所以這裡直接建幾何
+    const log = new THREE.CylinderGeometry(0.024, 0.029, 0.21, 5);
+    paint(log, PALETTE.wood);
+    log.rotateZ(Math.PI / 2);
+    log.translate(0, 0.029, 0);
+    const stub = new THREE.CylinderGeometry(0.012, 0.015, 0.08, 4);
+    paint(stub, PALETTE.woodDark);
+    stub.rotateZ(Math.PI / 2.6);
+    stub.translate(0.065, 0.06, 0.02);
+    return merge([log, stub]);
+  },
+
   stone_path: () => {
     const parts = [];
     for (let i = 0; i < 6; i++) {

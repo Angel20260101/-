@@ -14,7 +14,7 @@
       0
     ],
     "default_distance": 44,
-    "min_distance": 9,
+    "min_distance": 6,
     "max_distance": 140,
     "polar_deg": {
       "min": 22,
@@ -1818,5 +1818,60 @@
     "palm_pair": 2,
     "grass_tufts": 6,
     "none": 0
+  },
+  "ground_clutter": {
+    "_note": "地面細節：照 hex 的 surface 鋪，連 flora 設成 none 的空地也有東西看。types 裡重複出現的型別＝出現機率比較高。每種型別只佔一個 draw call。配色原則：細節要比地面「暗一階」才看得見，同色同明度等於隱形。",
+    "grass": {
+      "count": 16,
+      "types": [
+        "clover",
+        "clover",
+        "bush",
+        "flower_sm",
+        "mushroom",
+        "pebble",
+        "grass_tuft"
+      ]
+    },
+    "grass_light": {
+      "count": 16,
+      "types": [
+        "clover",
+        "bush",
+        "flower_sm",
+        "flower_sm_gold",
+        "pebble",
+        "grass_tuft"
+      ]
+    },
+    "grass_dark": {
+      "count": 14,
+      "types": [
+        "clover",
+        "clover",
+        "bush",
+        "mushroom",
+        "pebble"
+      ]
+    },
+    "sand": {
+      "count": 11,
+      "types": [
+        "pebble",
+        "pebble",
+        "shell",
+        "grass_tuft",
+        "driftwood"
+      ]
+    },
+    "rock": {
+      "count": 10,
+      "types": [
+        "pebble",
+        "pebble",
+        "clover",
+        "bush"
+      ]
+    }
   }
 }

@@ -406,3 +406,8 @@ body {
   font: 700 26px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
   letter-spacing: 2px; color: var(--ink); word-break: break-all;
 }
+
+/* 拉近時標籤會淡掉讓出畫面（sceneManager 以 inline style 控制）。
+   滑過、觸碰或鍵盤聚焦時一定要看得清楚，所以用 !important 蓋過 inline。 */
+.map-label:hover, .map-label:focus-visible,
+.map-spot:hover, .map-spot:focus-visible { opacity: 1 !important; }

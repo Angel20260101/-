@@ -26,8 +26,8 @@ npm run docs    # 由 JSON 產生劇本文件與流程圖
 | 可走完的路徑 | 162（全部驗證過可到達結局） |
 | 情緒練習卡 | 18 |
 | 島嶼養成素材 | 18 項 |
-| Draw calls | 未解鎖 27 ／ 全開 40 ／ 全開雨天 41（預算 60） |
-| 三角形 | 未解鎖 4,616 ／ 全開 12,064 ／ 全開雨天 13,740 |
+| Draw calls | 未解鎖 35 ／ 全開 48 ／ 全開雨天 49（預算 60，`npm test` 會擋） |
+| 三角形 | 未解鎖 8,652 ／ 全開 29,440 ／ 全開雨天 31,116 |
 | 貼圖 | 0 張（全部頂點色） |
 
 ## 文件
@@ -85,6 +85,7 @@ tou-tiong-island/
 │   ├── validate.mjs         劇情資料驗收（零依賴）
 │   ├── route-cases.mjs      航線黃金案例 + 設計意圖 + AI 過濾測試
 │   ├── api-cases.mjs        後端 API 端對端測試
+│   ├── world-budget.mjs     效能預算守門員（draw calls 超過就擋下建置）
 │   ├── build-scripts.mjs    由 JSON 產生劇本文件與流程圖
 │   └── jsonschema.mjs       極簡 JSON Schema 驗證器
 ├── tests/cases/             黃金案例資料

@@ -9,7 +9,7 @@
     "build": "npm run validate && vite build",
     "preview": "vite preview",
     "validate": "node tools/validate.mjs",
-    "test": "node tools/validate.mjs && node tools/route-cases.mjs && node tools/api-cases.mjs",
+    "test": "node tools/validate.mjs && node tools/route-cases.mjs && node tools/api-cases.mjs && node tools/world-budget.mjs",
     "docs": "node tools/build-scripts.mjs"
   },
   "devDependencies": {
