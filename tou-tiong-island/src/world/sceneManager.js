@@ -201,9 +201,9 @@ export class SceneManager {
   }
 
   // ── 建立／重建世界 ───────────────────────────────────────
-  rebuild(progress) {
+  rebuild(progress, wish = {}) {
     this._clearWorld();
-    const { islands, props, animals } = buildWorld(this.map, progress);
+    const { islands, props, animals, boats } = buildWorld(this.map, progress, wish);
     this.islandsById.clear();
 
     for (const island of islands) {
@@ -233,6 +233,7 @@ export class SceneManager {
     }
 
     this._buildAnimals(animals);
+    this._buildBoats(boats);
     this._buildClouds(islands);
     this._buildShallows(islands);
     this._buildLighthouse(islands);
@@ -294,6 +295,43 @@ export class SceneManager {
       group.forEach((a, i) => this.animals.push({ ...a, mesh, index: i }));
     }
     this._stepAnimals(this._clock ?? 0);
+  }
+
+  /**
+   * 願望島的小船。玩家每放出一艘願望就多停一艘，浮在海面上輕輕搖。
+   * 全部收成一個 InstancedMesh，所以不管停幾艘都只佔一個 draw call。
+   */
+  _buildBoats(list = []) {
+    if (this._boatMesh) {
+      this.worldGroup.remove(this._boatMesh);
+      this._boatMesh.dispose();
+      const i = this.instancedMeshes.indexOf(this._boatMesh);
+      if (i >= 0) this.instancedMeshes.splice(i, 1);
+      this._boatMesh = null;
+    }
+    this._boats = list;
+    if (!list.length) return;
+    this._boatMesh = this._instanced('boat', list.length);
+    this._stepBoats(this._clock ?? 0);
+  }
+
+  _stepBoats(t) {
+    if (!this._boatMesh) return;
+    const m = new THREE.Matrix4();
+    const e = new THREE.Euler();
+    const q = new THREE.Quaternion();
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3(1, 1, 1);
+    this._boats.forEach((b, i) => {
+      const bob = Math.sin(t * 1.1 + b.phase) * 0.035;
+      const roll = Math.sin(t * 0.9 + b.phase) * 0.07;
+      pos.set(b.x, -0.02 + bob, b.z);
+      e.set(roll, b.rot, 0);
+      q.setFromEuler(e);
+      m.compose(pos, q, scl);
+      this._boatMesh.setMatrixAt(i, m);
+    });
+    this._boatMesh.instanceMatrix.needsUpdate = true;
   }
 
   _buildClouds(islands) {
@@ -403,7 +441,9 @@ export class SceneManager {
     this.pickTargets = [];
     this.instancedMeshes = [];
     this.animals = [];
+    this._animalMeshes = [];
     this.clouds = null;
+    this._boatMesh = null;   // 上面那圈已經 dispose 過了，別再清一次
   }
 
   // ── DOM 標籤 ────────────────────────────────────────────
@@ -419,8 +459,12 @@ export class SceneManager {
       if (!home) el.type = 'button';
       el.className = `map-label${island.unlocked ? '' : ' map-label--locked'}${home ? ' map-label--home' : ''}`;
       el.dataset.islandId = island.island_id;
-      const growth = island.kind === 'story' && island.unlocked
-        ? `<span class="map-label__sub">航線 ${island.growthCount}／${island.growthTotal}</span>` : '';
+      let growth = '';
+      if (island.kind === 'story' && island.unlocked) {
+        growth = `<span class="map-label__sub">航線 ${island.growthCount}／${island.growthTotal}</span>`;
+      } else if (island.kind === 'wish') {
+        growth = `<span class="map-label__sub">${island.boats ? `小船 ${island.boats}` : '還沒有船'}${island.trees ? ` ・ 樹 ${island.trees}` : ''}</span>`;
+      }
       el.innerHTML = island.unlocked
         ? `<span class="map-label__name">${island.name}</span>${growth}`
         : '<span class="map-label__name">未探索</span>';
@@ -543,9 +587,16 @@ export class SceneManager {
       if (!ring.behind) remember(entry.el, x, y);
     }
 
+    // 島名：由近到遠依序擺。近的（畫面下方）先佔位，遠的撞到就往上讓——
+    // 願望島就在主島旁邊，跟故事島的名牌會重疊，所以島名之間也必須互相避讓。
+    const named = [];
     for (const entry of this.labels.values()) {
       if (entry.ring != null && ring) continue;
-      const p = project(entry.anchor);
+      named.push({ entry, p: project(entry.anchor) });
+    }
+    named.sort((a, b) => b.p.y - a.p.y);
+
+    for (const { entry, p } of named) {
       let y = p.y;
       const w = entry.el.offsetWidth || 72;
       const h = entry.el.offsetHeight || 30;
@@ -556,7 +607,7 @@ export class SceneManager {
         y = hit.t - 6;          // 往上讓開，島名就不會蓋住島本身
       }
       place(entry.el, p.x, y, p.behind);
-      // 島名之間不互相避讓：六座島本來就分得開，連鎖閃避反而會把標籤拉離島很遠
+      if (!p.behind) remember(entry.el, p.x, y);
     }
   }
 
@@ -629,14 +680,31 @@ export class SceneManager {
   focusHome({ animate = false } = {}) {
     const home = this.islandsById.get('island_home');
     if (!home) return this.fitToWorld({ animate });
-    // 島寬約 5 單位，外圈還要放得下一圈入口標籤
+    // 主島與願望島一起入鏡：小船從碼頭開出去，要看得到它停在哪裡。
+    // 鏡頭中心偏向主島（0.7），願望島落在畫面邊上就好，否則主島會被擠得太小。
+    const wish = this.islandsById.get('island_wish');
+    const hb = home.bounds;
+    const hc = { x: (hb.minX + hb.maxX) / 2, z: (hb.minZ + hb.maxZ) / 2 };
+    let target = { x: hc.x, y: 0, z: hc.z };
+    let extent = 5.4;           // 島寬約 5 單位，外圈還要放得下一圈入口標籤
+    if (wish) {
+      const wb = wish.bounds;
+      const mid = { x: (Math.min(hb.minX, wb.minX) + Math.max(hb.maxX, wb.maxX)) / 2,
+                    z: (Math.min(hb.minZ, wb.minZ) + Math.max(hb.maxZ, wb.maxZ)) / 2 };
+      target = { x: hc.x + (mid.x - hc.x) * 0.7, y: 0, z: hc.z + (mid.z - hc.z) * 0.7 };
+      const reach = Math.max(
+        Math.abs(wb.maxX - target.x), Math.abs(target.x - hb.minX),
+        Math.abs(wb.maxZ - target.z), Math.abs(target.z - hb.minZ),
+      );
+      extent = Math.max(extent, reach + 1.3);
+    }
     const tanH = Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect;
     const distance = THREE.MathUtils.clamp(
-      5.4 / Math.max(tanH, 0.12), this.controls.minDistance, this.controls.maxDistance,
+      extent / Math.max(tanH, 0.12), this.controls.minDistance, this.controls.maxDistance,
     );
-    if (animate) this.controls.flyTo({ target: home.center, distance }, 650);
+    if (animate) this.controls.flyTo({ target, distance }, 650);
     else {
-      this.controls.target.set(home.center.x, 0, home.center.z);
+      this.controls.target.set(target.x, 0, target.z);
       this.controls.distance = distance;
       this.controls.apply();
     }
@@ -809,6 +877,7 @@ export class SceneManager {
     if (this.animating || beamActive) {
       this._clock += dt;
       this._stepAnimals(this._clock);
+      this._stepBoats(this._clock);
       this._stepClouds(dt);
       this._stepRain(dt);
       this._stepBeam(now);

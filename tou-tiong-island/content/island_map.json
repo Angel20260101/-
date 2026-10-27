@@ -332,6 +332,209 @@
       }
     ]
   },
+  "wish_island": {
+    "island_id": "island_wish",
+    "name": "願望島",
+    "tagline": "小船停靠的地方。公司回應了，這裡就長出一棵樹。",
+    "origin": {
+      "q": 3,
+      "r": 0
+    },
+    "flora": "temperate",
+    "hexes": [
+      {
+        "q": 0,
+        "r": 0,
+        "level": 1,
+        "surface": "grass_light",
+        "flora": "none"
+      },
+      {
+        "q": 1,
+        "r": 0,
+        "level": 0,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      },
+      {
+        "q": 0,
+        "r": 1,
+        "level": 0,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      }
+    ],
+    "landmarks": [
+      {
+        "type": "pier",
+        "hex": [
+          0,
+          1
+        ],
+        "offset": [
+          -0.85,
+          0.0
+        ],
+        "scale": 0.85,
+        "rot": -1.571
+      },
+      {
+        "type": "signpost",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          -0.3,
+          -0.6
+        ],
+        "scale": 0.9,
+        "rot": -0.5,
+        "interaction": "wishboard",
+        "label": "願望島"
+      }
+    ],
+    "_dock_note": "小船不是固定擺設：玩家每放出一艘，就依序佔用一個停靠位。dx/dz 是相對島中心的世界座標，船浮在海平面上。",
+    "dock_slots": [
+      {
+        "dx": -1.78,
+        "dz": 1.45,
+        "rot": -0.2
+      },
+      {
+        "dx": -1.98,
+        "dz": 1.95,
+        "rot": 0.15
+      },
+      {
+        "dx": -2.06,
+        "dz": 1.0,
+        "rot": -0.35
+      },
+      {
+        "dx": -1.62,
+        "dz": 2.45,
+        "rot": 0.3
+      },
+      {
+        "dx": -2.16,
+        "dz": 0.52,
+        "rot": -0.1
+      },
+      {
+        "dx": -1.28,
+        "dz": 2.85,
+        "rot": 0.42
+      }
+    ],
+    "_tree_note": "每個主題一個位子，照 wish_board.json 的 status 決定長樹苗還是大樹；沒有回應就空著。",
+    "tree_slots": [
+      {
+        "theme": "下班後不傳訊息",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          0.35,
+          -0.4
+        ],
+        "rot": 0.4,
+        "scale": 1.0
+      },
+      {
+        "theme": "休息空間",
+        "hex": [
+          1,
+          0
+        ],
+        "offset": [
+          -0.3,
+          -0.25
+        ],
+        "rot": -0.8,
+        "scale": 0.95
+      },
+      {
+        "theme": "工作量與人力",
+        "hex": [
+          0,
+          1
+        ],
+        "offset": [
+          0.3,
+          0.35
+        ],
+        "rot": 1.1,
+        "scale": 1.0
+      },
+      {
+        "theme": "主管溝通方式",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          0.15,
+          0.5
+        ],
+        "rot": -0.4,
+        "scale": 1.0
+      },
+      {
+        "theme": "薪資福利",
+        "hex": [
+          1,
+          0
+        ],
+        "offset": [
+          0.35,
+          0.35
+        ],
+        "rot": 0.9,
+        "scale": 1.0
+      },
+      {
+        "theme": "其他",
+        "hex": [
+          0,
+          1
+        ],
+        "offset": [
+          -0.4,
+          -0.1
+        ],
+        "rot": -1.2,
+        "scale": 0.9
+      }
+    ],
+    "animals": [
+      {
+        "type": "animal_bird",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "behaviour": "circle",
+        "radius": 2.4,
+        "height": 2.8,
+        "speed": 0.3,
+        "rot": 0,
+        "rainy": {
+          "type": "animal_bird",
+          "behaviour": "circle",
+          "radius": 1.8,
+          "height": 2.0,
+          "speed": 0.2,
+          "note": "雨天飛低一點"
+        }
+      }
+    ]
+  },
   "islands": [
     {
       "island_id": "island_boundary",

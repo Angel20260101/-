@@ -12,8 +12,10 @@ import { StoryView } from './storyView.js';
 import { ResultView } from './resultView.js';
 import {
   Sheet, trustPanel, islandPanel, dailyPanel, weeklyPanel, lighthousePanel,
-  letterPanel, wishPanel, recordsPanel, atlasPanel, collectionPanel, aboutPanel,
+  letterPanel, wishPanel, wishBoardPanel, recordsPanel, backupPanel, atlasPanel,
+  collectionPanel, aboutPanel,
 } from './panels.js';
+import * as vaultClient from '../core/vaultClient.js';
 
 const WEATHER_LINE = { sunny: '今天島上出太陽', cloudy: '今天島上多雲', rainy: '今天島上下雨' };
 
@@ -92,7 +94,10 @@ export class App {
   }
 
   refreshWorld() {
-    this.islands = this.scene.rebuild(this.state.progressForWorld());
+    this.islands = this.scene.rebuild(this.state.progressForWorld(), {
+      count: this.state.wishes().length,
+      board: this.content.wishBoard,
+    });
   }
 
   /** 這週的溫度計還沒做時，雲朵上多一個小提示；不打斷任何事。 */
@@ -117,9 +122,12 @@ export class App {
     if (!island) return;
     this.scene.autoFit = false;
     this.scene.select(islandId);
+    // 主島與願望島本來就在預設鏡頭裡。再推近它們，主島那一圈入口（燈塔、郵筒、
+    // 我的紀錄…）就全部被擠出畫面，人會卡在那裡不知道怎麼回去。
+    if (island.kind === 'home') return undefined;   // 主島直接點島上的文字就好
+    if (island.kind === 'wish') return this.openInteraction('wishboard');
     this.scene.focus(islandId);
-    if (island.kind === 'home') return;       // 主島直接點島上的文字就好
-    islandPanel(this.sheet, {
+    return islandPanel(this.sheet, {
       island, state: this.state, content: this.content,
       onPlay: (storyId) => this.play(storyId),
     });
@@ -157,13 +165,38 @@ export class App {
       case 'wish':
         return wishPanel(this.sheet, {
           state: this.state, content: this.content,
-          onSent: () => this.toast('小船出發了'),
+          onSent: () => {
+            // 小船要馬上看得到，但不能把鏡頭整個推到願望島上——那樣主島的入口
+            // 就全部跑出畫面了。focusHome 本來就把兩座島一起框住，船看得到，
+            // 燈塔、郵筒、我的紀錄也都還在手邊。
+            this.refreshWorld();
+            this.scene.focusHome({ animate: true });
+            this.toast('小船出發了，停在願望島');
+          },
+        });
+      case 'wishboard':
+        return wishBoardPanel(this.sheet, {
+          state: this.state, content: this.content,
+          onWish: () => this.openInteraction('wish'),
         });
       case 'records':
         return recordsPanel(this.sheet, {
           state: this.state, content: this.content,
           onAtlas: () => this.openInteraction('atlas'),
           onCollection: () => this.openInteraction('collection'),
+          onBackup: () => this.openInteraction('backup'),
+        });
+      case 'backup':
+        return backupPanel(this.sheet, {
+          state: this.state, vaultClient,
+          // 還原進來的是另一台裝置的島：天氣、島嶼、小船全部重畫一次
+          onRestored: () => {
+            this.applyWeather(this.state.todayWeather, { animate: false });
+            this.refreshWorld();
+            this.scene.focusHome({ animate: true });
+            this.refreshCloudLabel();
+            this.toast('紀錄接回來了');
+          },
         });
       case 'atlas':
         return atlasPanel(this.sheet, { state: this.state, onPlay: (s) => this.play(s) });

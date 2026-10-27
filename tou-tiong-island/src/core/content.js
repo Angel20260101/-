@@ -9,6 +9,7 @@ import practiceCards from '../../content/practice_cards.json';
 import dailyWeekly from '../../content/daily_weekly.json';
 import aiFeedback from '../../content/ai_feedback.json';
 import storyIndex from '../../content/story_index.json';
+import wishBoard from '../../content/wish_board.json';
 
 const storyLoaders = import.meta.glob('../../content/stories/*.json');
 
@@ -32,6 +33,7 @@ export const content = {
   dailyWeekly,
   aiFeedback,
   storyIndex,
+  wishBoard,
   cardById(id) { return practiceCards.cards.find((c) => c.card_id === id) ?? null; },
   islandById(id) { return islandMap.islands.find((i) => i.island_id === id) ?? null; },
   islandForStory(storyId) { return islandMap.islands.find((i) => i.story_id === storyId) ?? null; },

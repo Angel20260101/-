@@ -325,6 +325,13 @@ export const PROP_FACTORIES = {
     box(0.015, 0.2, 0.14, PALETTE.towerWhite, 0, 0.23, 0.05),
   ]),
 
+  // 願望島：公司還在處理 → 樹苗；做到了 → 大樹。
+  wish_sapling: () => merge([
+    cyl(0.025, 0.04, 0.22, 4, PALETTE.trunk, 0, 0.11, 0),
+    blob(0.12, PALETTE.leafLime, 0, 0.28, 0),
+    blob(0.07, PALETTE.leafRound, 0.07, 0.34, 0.04),
+  ]),
+
   wish_tree: () => merge([
     cyl(0.07, 0.1, 0.46, 5, PALETTE.trunk, 0, 0.23, 0),
     blob(0.34, PALETTE.leafRound, 0, 0.72, 0),

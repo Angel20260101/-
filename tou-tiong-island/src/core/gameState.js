@@ -234,6 +234,16 @@ export class GameState extends EventTarget {
     });
   }
 
+  /** 還原備份：整份換掉。島嶼進度、紀錄、信件、小船一起回來。 */
+  replaceAll(data) {
+    this.data = storage.migrate(data);
+    this.data.active_session = null;   // 別把別台裝置沒走完的故事帶過來
+    this.persist();
+    return this.data;
+  }
+
+  exportJSON() { return storage.exportSave(this.data); }
+
   get settings() { return this.data.settings; }
 
   setSetting(key, value) {

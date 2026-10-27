@@ -71,7 +71,7 @@ export function clear() {
 }
 
 /** 舊版存檔升級。目前只有 1.0.0，保留這個位置讓之後加欄位時不會弄丟玩家資料。 */
-function migrate(old) {
+export function migrate(old) {
   return { ...emptySave(), ...old, save_version: SAVE_VERSION };
 }
 

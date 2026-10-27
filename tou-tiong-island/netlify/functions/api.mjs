@@ -18,6 +18,7 @@ import storyIndex from '../../content/story_index.json' with { type: 'json' };
 import islandMap from '../../content/island_map.json' with { type: 'json' };
 import practiceCards from '../../content/practice_cards.json' with { type: 'json' };
 import dailyWeekly from '../../content/daily_weekly.json' with { type: 'json' };
+import wishBoard from '../../content/wish_board.json' with { type: 'json' };
 // 六篇劇本靜態 import：打包後的 Function 不含專案檔案，執行時讀不到 content/stories/
 import story01 from '../../content/stories/story_01_late_message.json' with { type: 'json' };
 import story02 from '../../content/stories/story_02_forty_seventh_call.json' with { type: 'json' };
@@ -78,6 +79,64 @@ class MemoryStore {
 
 const store = new MemoryStore();
 
+/**
+ * 保存代碼的保險庫。
+ *
+ * 存進去的永遠是前端加密好的密文（src/core/vault.js），伺服器沒有密碼、
+ * 解不開，也拿不到任何可以對應到個人的東西。
+ *
+ * Netlify Blobs 要站台本身有開才拿得到；拿不到就退回記憶體，
+ * 讓本機開發跑得動，但 available=false 會一路傳到介面上，不會假裝有備份。
+ */
+class VaultStore {
+  constructor() { this.memory = new Map(); this.blobs = undefined; }
+
+  async _store() {
+    if (this.blobs !== undefined) return this.blobs;
+    try {
+      const { getStore } = await import('@netlify/blobs');
+      this.blobs = getStore({ name: 'tti-vault', consistency: 'strong' });
+    } catch {
+      this.blobs = null;        // 本機或沒開 Blobs：記憶體頂著，但會誠實回報
+    }
+    return this.blobs;
+  }
+
+  async durable() { return (await this._store()) !== null; }
+
+  async get(code) {
+    const b = await this._store();
+    if (!b) return this.memory.get(code) ?? null;
+    try { return await b.get(code, { type: 'json' }); } catch { return null; }
+  }
+
+  async put(code, row) {
+    const b = await this._store();
+    if (!b) { this.memory.set(code, row); return row; }
+    await b.setJSON(code, row);
+    return row;
+  }
+}
+
+const vault = new VaultStore();
+
+const CODE_RE = /^TTI-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}$/;
+const MAX_CIPHERTEXT = 512 * 1024;   // 存檔再大也不該超過這個，超過就是有人在亂丟東西
+const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/** 只收密文。任何看起來像明文的欄位都擋掉，免得哪天有人改前端改錯方向。 */
+function validateSealed(body) {
+  const allowed = ['v', 'salt', 'iv', 'ct', 'verifier'];
+  const extra = Object.keys(body).filter((k) => !allowed.includes(k));
+  if (extra.length) return `不該出現的欄位：${extra.join(', ')}`;
+  for (const k of ['salt', 'iv', 'ct', 'verifier']) {
+    if (typeof body[k] !== 'string' || !body[k] || !B64_RE.test(body[k])) return `${k} 必須是 base64 字串`;
+  }
+  if (body.ct.length > MAX_CIPHERTEXT) return '備份內容太大';
+  return null;
+}
+
+
 // ── 工具 ──────────────────────────────────────────────────
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
@@ -122,7 +181,7 @@ export default async (request) => {
   if (!seg) return err('not_found', '未知的路徑', 404);
 
   let body = {};
-  if (method === 'POST' || method === 'PATCH') {
+  if (method === 'POST' || method === 'PATCH' || method === 'PUT') {
     // 空 body 是合法的（例如 advance 不需要任何參數），只有「有內容但不是 JSON」才算錯
     const raw = (await request.text()).trim();
     if (raw) {
@@ -282,6 +341,49 @@ export default async (request) => {
       if (seg[2] === 'thermometer' && method === 'GET') {
         return json({ entries: await store.listWeekly(playerId) });
       }
+    }
+
+    // ── 保存代碼（E8）────────────────────────────────────
+    // 伺服器全程只碰得到密文。沒有帳號、沒有 email，弄丟密碼就真的解不開。
+    if (seg[0] === 'vault') {
+      if (seg[1] === 'status' && method === 'GET') {
+        return json({ durable: await vault.durable() });
+      }
+      const code = (seg[1] ?? '').toUpperCase();
+      if (!CODE_RE.test(code)) return err('invalid_code', '代碼格式不對', 400);
+
+      if (method === 'GET') {
+        const row = await vault.get(code);
+        if (!row) return err('not_found', '找不到這組代碼的備份', 404);
+        // verifier 不回傳：知道代碼的人不該因此就能覆蓋別人的備份
+        return json({ v: row.v, salt: row.salt, iv: row.iv, ct: row.ct, updated_at: row.updated_at });
+      }
+
+      if (method === 'PUT') {
+        const bad = validateSealed(body);
+        if (bad) return err('invalid_request', bad, 400);
+        const existing = await vault.get(code);
+        if (existing && existing.verifier !== body.verifier) {
+          return err('wrong_password', '這組代碼已經有備份了，密碼不對就不能覆蓋', 409);
+        }
+        const row = {
+          v: body.v ?? 1, salt: body.salt, iv: body.iv, ct: body.ct, verifier: body.verifier,
+          created_at: existing?.created_at ?? new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await vault.put(code, row);
+        return json({ code, updated_at: row.updated_at, durable: await vault.durable() }, existing ? 200 : 201);
+      }
+    }
+
+    // GET /api/v1/wishes/board —— 願望看板：公司對每個主題的回應
+    if (seg[0] === 'wishes' && seg[1] === 'board' && method === 'GET') {
+      return json({
+        statuses: wishBoard.statuses,
+        themes: wishBoard.themes,
+        k_anonymity_min: wishBoard.k_anonymity_min,
+        note: '只回傳主題與公司的回應。沒有任何人寫的願望原文會經過這裡——原文留在使用者自己的裝置上。',
+      });
     }
 
     // GET /api/v1/insights/team —— 團隊統計：低於 k 匿名門檻一律不回傳

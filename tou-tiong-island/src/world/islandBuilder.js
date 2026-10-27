@@ -34,12 +34,14 @@ const matrixOf = (x, y, z, rotY = 0, scale = 1) =>
 /**
  * @param {object} map       content/island_map.json
  * @param {object} progress  { [island_id]: { unlocked, name, routes: string[] } }
+ * @param {object} wish      { count: number, board: content/wish_board.json }
  */
-export function buildWorld(map, progress = {}) {
+export function buildWorld(map, progress = {}, wish = {}) {
   const cfg = map.hex;
   const islands = [];
   const props = new Map();   // type -> Matrix4[]（靜態道具）
   const animals = [];        // 會動的島民，交給 sceneManager 逐幀更新
+  const boats = [];          // 停在願望島的小船，會隨海浪上下
   const addProp = (type, matrix) => {
     if (!props.has(type)) props.set(type, []);
     props.get(type).push(matrix);
@@ -153,6 +155,75 @@ export function buildWorld(map, progress = {}) {
     });
   }
 
+  // ── 願望島 ───────────────────────────────────────────────
+  // 碼頭放出的每一艘小船都停在這裡；公司回應一個主題，島上就長出一棵樹。
+  // 玩家自己寫的願望原文從來不會離開這台裝置，這裡呈現的只有「船的數量」與公司的回應。
+  if (map.wish_island) {
+    const w = map.wish_island;
+    const origin = w.origin;
+    const hexes = w.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    placeLandmarks(w.landmarks, w.hexes, origin);
+
+    const statusOf = new Map((wish.board?.themes ?? []).map((t) => [t.theme, t.status]));
+    const growthOf = new Map((wish.board?.statuses ?? []).map((s2) => [s2.status_id, s2.growth]));
+    const occupied = occupiedOf(w.landmarks, w.hexes, origin);
+    let trees = 0;
+    for (const slot of w.tree_slots ?? []) {
+      const growth = growthOf.get(statusOf.get(slot.theme)) ?? 'none';
+      if (growth === 'none') continue;
+      const hex = w.hexes.find((h) => h.q === slot.hex[0] && h.r === slot.hex[1]);
+      if (!hex) continue;
+      const base = hexTopPosition(hex, cfg, origin);
+      const [dx, dz] = slot.offset ?? [0, 0];
+      addProp(growth === 'tree' ? 'wish_tree' : 'wish_sapling',
+        matrixOf(base.x + dx, base.y, base.z + dz, slot.rot ?? 0, slot.scale ?? 1));
+      occupied.push({ x: base.x + dx, z: base.z + dz });
+      trees++;
+    }
+    scatterFlora(w.hexes, origin, w.flora, `${w.island_id}-flora`, occupied);
+
+    const centre = axialToWorld(origin.q, origin.r, cfg.size);
+    placeAnimals(w.animals, w.hexes, origin, centre);
+
+    // 小船：放出幾艘就停幾艘，停靠位用完就不再增加（島不會被船淹沒）
+    const docked = Math.min(wish.count ?? 0, (w.dock_slots ?? []).length);
+    for (let i = 0; i < docked; i++) {
+      const slot = w.dock_slots[i];
+      boats.push({
+        x: centre.x + slot.dx,
+        z: centre.z + slot.dz,
+        rot: slot.rot ?? 0,
+        phase: (i * 1.7) % (Math.PI * 2),
+      });
+    }
+
+    const sign = (w.landmarks ?? []).find((lm) => lm.interaction);
+    const anchors = {};
+    if (sign) {
+      const hex = w.hexes.find((h) => h.q === sign.hex[0] && h.r === sign.hex[1]);
+      const base = hexTopPosition(hex, cfg, origin);
+      const [dx, dz] = sign.offset ?? [0, 0];
+      anchors[sign.interaction] = { x: base.x + dx, y: base.y + 0.5, z: base.z + dz, label: sign.label };
+    }
+
+    islands.push({
+      island_id: w.island_id,
+      kind: 'wish',
+      name: w.name,
+      tagline: w.tagline,
+      geometry,
+      bounds,
+      anchors,
+      interaction: sign?.interaction ?? null,
+      boats: docked,
+      trees,
+      unlocked: true,
+      growthCount: trees,
+      growthTotal: (w.tree_slots ?? []).length,
+    });
+  }
+
   // ── 六座故事島 ───────────────────────────────────────────
   for (const island of map.islands) {
     const origin = island.origin;
@@ -224,5 +295,5 @@ export function buildWorld(map, progress = {}) {
     });
   }
 
-  return { islands, props, animals };
+  return { islands, props, animals, boats };
 }

@@ -260,6 +260,62 @@ putWeekly(row) / listWeekly(playerId)
 aggregate({ from, to })
 ```
 
+保存代碼另外走 `VaultStore`（`durable()` / `get(code)` / `put(code, row)`），
+因為它存的是不透明密文，跟上面這些有結構的資料表性質不同。
+
+## 保存代碼（E8）
+
+紀錄預設只存在瀏覽器的 localStorage，清快取或換手機就會消失。E8 提供兩條帶走的路，
+兩條都不需要帳號、不需要 email。
+
+### 一、備份檔
+
+`state.exportJSON()` 匯出純 JSON，讀回時走 `storage.importSave()`。
+檔案在使用者自己手上，不經過伺服器，離線也能用。
+
+### 二、保存代碼（端對端加密）
+
+代碼格式 `TTI-XXXX-XXXX`，字母表去掉 `0 O 1 I L`，避免手抄誤判。
+加解密全部在瀏覽器裡完成（`src/core/vault.js`），**伺服器只收得到密文**。
+
+```
+bits     = PBKDF2(password, salt, 150_000, SHA-256, 512 bits)
+aesKey   = bits[0..32]      // AES-GCM 256，加密整份存檔
+verifier = bits[32..64]     // 存在伺服器，用來擋掉「知道代碼但不知道密碼」的人
+```
+
+PBKDF2 的兩個輸出區塊彼此推不回去，所以即使資料庫整個外洩，拿到 `verifier` 也還原不出
+`aesKey`。密碼不上傳、伺服器無法驗證也無法重設——**忘記密碼就真的解不開**，介面上必須講清楚。
+
+覆蓋同一組代碼時要沿用原本的 `salt`，否則推出來的 verifier 跟伺服器存的對不上，
+連本人都會被擋在外面（`seal(plaintext, password, existingSalt)`）。
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/api/v1/vault/status` | 回 `{ durable }`。Netlify Blobs 沒開時為 `false`，介面要據實告知 |
+| GET | `/api/v1/vault/:code` | 回 `{ v, salt, iv, ct, updated_at }`。**不回傳 `verifier`** |
+| PUT | `/api/v1/vault/:code` | 收 `{ v, salt, iv, ct, verifier }`。已存在且 verifier 不符回 `409` |
+
+伺服器端的防呆：只允許 `v / salt / iv / ct / verifier` 五個欄位，多一個就回 `400`
+（避免哪天前端改錯方向把明文送上來）；`salt / iv / ct / verifier` 必須是 base64；
+`ct` 上限 512 KB。
+
+儲存層是 `VaultStore`，優先用 Netlify Blobs（`tti-vault`，strong consistency），
+拿不到就退回記憶體並讓 `durable` 回 `false`——本機開發跑得動，但不會假裝有備份。
+
+## 願望看板
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/api/v1/wishes/board` | 主題、公司回應進度（`received` / `in_progress` / `done`）、k 匿名門檻 |
+
+內容來自 `content/wish_board.json`，正式上線時由企業端後台維護。
+**使用者寫的願望原文從來不會經過這個端點**，原文只留在他自己的裝置上；
+公司看到的只有主題，而且一樣要過 k 匿名門檻。
+
+島上的樹就是照這份資料長的：`in_progress` 長樹苗、`done` 長大樹、`received` 什麼都不長。
+沒有回應的主題島上就空著——這裡不替公司講好話。
+
 ## 隱私規範
 
 ### 不得提供給雇主的東西
@@ -276,6 +332,8 @@ aggregate({ from, to })
 4. **`players` 表沒有可識別欄位**：沒有 email、姓名、員工編號、部門、職稱。
    `org_id` 只用來決定統計的分母，不能反查成員。
 5. **AI 回饋不寫入任何組織可查的資料表**，`player_note` 原文不落地。
+6. **保存代碼的備份是密文**。伺服器沒有密碼，解不開，也無從得知裡面是誰的島；
+   願望看板只回傳主題與公司回應，不碰任何人寫的原文。
 
 ### 玩家的資料權利
 
@@ -284,6 +342,7 @@ aggregate({ from, to })
 | 匿名使用 | 預設。不需要帳號即可完整遊玩 |
 | 隨時查看 | 存檔是純 JSON，可直接匯出 |
 | 刪除 | 清除本機存檔即可；接上後端時 `DELETE /players/:pid` 連動刪除所有關聯列 |
+| 帶走 | 下載備份檔，或用保存代碼（端對端加密）在另一台裝置還原 |
 | 選擇性同意 AI | 每次都要按按鈕；自填內容另外一道同意 |
 
 ### 送進第三方（AI 模型）的資料

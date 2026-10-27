@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0.0",
+  "description": "願望看板：碼頭許願的主題，以及公司對每個主題的回應進度。島上的樹是照這份資料長出來的。",
+  "data_note": "themes 裡的 response 是示範用的種子資料。正式上線時這份內容由企業端後台維護，透過 GET /api/v1/wishes/board 取得；前端只負責呈現，不會自己生成公司的回答。",
+  "k_anonymity_min": 10,
+  "statuses": [
+    {
+      "status_id": "received",
+      "label": "收到了",
+      "growth": "none",
+      "island_line": "小船停在岸邊。還沒有回音。"
+    },
+    {
+      "status_id": "in_progress",
+      "label": "正在處理",
+      "growth": "sapling",
+      "island_line": "沙地上冒出一株樹苗。"
+    },
+    {
+      "status_id": "done",
+      "label": "做到了",
+      "growth": "tree",
+      "island_line": "樹長起來了，有影子可以坐。"
+    }
+  ],
+  "themes": [
+    {
+      "theme": "下班後不傳訊息",
+      "status": "done",
+      "response": "十月起，晚上八點之後的內部訊息一律改成隔天上班再送出，系統會自動延後。急件走電話。",
+      "updated_at": "2026-10-01"
+    },
+    {
+      "theme": "休息空間",
+      "status": "done",
+      "response": "三樓東側整理成休息室，十一月中開放。沒有打卡、不用登記。",
+      "updated_at": "2026-10-15"
+    },
+    {
+      "theme": "工作量與人力",
+      "status": "in_progress",
+      "response": "人資正在盤點各組的工作量，年底前提出調整方案。",
+      "updated_at": "2026-10-08"
+    },
+    {
+      "theme": "主管溝通方式",
+      "status": "in_progress",
+      "response": "主管的回饋訓練排在明年第一季，課程內容還在確認。",
+      "updated_at": "2026-09-22"
+    },
+    {
+      "theme": "薪資福利",
+      "status": "received",
+      "response": "收到了。這一項要等年度預算會議，三月會一起說明。",
+      "updated_at": "2026-09-30"
+    },
+    {
+      "theme": "其他",
+      "status": "received",
+      "response": null,
+      "updated_at": null
+    }
+  ]
+}

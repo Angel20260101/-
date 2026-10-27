@@ -164,5 +164,62 @@ check(`團隊統計人數不足 ${K_ANONYMITY_MIN} 人時不回傳任何內容`,
 check('團隊統計沒有任何個人層級欄位',
   !JSON.stringify(team.data).includes('player_id') && !JSON.stringify(team.data).includes('note_text'));
 
+// ── 保存代碼（E8）：伺服器只能碰到密文 ──────────────────
+// Node 的 webcrypto 跟瀏覽器同一套 API，所以前端那支 vault.js 可以直接拿來跑
+const { seal, unseal, makeCode, normaliseCode, isValidCode } = await import('../src/core/vault.js');
+
+check('代碼格式正確且避開易混淆的字元',
+  isValidCode(makeCode()) && !/[01OIL]/.test(makeCode().replace(/^TTI-/, '')));
+check('代碼輸入容錯：小寫、沒有連字號、多餘空白都能還原成正規格式',
+  normaliseCode(' tti xk4m 9qp2 ') === 'TTI-XK4M-9QP2'
+  && normaliseCode('XK4M9QP2') === 'TTI-XK4M-9QP2'
+  && normaliseCode('TTI-XK4M-9QP') === null);
+
+const SAVE = JSON.stringify({ save_version: '1.0.0', player_id: 'anon_vault', islands: { island_boundary: { unlocked: true, routes: ['r_01_boundary'] } } });
+const PW = 'hoe-tiong-2026';
+const code = makeCode();
+const sealed = await seal(SAVE, PW);
+
+check('加密後的內容裡找不到任何明文片段',
+  !sealed.ct.includes('island_boundary') && !atob(sealed.ct).includes('island_boundary')
+  && !JSON.stringify(sealed).includes('anon_vault'));
+check('自己解得開', (await unseal(sealed, PW)) === SAVE);
+let wrongPw = false;
+try { await unseal(sealed, 'wrong-password'); } catch { wrongPw = true; }
+check('密碼不對就解不開', wrongPw);
+
+const put = await call('PUT', `/api/v1/vault/${code}`, sealed);
+check('上傳備份回 201', put.status === 201);
+const got = await call('GET', `/api/v1/vault/${code}`);
+check('取回的密文跟存進去的一樣', got.status === 200 && got.data.ct === sealed.ct);
+check('GET 不會回傳 verifier（光知道代碼不該能覆蓋別人的備份）',
+  got.data.verifier === undefined);
+check('取回來的密文解得開，內容跟原本的存檔一致', (await unseal(got.data, PW)) === SAVE);
+
+// 覆蓋：沿用同一個 salt 才對得上 verifier
+const again = await seal(JSON.stringify({ save_version: '1.0.0', player_id: 'anon_vault', islands: {} }), PW, sealed.salt);
+check('同一組代碼＋正確密碼可以覆蓋',
+  (await call('PUT', `/api/v1/vault/${code}`, again)).status === 200);
+const evil = await seal('{"save_version":"1.0.0"}', 'not-the-password');
+check('密碼不對不能覆蓋別人的備份（409）',
+  (await call('PUT', `/api/v1/vault/${code}`, evil)).status === 409);
+
+check('格式不對的代碼回 400', (await call('GET', '/api/v1/vault/NOPE')).status === 400);
+check('沒有備份的代碼回 404', (await call('GET', `/api/v1/vault/${makeCode()}`)).status === 404);
+check('夾帶明文欄位會被擋下來',
+  (await call('PUT', `/api/v1/vault/${makeCode()}`, { ...sealed, player_note: '偷渡的明文' })).status === 400);
+check('非 base64 的密文會被擋下來',
+  (await call('PUT', `/api/v1/vault/${makeCode()}`, { ...sealed, ct: '不是 base64' })).status === 400);
+check('超過上限的備份會被擋下來',
+  (await call('PUT', `/api/v1/vault/${makeCode()}`, { ...sealed, ct: 'A'.repeat(512 * 1024 + 4) })).status === 400);
+
+// ── 願望看板 ──────────────────────────────────────────
+const board = await call('GET', '/api/v1/wishes/board');
+check('願望看板回傳主題與公司回應',
+  board.status === 200 && board.data.themes.length === 6
+  && board.data.themes.some((t) => t.status === 'done' && t.response));
+check('願望看板不含任何人寫的願望原文',
+  !JSON.stringify(board.data).includes('wish_id') && !JSON.stringify(board.data).includes('player_id'));
+
 console.log(failures ? `\n✗ ${failures} 項未通過\n` : '\n✓ 全部通過\n');
 process.exit(failures ? 1 : 0);
