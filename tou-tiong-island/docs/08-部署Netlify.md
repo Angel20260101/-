@@ -97,6 +97,26 @@ Netlify 自動建置
 
 前端預設完全獨立運作（匿名、localStorage），不接後端也能完整遊玩。
 
+### 保存代碼需要開 Netlify Blobs
+
+「保存代碼」（`/api/v1/vault/*`）把加密後的備份存在 **Netlify Blobs**。
+它不需要環境變數，但**站台必須開啟 Blobs** 才拿得到 store。
+
+- 開了：備份真的存得住，換手機能還原。
+- 沒開：自動退回行程內記憶體，**Function 一被回收備份就沒了**。
+  這種情況下 `GET /api/v1/vault/status` 會回 `{ durable: false }`，
+  介面會直接告訴使用者「這個站台的雲端儲存還沒開，請改用下載備份檔」——
+  不會假裝備份成功。
+
+部署後驗證一次：
+
+```bash
+curl -s https://<你的站台>/api/v1/vault/status
+# 期望： {"durable":true}
+```
+
+備份檔那條路（下載 / 讀回 JSON）完全不經過伺服器，所以不受這個設定影響。
+
 ## 本機開發
 
 ```bash

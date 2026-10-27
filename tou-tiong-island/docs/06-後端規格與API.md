@@ -102,8 +102,8 @@ CREATE TABLE daily_checkins (
   player_id  TEXT NOT NULL REFERENCES players ON DELETE CASCADE,
   date       DATE NOT NULL,                        -- 玩家本地日期
   mood_id    TEXT NOT NULL,
-  energy     SMALLINT CHECK (energy BETWEEN 1 AND 5),
-  note       TEXT CHECK (char_length(note) <= 140),
+  energy     SMALLINT CHECK (energy BETWEEN 1 AND 5),   -- 已停用：打卡改成一鍵三選一
+  note       TEXT CHECK (char_length(note) <= 140),       -- 已停用：同上，沒有自填欄位
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (player_id, date)                    -- 同一天可以改，不會多一列
@@ -113,13 +113,27 @@ CREATE TABLE daily_checkins (
 CREATE TABLE weekly_thermometer (
   player_id      TEXT NOT NULL REFERENCES players ON DELETE CASCADE,
   week           TEXT NOT NULL,                    -- ISO 週次，'2026-W44'
-  instrument_id  TEXT NOT NULL,                    -- 'tti_mood_thermometer_v1'
-  answers        JSONB NOT NULL,                   -- { t1: 0-4, ... }
-  score          SMALLINT NOT NULL,
-  band_id        TEXT NOT NULL,
-  safety_flagged BOOLEAN NOT NULL DEFAULT false,   -- 安全題非零；不計入 score
+  instrument_id  TEXT NOT NULL,                    -- 'bsrs5'
+  answers        JSONB NOT NULL,                   -- { b1: 0-4, ... b5: 0-4 }
+  score          SMALLINT NOT NULL,                -- 前 5 題總分 0-20；不顯示給玩家
+  band_id        TEXT NOT NULL,                    -- good / mild / moderate / severe
+  safety_flagged BOOLEAN NOT NULL DEFAULT false,   -- 附加題 b6 >= 2；不計入 score
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (player_id, week)
+);
+
+-- ── 保存代碼（E8）─────────────────────────────────────────
+-- 整張表只有密文。沒有 player_id、沒有任何可以對應到人的欄位，
+-- 伺服器也沒有密碼，所以就算整張表外洩也解不開。
+CREATE TABLE vault (
+  code       TEXT PRIMARY KEY,                     -- 'TTI-XXXX-XXXX'
+  v          SMALLINT NOT NULL DEFAULT 1,
+  salt       TEXT NOT NULL,                        -- base64，PBKDF2 用
+  iv         TEXT NOT NULL,                        -- base64，AES-GCM 用
+  ct         TEXT NOT NULL,                        -- base64 密文，上限 512 KB
+  verifier   TEXT NOT NULL,                        -- 只用來擋覆蓋；GET 不回傳
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ── 收藏 ──────────────────────────────────────────────────
