@@ -35,7 +35,7 @@ body {
 /* 太陽：純 CSS，換天氣只是改透明度與大小，完全不佔 WebGL 的資源 */
 .sky__sun {
   position: absolute; top: 9%; left: 16%;
-  width: 34vmin; height: 34vmin; border-radius: 50%;
+  width: 42vmin; height: 42vmin; border-radius: 50%;
   background:
     radial-gradient(circle, #fff6cf 0%, #ffeeb0 26%, rgba(255,242,203,.45) 42%, rgba(255,247,218,.16) 62%, transparent 74%);
   transition: opacity 1.1s ease, transform 1.1s ease, filter 1.1s ease;
@@ -52,6 +52,8 @@ body {
 .sky__sun[data-weather="cloudy"]::after { opacity: 0; }
 .sky__sun[data-weather="rainy"] { opacity: 0; transform: scale(1.4); }
 #map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* 天氣罩：整個畫面蒙一層很淡的色，陰天與雨天一眼就分得出來。純 CSS，零成本 */
+.veil { position: absolute; inset: 0; pointer-events: none; transition: background 1100ms ease; }
 
 /* ── 地圖標籤 ───────────────────────────────── */
 .label-layer { position: absolute; inset: 0; pointer-events: none; }
@@ -116,7 +118,13 @@ body {
   display: flex; align-items: flex-start; justify-content: space-between;
   pointer-events: none;
 }
-.hud__title { display: block; font-size: 19px; font-weight: 800; letter-spacing: .1em; }
+/* 雨天的背景很深，標題需要自己的底，不然讀不到 */
+.hud__brand {
+  background: rgba(252, 248, 239, .86);
+  padding: 6px 14px 7px; border-radius: 16px;
+  box-shadow: var(--shadow-s);
+}
+.hud__title { display: block; font-size: 18px; font-weight: 800; letter-spacing: .1em; }
 .hud__sub { display: block; font-size: 11.5px; color: var(--muted); }
 .hud__actions { display: flex; gap: 8px; pointer-events: auto; }
 .hud__btn {

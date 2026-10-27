@@ -31,6 +31,7 @@ export class App {
       canvas: document.getElementById('map'),
       labelLayer: document.getElementById('labels'),
       skyLayer: document.getElementById('sky'),
+      veilLayer: document.getElementById('veil'),
       map: content.islandMap,
       onSelectIsland: (id) => this.selectIsland(id),
       onSelectInteraction: (id) => this.openInteraction(id),

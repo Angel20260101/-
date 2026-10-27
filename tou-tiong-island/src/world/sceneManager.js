@@ -25,10 +25,11 @@ const RAIN_AREA = 26;
 const RAIN_TOP = 9;
 
 export class SceneManager {
-  constructor({ canvas, labelLayer, skyLayer, map, onSelectIsland, onSelectInteraction }) {
+  constructor({ canvas, labelLayer, skyLayer, veilLayer, map, onSelectIsland, onSelectInteraction }) {
     this.canvas = canvas;
     this.labelLayer = labelLayer;
     this.skyLayer = skyLayer;
+    this.veilLayer = veilLayer ?? null;
     this.map = map;
     this.onSelectIsland = onSelectIsland;
     this.onSelectInteraction = onSelectInteraction;
@@ -78,12 +79,7 @@ export class SceneManager {
 
     this.weather = WEATHER.sunny;
     this._lightTarget = { hemi: this.weather.hemiIntensity, dir: this.weather.dirIntensity };
-    this._colourTarget = {
-      water: new THREE.Color(this.weather.water),
-      foam: new THREE.Color(this.weather.foam),
-      fog: new THREE.Color(this.weather.fog),
-      dir: new THREE.Color(this.weather.dirColor),
-    };
+    this._colourTarget = this._targetsFor(this.weather);
 
     this._raycaster = new THREE.Raycaster();
     this._paused = false;
@@ -158,25 +154,45 @@ export class SceneManager {
    * 套用天氣。這是「上帝視角」的出口：玩家一天一次的選擇，
    * 決定整座群島的天空、海水、光線、雲量與有沒有下雨。
    */
-  setWeather(id, { animate = true } = {}) {
-    const w = WEATHER[id] ?? WEATHER.sunny;
-    this.weather = w;
-    this._paintSky(w);
-    this._colourTarget = {
+  _targetsFor(w) {
+    return {
       water: new THREE.Color(w.water),
       foam: new THREE.Color(w.foam),
       fog: new THREE.Color(w.fog),
       dir: new THREE.Color(w.dirColor),
+      hemiSky: new THREE.Color(w.hemiSky ?? '#ffffff'),
+      hemiGround: new THREE.Color(w.hemiGround ?? PALETTE.sandSide),
+      cloud: new THREE.Color(w.cloudColour ?? PALETTE.towerWhite),
     };
+  }
+
+  setWeather(id, { animate = true } = {}) {
+    const w = WEATHER[id] ?? WEATHER.sunny;
+    const changed = this.weather?.id !== w.id;
+    this.weather = w;
+    this._paintSky(w);
+    if (this.veilLayer) this.veilLayer.style.background = w.veil ?? 'transparent';
+    this._colourTarget = this._targetsFor(w);
     this._lightTarget = { hemi: w.hemiIntensity, dir: w.dirIntensity };
-    if (this.clouds) this.clouds.count = Math.min(w.clouds, MAX_CLOUDS);
+    if (this.clouds) {
+      this.clouds.count = Math.min(w.clouds, MAX_CLOUDS);
+      // 雲高跟著天氣走：晴天高而少，陰雨天低而密，低下來才進得了鏡頭
+      const [lo, hi] = w.cloudY ?? [3.4, 6.8];
+      for (let i = 1; i < MAX_CLOUDS; i++) {
+        const c = this._cloudState?.[i];
+        if (c) c.y = lo + ((i * 0.37) % 1) * (hi - lo);
+      }
+    }
     if (this.rain) this.rain.count = this.reducedMotion ? 0 : Math.min(w.rain, MAX_RAIN);
-    if (this._animalSource) this._buildAnimals();   // 島民換上這個天氣該做的事
+    if (changed && this._animalSource) this._buildAnimals();   // 島民換上這個天氣該做的事
     if (!animate) {
       this.water.material.color.copy(this._colourTarget.water);
       if (this.shallows) this.shallows.material.color.copy(this._colourTarget.foam);
       this.scene.fog.color.copy(this._colourTarget.fog);
       this.dir.color.copy(this._colourTarget.dir);
+      this.hemi.color.copy(this._colourTarget.hemiSky);
+      this.hemi.groundColor.copy(this._colourTarget.hemiGround);
+      this.cloudMaterial.color.copy(this._colourTarget.cloud);
       this.hemi.intensity = w.hemiIntensity;
       this.dir.intensity = w.dirIntensity;
     }
@@ -757,10 +773,15 @@ export class SceneManager {
 
   _stepColours(dt) {
     const k = Math.min(1, dt * 2.4);
-    this.water.material.color.lerp(this._colourTarget.water, k);
-    if (this.shallows) this.shallows.material.color.lerp(this._colourTarget.foam, k);
-    this.scene.fog.color.lerp(this._colourTarget.fog, k);
-    this.dir.color.lerp(this._colourTarget.dir, k);
+    const t = this._colourTarget;
+    this.water.material.color.lerp(t.water, k);
+    if (this.shallows) this.shallows.material.color.lerp(t.foam, k);
+    this.scene.fog.color.lerp(t.fog, k);
+    this.dir.color.lerp(t.dir, k);
+    // 半球光的天空／地面色是低多邊形最吃重的訊號：整座島的色溫跟著天氣走
+    this.hemi.color.lerp(t.hemiSky, k);
+    this.hemi.groundColor.lerp(t.hemiGround, k);
+    this.cloudMaterial.color.lerp(t.cloud, k);
     this.hemi.intensity += (this._lightTarget.hemi - this.hemi.intensity) * k;
     this.dir.intensity += (this._lightTarget.dir - this.dir.intensity) * k;
   }
