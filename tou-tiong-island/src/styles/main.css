@@ -448,3 +448,6 @@ body {
    滑過、觸碰或鍵盤聚焦時一定要看得清楚，所以用 !important 蓋過 inline。 */
 .map-label:hover, .map-label:focus-visible,
 .map-spot:hover, .map-spot:focus-visible { opacity: 1 !important; }
+
+/* 示範資料的提示條：要一眼看出「這不是你的紀錄」，所以用警示色而不是中性色 */
+.card--demo { border: 1px solid var(--gold); background: #fdf6e5; }

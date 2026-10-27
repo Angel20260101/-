@@ -12,6 +12,7 @@
  *   7. 每個結局、每條航線至少有一條路徑可達（沒有寫了卻看不到的內容）
  *   8. state_effects / 條件運算式只引用 state_vars 宣告過的變數
  *   9. 航線的 practice_card_id 與 island_growth_id 在內容庫中存在
+ *  10. 示範資料只引用真實存在的島嶼、航線、結局、練習卡與紀念物
  */
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -206,6 +207,59 @@ for (const i of islandMap.islands) {
 }
 
 // 產生故事索引（前端首屏用；由驗證器產生，確保永遠與劇本同步）
+// ── 10. 示範資料 ──────────────────────────────────────────
+// 示範資料是手寫的 id 清單，最容易出現「寫了一個不存在的結局」這種錯，
+// 而且它不會壞掉、只會安靜地少一筆，所以一定要在建置前擋下來。
+{
+  const { buildDemoSave } = await import('../src/core/demoData.js');
+  const cards = read('content/practice_cards.json');
+  const dailyWeekly = read('content/daily_weekly.json');
+  const islandMap = read('content/island_map.json');
+  const demo = buildDemoSave({ practiceCards: cards, dailyWeekly });
+
+  const islandById = new Map(islandMap.islands.map((i) => [i.island_id, i]));
+  const endingIds = new Set();
+  const routeIds = new Set();
+  for (const file of storyFiles) {
+    const st = read(join('content/stories', file));
+    for (const e of st.endings) endingIds.add(e.ending_id);
+    for (const r of st.routes) routeIds.add(r.route_id);
+  }
+  const bandIds = new Set(dailyWeekly.weekly.instrument.bands.map((b) => b.band_id));
+  const moodIds = new Set(dailyWeekly.daily.options.map((o) => o.mood_id));
+  const themes = new Set(read('content/wish_board.json').themes.map((t) => t.theme));
+
+  const bad = (m) => problems.push(`示範資料：${m}`);
+  for (const [id, st] of Object.entries(demo.islands)) {
+    const island = islandById.get(id);
+    if (!island) { bad(`島嶼 ${id} 不存在`); continue; }
+    const known = new Set(island.growth.map((g) => g.route_id));
+    for (const r of st.routes) if (!known.has(r)) bad(`${id} 的航線 ${r} 不存在`);
+    for (const e of Object.keys(st.endings)) if (!endingIds.has(e)) bad(`結局 ${e} 不存在`);
+    if (st.routes.length > island.growth.length) bad(`${id} 的航線數超過它實際有的`);
+  }
+  for (const c of demo.cards) if (!cards.cards.some((x) => x.card_id === c)) bad(`練習卡 ${c} 不存在`);
+  for (const k of demo.keepsakes) {
+    if (!dailyWeekly.weekly.reward.keepsakes.some((x) => x.keepsake_id === k)) bad(`紀念物 ${k} 不存在`);
+  }
+  for (const e of Object.values(demo.daily)) if (!moodIds.has(e.mood_id)) bad(`天氣 ${e.mood_id} 不存在`);
+  for (const w of demo.weekly) {
+    if (!bandIds.has(w.band_id)) bad(`分級 ${w.band_id} 不存在`);
+    const sum = Object.values(w.answers).reduce((a, b) => a + b, 0);
+    if (sum !== w.score) bad(`${w.week} 的總分 ${w.score} 跟作答 ${sum} 對不起來`);
+    const band = dailyWeekly.weekly.instrument.bands.find((b) => sum >= b.min && sum <= b.max);
+    if (band.band_id !== w.band_id) bad(`${w.week} 的分級應該是 ${band.band_id}，不是 ${w.band_id}`);
+  }
+  for (const w of demo.wishes) if (!themes.has(w.theme)) bad(`願望主題「${w.theme}」不在看板上`);
+  // 這份資料是拿來示範「島會長大」的，所以不能全空也不能全滿
+  const unlocked = Object.keys(demo.islands).length;
+  if (unlocked === 0) bad('一座島都沒解鎖，看不出島會長大');
+  if (unlocked === islandMap.islands.length) bad('六座島全開，看不出還有東西可以探索');
+  // 打卡要有缺口：這個產品主張沒有連續紀錄的壓力，示範資料不該演全勤
+  const span = 42;
+  if (Object.keys(demo.daily).length >= span) bad('打卡沒有任何缺口，與「沒有連續紀錄壓力」的主張衝突');
+}
+
 if (!problems.length) {
   const index = storyFiles.map((file) => {
     const s = read(join('content/stories', file));

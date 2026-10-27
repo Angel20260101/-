@@ -16,6 +16,7 @@ import {
   atlasPanel, collectionPanel, aboutPanel,
 } from './panels.js';
 import * as vaultClient from '../core/vaultClient.js';
+import { buildDemoSave } from '../core/demoData.js';
 
 const WEATHER_LINE = { sunny: '今天島上出太陽', cloudy: '今天島上多雲', rainy: '今天島上下雨' };
 
@@ -83,6 +84,7 @@ export class App {
 
   /** 第一次進站先講三行信任說明；之後直接進地圖，有沒打完的故事就問要不要接續。 */
   _firstRun() {
+    if (this._demoRequested()) return;
     if (!this.state.settings.trust_seen) {
       trustPanel(this.sheet, {
         onDone: () => { this.state.setSetting('trust_seen', true); this._maybeResume(); },
@@ -90,6 +92,31 @@ export class App {
       return;
     }
     this._maybeResume();
+  }
+
+  /**
+   * 網址帶 ?demo=1 時載入示範資料，方便 demo 與錄影。
+   * 已經有真實紀錄的話先問過——不能因為一個網址參數就把人家的島換掉。
+   */
+  _demoRequested() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('demo') !== '1') return false;
+    const d = this.state.data;
+    const hasReal = !d.demo && (Object.keys(d.islands).length || Object.keys(d.daily).length
+      || d.weekly.length || d.letters.length || d.wishes.length);
+    if (!hasReal) { this.loadDemo({ openRecords: false }); return true; }
+    this.sheet.open({
+      title: '要換成示範資料嗎',
+      subtitle: '這台裝置已經有紀錄了',
+      mini: true,
+      body: `<p class="card__text">網址帶了 <code>?demo=1</code>。載入示範資料會<b>蓋掉</b>你現在的島。</p>
+             <p class="tiny">想留著的話，先去「我的紀錄 → 保存紀錄」下載一份備份檔。</p>`,
+      actions: [
+        { label: '換成示範資料', onClick: () => { this.sheet.close(); this.loadDemo({ openRecords: false }); } },
+        { label: '保留我的紀錄', className: 'btn btn--ghost', onClick: () => { this.sheet.close(); this._maybeResume(); } },
+      ],
+    });
+    return true;
   }
 
   toast(text, ms = 2600) {
@@ -191,6 +218,8 @@ export class App {
           onAtlas: () => this.openInteraction('atlas'),
           onCollection: () => this.openInteraction('collection'),
           onBackup: () => this.openInteraction('backup'),
+          onDemo: () => this.loadDemo(),
+          onClearDemo: () => this.clearDemo(),
         });
       case 'login':
         return loginPanel(this.sheet, {
@@ -241,6 +270,27 @@ export class App {
     }
     if (outcome.firstPlay) this.toast('新的島嶼出現在地圖上了');
     else if (outcome.newRoute) this.toast('島上長出了新的地景');
+  }
+
+  /**
+   * 載入示範資料。
+   *
+   * 永遠不自動發生——只有從「我的紀錄」按下去，或網址帶 ?demo=1 才會進來。
+   * 真的使用者第一次進站就看到一整個月不是他打的卡，那是在他的紀錄裡塞假東西。
+   */
+  loadDemo({ openRecords = true } = {}) {
+    this.state.replaceAll(buildDemoSave(this.content));
+    this._afterRestore();
+    this.toast('載入示範資料了，隨時可以清掉');
+    // 從「我的紀錄」按下去的，要把填好的那一頁重開給他看；
+    // 從 ?demo=1 進來的要看到島，不是一進站就被一張面板蓋住。
+    if (openRecords) this.openInteraction('records');
+  }
+
+  clearDemo() {
+    this.state.resetAll();
+    this._afterRestore();
+    this.toast('清掉了，這是一座全新的島');
   }
 
   /** 還原進來的是另一台裝置的島：天氣、島嶼、小船全部重畫一次。 */

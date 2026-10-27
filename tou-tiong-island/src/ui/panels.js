@@ -430,7 +430,7 @@ export function wishBoardPanel(sheet, { state, content, onWish }) {
 }
 
 /* ──────────────── 我的紀錄（E9） ──────────────── */
-export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onBackup }) {
+export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onBackup, onDemo, onClearDemo }) {
   const COLOR = { sunny: '#f3d08c', cloudy: '#b9c4c2', rainy: '#8fadb4' };
   const days = state.recentCheckins(28);
   const cells = days.map(({ date, entry }) =>
@@ -447,11 +447,18 @@ export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onB
   const counted = days.filter((d) => d.entry).length;
   const wishes = state.wishes().length;
   const letters = state.letters().length;
+  const demo = Boolean(state.data.demo);
+  const empty = !counted && !state.data.weekly.length && !wishes && !letters
+    && !Object.keys(state.data.islands).length;
 
   sheet.open({
     title: '我的紀錄',
-    subtitle: '只有你看得到',
+    subtitle: demo ? '示範資料・不是你的紀錄' : '只有你看得到',
     body: `
+      ${demo ? `<div class="card card--demo">
+        <p class="card__text"><b>這些是示範資料</b>，不是你記的。用來看這些畫面長大之後的樣子。</p>
+        <p class="tiny">清掉之後會回到一座全新的島，你原本的紀錄已經在載入示範資料時被換掉了。</p>
+      </div>` : ''}
       <div class="section-label">最近四週的天氣</div>
       <div class="cal">${cells}</div>
       <div class="cal__legend">
@@ -467,13 +474,21 @@ export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onB
       <div class="section-label">其他</div>
       <p class="muted">放出去的小船 ${wishes} 艘　・　郵局裡的信 ${letters} 封</p>
       <div class="section-label">換手機也要留著</div>
-      <p class="tiny">以上這些只存在這台裝置的瀏覽器裡。清快取或換手機就會不見。</p>`,
+      <p class="tiny">以上這些只存在這台裝置的瀏覽器裡。清快取或換手機就會不見。</p>
+      ${empty ? `<div class="section-label">還沒有東西可以看</div>
+        <p class="tiny">想先看看這些畫面有資料時長什麼樣子，可以載入一份示範資料。
+        它會<b>蓋掉</b>這台裝置現在的存檔（你目前是空的），隨時可以清掉。</p>
+        <div class="row-btns"><button type="button" class="btn btn--ghost" id="rec-demo">載入示範資料</button></div>` : ''}`,
     actions: [
-      { label: '保存紀錄', className: 'btn btn--ghost', onClick: () => onBackup?.() },
+      demo
+        ? { label: '清掉示範', className: 'btn btn--ghost', onClick: () => onClearDemo?.() }
+        : { label: '保存紀錄', className: 'btn btn--ghost', onClick: () => onBackup?.() },
       { label: '航海圖', className: 'btn btn--ghost', onClick: () => onAtlas?.() },
       { label: '收藏', className: 'btn btn--ghost', onClick: () => onCollection?.() },
     ],
   });
+
+  sheet.mount.querySelector('#rec-demo')?.addEventListener('click', () => onDemo?.());
 }
 
 /* ──────────────── 島嶼 ──────────────── */

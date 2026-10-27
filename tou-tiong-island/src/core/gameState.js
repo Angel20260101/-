@@ -244,6 +244,15 @@ export class GameState extends EventTarget {
 
   exportJSON() { return storage.exportSave(this.data); }
 
+  /** 清空成一座全新的島。信任說明看過就不再重看。 */
+  resetAll() {
+    const seen = this.data.settings?.trust_seen;
+    this.data = storage.emptySave();
+    this.data.settings.trust_seen = Boolean(seen);
+    this.persist();
+    return this.data;
+  }
+
   get settings() { return this.data.settings; }
 
   setSetting(key, value) {
