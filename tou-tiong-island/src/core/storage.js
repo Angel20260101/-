@@ -37,8 +37,10 @@ export function emptySave() {
     weekly: [],
     keepsakes: [],
     cards: [],
+    letters: [],
+    wishes: [],
     active_session: null,
-    settings: { ai_feedback_consent: null, reduce_motion: false },
+    settings: { ai_feedback_consent: null, reduce_motion: false, trust_seen: false },
   };
 }
 

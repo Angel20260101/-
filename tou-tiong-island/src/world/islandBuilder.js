@@ -38,7 +38,8 @@ const matrixOf = (x, y, z, rotY = 0, scale = 1) =>
 export function buildWorld(map, progress = {}) {
   const cfg = map.hex;
   const islands = [];
-  const props = new Map(); // type -> Matrix4[]
+  const props = new Map();   // type -> Matrix4[]（靜態道具）
+  const animals = [];        // 會動的島民，交給 sceneManager 逐幀更新
   const addProp = (type, matrix) => {
     if (!props.has(type)) props.set(type, []);
     props.get(type).push(matrix);
@@ -76,6 +77,35 @@ export function buildWorld(map, progress = {}) {
     }
   };
 
+  /** 島民：只記下世界座標與行為參數，動畫由 sceneManager 負責。 */
+  const placeAnimals = (list, hexes, origin, islandCenter) => {
+    for (const a of list ?? []) {
+      const hex = hexes.find((h) => h.q === a.hex[0] && h.r === a.hex[1]);
+      if (!hex) continue;
+      const base = hexTopPosition(hex, cfg, origin);
+      const [dx, dz] = a.offset ?? [0, 0];
+      const form = (src, fallback = {}) => ({
+        type: src.type ?? fallback.type,
+        behaviour: src.behaviour ?? fallback.behaviour ?? 'breathe',
+        axis: src.axis ?? fallback.axis ?? 'x',
+        range: src.range ?? fallback.range ?? 0.5,
+        radius: src.radius ?? fallback.radius ?? 2,
+        height: src.height ?? fallback.height ?? 2.2,
+        speed: src.speed ?? fallback.speed ?? 0.6,
+        hidden: src.hidden ?? false,
+      });
+      const def = form(a);
+      animals.push({
+        base: { x: base.x + dx, y: base.y, z: base.z + dz },
+        centre: islandCenter,
+        rot: a.rot ?? 0,
+        phase: Math.random() * Math.PI * 2,
+        // 天氣是玩家決定的，島民照著天氣換事情做
+        forms: { default: def, rainy: a.rainy ? form(a.rainy, def) : def },
+      });
+    }
+  };
+
   const occupiedOf = (landmarks, hexes, origin) =>
     (landmarks ?? []).flatMap((lm) => {
       const hex = hexes.find((h) => h.q === lm.hex[0] && h.r === lm.hex[1]);
@@ -104,9 +134,13 @@ export function buildWorld(map, progress = {}) {
       anchors[lm.interaction] = { x: base.x + dx, y: base.y + 0.5, z: base.z + dz, label: lm.label };
     }
 
+    const homeCentre = axialToWorld(origin.q, origin.r, cfg.size);
+    placeAnimals(home.animals, home.hexes, origin, homeCentre);
+
     islands.push({
       island_id: home.island_id,
       kind: 'home',
+      sky_anchor: home.sky_anchor ?? null,
       name: home.name,
       tagline: home.tagline,
       geometry,
@@ -172,6 +206,7 @@ export function buildWorld(map, progress = {}) {
     placeLandmarks(localLandmarks, localHexes, origin);
     scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-${grown.length}`,
       occupiedOf(localLandmarks, localHexes, origin));
+    placeAnimals(island.animals, localHexes, origin, axialToWorld(origin.q, origin.r, cfg.size));
 
     islands.push({
       island_id: island.island_id,
@@ -189,5 +224,5 @@ export function buildWorld(map, progress = {}) {
     });
   }
 
-  return { islands, props };
+  return { islands, props, animals };
 }

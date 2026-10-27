@@ -98,7 +98,7 @@
         ],
         "scale": 1.0,
         "rot": 0.3,
-        "interaction": "weekly",
+        "interaction": "lighthouse",
         "label": "燈塔"
       },
       {
@@ -108,28 +108,43 @@
           1
         ],
         "offset": [
-          0.3,
-          0.9
+          0.45,
+          1.0
         ],
         "scale": 1.0,
         "rot": 0.9,
-        "interaction": "daily",
+        "interaction": "wish",
         "label": "碼頭"
       },
       {
-        "type": "signpost",
+        "type": "mailbox",
         "hex": [
           -1,
           0
         ],
         "offset": [
-          0,
-          0.2
+          -0.2,
+          0.35
         ],
         "scale": 1.0,
-        "rot": -0.4,
-        "interaction": "atlas",
-        "label": "航海圖"
+        "rot": -0.3,
+        "interaction": "letter",
+        "label": "郵筒"
+      },
+      {
+        "type": "hut",
+        "hex": [
+          -1,
+          1
+        ],
+        "offset": [
+          0.2,
+          -0.1
+        ],
+        "scale": 0.85,
+        "rot": 0.5,
+        "interaction": "records",
+        "label": "我的紀錄"
       },
       {
         "type": "bench",
@@ -142,9 +157,20 @@
           -0.3
         ],
         "scale": 1.0,
-        "rot": 1.2,
-        "interaction": "collection",
-        "label": "長椅"
+        "rot": 1.2
+      },
+      {
+        "type": "signpost",
+        "hex": [
+          1,
+          0
+        ],
+        "offset": [
+          0.55,
+          0.45
+        ],
+        "scale": 0.9,
+        "rot": -0.4
       },
       {
         "type": "flower_patch",
@@ -153,8 +179,8 @@
           1
         ],
         "offset": [
-          0.4,
-          0.3
+          0.55,
+          0.4
         ],
         "scale": 1.0,
         "rot": 0
@@ -163,27 +189,146 @@
     "interactions": [
       {
         "id": "daily",
-        "landmark": "pier",
-        "title": "碼頭｜今天的天氣",
-        "subtitle": "每日任務・約 30 秒"
+        "landmark": "cloud",
+        "title": "今天島上的天氣",
+        "subtitle": "一鍵・約 5 秒"
       },
       {
-        "id": "weekly",
+        "id": "lighthouse",
         "landmark": "lighthouse",
-        "title": "燈塔｜心情溫度計",
-        "subtitle": "每週任務・自願"
+        "title": "燈塔",
+        "subtitle": "隨時可以點，不必說原因"
       },
       {
-        "id": "atlas",
-        "landmark": "signpost",
-        "title": "航海圖｜探索進度",
-        "subtitle": "看看你走過哪些航線"
+        "id": "wish",
+        "landmark": "pier",
+        "title": "碼頭許願",
+        "subtitle": "寫下希望工作環境改變什麼"
       },
       {
-        "id": "collection",
-        "landmark": "bench",
-        "title": "長椅｜收藏",
-        "subtitle": "紀念物與情緒練習卡"
+        "id": "letter",
+        "landmark": "mailbox",
+        "title": "時光郵局",
+        "subtitle": "寫給未來的自己，只有你看得到"
+      },
+      {
+        "id": "records",
+        "landmark": "hut",
+        "title": "我的紀錄",
+        "subtitle": "天氣日曆與每週顏色"
+      }
+    ],
+    "sky_anchor": {
+      "x": 0.0,
+      "y": 4.2,
+      "z": -0.6,
+      "interaction": "daily",
+      "label": "今天的天氣"
+    },
+    "animals": [
+      {
+        "type": "animal_bear_mow",
+        "hex": [
+          1,
+          0
+        ],
+        "offset": [
+          -0.35,
+          0.1
+        ],
+        "behaviour": "patrol",
+        "axis": "x",
+        "range": 0.55,
+        "speed": 0.22,
+        "rot": 0,
+        "rainy": {
+          "type": "animal_bear_rain",
+          "behaviour": "sip",
+          "speed": 0.8,
+          "note": "穿雨衣在整理花園"
+        }
+      },
+      {
+        "type": "animal_rabbit_tea",
+        "hex": [
+          0,
+          -1
+        ],
+        "offset": [
+          0.1,
+          0.15
+        ],
+        "behaviour": "sip",
+        "speed": 0.9,
+        "rot": 2.4,
+        "rainy": {
+          "type": "animal_rabbit_brolly",
+          "behaviour": "patrol",
+          "speed": 0.3,
+          "range": 0.4,
+          "axis": "x",
+          "note": "撐傘出門買咖啡"
+        }
+      },
+      {
+        "type": "animal_cat_nap",
+        "hex": [
+          -1,
+          1
+        ],
+        "offset": [
+          -0.35,
+          -0.3
+        ],
+        "behaviour": "breathe",
+        "speed": 0.55,
+        "rot": 0.8,
+        "rainy": {
+          "type": "animal_cat_shelter",
+          "behaviour": "breathe",
+          "speed": 0.4,
+          "note": "躲到屋簷下"
+        }
+      },
+      {
+        "type": "animal_fox_fish",
+        "hex": [
+          0,
+          1
+        ],
+        "offset": [
+          -0.5,
+          0.5
+        ],
+        "behaviour": "fish",
+        "speed": 0.7,
+        "rot": -0.5,
+        "rainy": {
+          "type": "animal_fox_brolly",
+          "behaviour": "fish",
+          "speed": 0.5,
+          "note": "撐傘繼續釣"
+        }
+      },
+      {
+        "type": "animal_bird",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "behaviour": "circle",
+        "radius": 2.4,
+        "height": 2.6,
+        "speed": 0.35,
+        "rot": 0,
+        "rainy": {
+          "hidden": true,
+          "note": "躲雨去了"
+        }
       }
     ]
   },
@@ -370,6 +515,28 @@
             }
           ]
         }
+      ],
+      "animals": [
+        {
+          "type": "animal_cat_nap",
+          "hex": [
+            0,
+            0
+          ],
+          "offset": [
+            0.45,
+            0.4
+          ],
+          "behaviour": "breathe",
+          "speed": 0.5,
+          "rot": 1.2,
+          "rainy": {
+            "type": "animal_cat_shelter",
+            "behaviour": "breathe",
+            "speed": 0.4,
+            "note": "躲到屋簷下"
+          }
+        }
       ]
     },
     {
@@ -540,6 +707,30 @@
               "rot": 3.5
             }
           ]
+        }
+      ],
+      "animals": [
+        {
+          "type": "animal_rabbit_tea",
+          "hex": [
+            0,
+            0
+          ],
+          "offset": [
+            0.4,
+            0.35
+          ],
+          "behaviour": "sip",
+          "speed": 0.85,
+          "rot": -1.0,
+          "rainy": {
+            "type": "animal_rabbit_brolly",
+            "behaviour": "patrol",
+            "speed": 0.3,
+            "range": 0.4,
+            "axis": "x",
+            "note": "撐傘出門買咖啡"
+          }
         }
       ]
     },
@@ -712,6 +903,28 @@
             }
           ]
         }
+      ],
+      "animals": [
+        {
+          "type": "animal_fox_fish",
+          "hex": [
+            0,
+            1
+          ],
+          "offset": [
+            0.3,
+            0.3
+          ],
+          "behaviour": "fish",
+          "speed": 0.6,
+          "rot": 0.4,
+          "rainy": {
+            "type": "animal_fox_brolly",
+            "behaviour": "fish",
+            "speed": 0.5,
+            "note": "撐傘繼續釣"
+          }
+        }
       ]
     },
     {
@@ -869,6 +1082,30 @@
               "rot": 0.6
             }
           ]
+        }
+      ],
+      "animals": [
+        {
+          "type": "animal_bear_mow",
+          "hex": [
+            1,
+            0
+          ],
+          "offset": [
+            0,
+            0
+          ],
+          "behaviour": "patrol",
+          "axis": "z",
+          "range": 0.45,
+          "speed": 0.2,
+          "rot": 1.57,
+          "rainy": {
+            "type": "animal_bear_rain",
+            "behaviour": "sip",
+            "speed": 0.8,
+            "note": "穿雨衣在整理花園"
+          }
         }
       ]
     },
@@ -1054,6 +1291,28 @@
             }
           ]
         }
+      ],
+      "animals": [
+        {
+          "type": "animal_bird",
+          "hex": [
+            0,
+            0
+          ],
+          "offset": [
+            0,
+            0
+          ],
+          "behaviour": "circle",
+          "radius": 1.6,
+          "height": 1.9,
+          "speed": 0.4,
+          "rot": 0,
+          "rainy": {
+            "hidden": true,
+            "note": "躲雨去了"
+          }
+        }
       ]
     },
     {
@@ -1237,6 +1496,28 @@
               "rot": 2.0
             }
           ]
+        }
+      ],
+      "animals": [
+        {
+          "type": "animal_cat_nap",
+          "hex": [
+            0,
+            0
+          ],
+          "offset": [
+            -0.35,
+            0.35
+          ],
+          "behaviour": "breathe",
+          "speed": 0.45,
+          "rot": 2.0,
+          "rainy": {
+            "type": "animal_cat_shelter",
+            "behaviour": "breathe",
+            "speed": 0.4,
+            "note": "躲到屋簷下"
+          }
         }
       ]
     }

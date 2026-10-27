@@ -223,7 +223,179 @@ export const PROP_FACTORIES = {
     cyl(0.24, 0.24, 0.26, 8, PALETTE.towerGlass, 0, 1.57, 0),
     cyl(0.30, 0.30, 0.04, 8, PALETTE.towerWhite, 0, 1.72, 0),
     cone(0.32, 0.30, 8, PALETTE.towerRoof, 0, 1.89, 0),
-    blob(0.05, PALETTE.lampGlow, 0, 2.08, 0),
+  ]),
+
+  // ── 島民：擬人化的小動物 ──────────────────────────────
+  // 每一隻都連同牠正在做的事一起做成一個模型，所以一種行為＝一個 InstancedMesh。
+  // 體型刻意偏小（約 0.4 單位高），遠看是會動的小點，靠近才看得出在幹嘛。
+
+  animal_bear_mow: () => merge([
+    // 熊
+    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, -0.05, 0.05, 0),
+    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, 0.05, 0.05, 0),
+    blob(0.125, PALETTE.furBear, 0, 0.20, 0),
+    blob(0.085, PALETTE.furBear, 0, 0.345, 0.02),
+    blob(0.032, PALETTE.furBear, -0.062, 0.405, 0.01),
+    blob(0.032, PALETTE.furBear, 0.062, 0.405, 0.01),
+    blob(0.042, PALETTE.furRabbit, 0, 0.325, 0.085),
+    box(0.17, 0.06, 0.05, PALETTE.cloth, 0, 0.235, 0.085),
+    // 推草機：握把從熊的手往前下方
+    box(0.028, 0.025, 0.26, PALETTE.woodDark, -0.07, 0.235, 0.20),
+    box(0.028, 0.025, 0.26, PALETTE.woodDark, 0.07, 0.235, 0.20),
+    box(0.22, 0.09, 0.13, PALETTE.leafLime, 0, 0.075, 0.33),
+    cyl(0.045, 0.045, 0.03, 6, PALETTE.woodDark, -0.11, 0.045, 0.33),
+    cyl(0.045, 0.045, 0.03, 6, PALETTE.woodDark, 0.11, 0.045, 0.33),
+  ]),
+
+  animal_rabbit_tea: () => merge([
+    // 小圓桌
+    cyl(0.028, 0.034, 0.13, 5, PALETTE.woodDark, 0.15, 0.065, 0),
+    cyl(0.115, 0.115, 0.022, 8, PALETTE.wood, 0.15, 0.14, 0),
+    cyl(0.028, 0.034, 0.032, 6, PALETTE.teaCup, 0.12, 0.167, 0.02),
+    blob(0.022, PALETTE.flowerA, 0.19, 0.168, -0.02),
+    // 兔子
+    cyl(0.045, 0.05, 0.07, 5, PALETTE.furRabbit, -0.09, 0.035, 0),
+    blob(0.095, PALETTE.furRabbit, -0.09, 0.145, 0),
+    blob(0.068, PALETTE.furRabbit, -0.075, 0.255, 0.015),
+    cone(0.028, 0.14, 4, PALETTE.furRabbit, -0.105, 0.355, 0),
+    cone(0.028, 0.14, 4, PALETTE.furRabbitIn, -0.045, 0.355, 0.01),
+    blob(0.018, PALETTE.furRabbitIn, -0.06, 0.245, 0.062),
+    box(0.1, 0.05, 0.04, PALETTE.clothWarm, -0.085, 0.175, 0.055),
+  ]),
+
+  animal_cat_nap: () => merge([
+    cyl(0.17, 0.17, 0.016, 8, PALETTE.rope, 0, 0.008, 0),      // 墊子
+    blob(0.085, PALETTE.furCat, 0, 0.075, 0),
+    blob(0.055, PALETTE.furCat, 0.065, 0.085, 0.045),
+    cone(0.022, 0.05, 4, PALETTE.furCat, 0.045, 0.125, 0.045),
+    cone(0.022, 0.05, 4, PALETTE.furCat, 0.085, 0.125, 0.045),
+    cyl(0.018, 0.012, 0.13, 4, PALETTE.furCat, -0.09, 0.055, -0.03),
+  ]),
+
+  animal_fox_fish: () => merge([
+    cyl(0.04, 0.045, 0.065, 5, PALETTE.furFox, 0, 0.032, 0),
+    blob(0.088, PALETTE.furFox, 0, 0.125, 0),
+    blob(0.062, PALETTE.furFox, 0, 0.225, 0.03),
+    cone(0.03, 0.07, 4, PALETTE.furFox, -0.042, 0.29, 0.02),
+    cone(0.03, 0.07, 4, PALETTE.furFox, 0.042, 0.29, 0.02),
+    blob(0.03, PALETTE.furRabbit, 0, 0.215, 0.082),
+    cyl(0.028, 0.012, 0.16, 4, PALETTE.furRabbit, -0.095, 0.105, -0.05),
+    box(0.012, 0.012, 0.34, PALETTE.woodDark, 0.06, 0.25, 0.14),   // 釣竿
+    box(0.006, 0.17, 0.006, PALETTE.rope, 0.06, 0.2, 0.3),
+  ]),
+
+  animal_bird: () => merge([
+    blob(0.052, PALETTE.furBird, 0, 0.05, 0),
+    blob(0.034, PALETTE.furBird, 0, 0.105, 0.025),
+    cone(0.016, 0.045, 4, PALETTE.flowerB, 0, 0.105, 0.068),
+    box(0.11, 0.012, 0.05, PALETTE.furBird, -0.06, 0.06, -0.01),
+    box(0.11, 0.012, 0.05, PALETTE.furBird, 0.06, 0.06, -0.01),
+  ]),
+
+  // ── 天氣 ───────────────────────────────────────────────
+  cloud: () => merge([
+    blob(0.42, PALETTE.towerWhite, 0, 0, 0),
+    blob(0.32, PALETTE.towerWhite, 0.45, -0.06, 0.05),
+    blob(0.28, PALETTE.towerWhite, -0.42, -0.08, -0.04),
+    blob(0.24, PALETTE.towerWhite, 0.14, 0.16, -0.08),
+  ]),
+
+  raindrop: () => merge([
+    box(0.018, 0.34, 0.018, PALETTE.foam, 0, 0, 0),
+  ]),
+
+  // 燈塔的燈：獨立一顆，才能在點擊時單獨亮起來
+  lighthouse_lamp: () => merge([
+    blob(0.085, PALETTE.towerGlass, 0, 0, 0),
+  ]),
+
+  // ── 之後幾批會用到的小物 ─────────────────────────────
+  mailbox: () => merge([
+    cyl(0.035, 0.042, 0.42, 5, PALETTE.woodDark, 0, 0.21, 0),
+    box(0.22, 0.2, 0.17, PALETTE.towerRed, 0, 0.52, 0),
+    cyl(0.1, 0.1, 0.18, 6, PALETTE.towerRed, 0, 0.62, 0),
+    box(0.13, 0.025, 0.02, PALETTE.towerWhite, 0, 0.55, 0.09),
+    blob(0.03, PALETTE.gold, 0.1, 0.63, 0.06),
+  ]),
+
+  boat: () => merge([
+    box(0.3, 0.07, 0.14, PALETTE.wood, 0, 0.035, 0),
+    cone(0.07, 0.16, 4, PALETTE.wood, 0.17, 0.045, 0),
+    cyl(0.012, 0.012, 0.3, 4, PALETTE.woodDark, 0, 0.2, 0),
+    box(0.015, 0.2, 0.14, PALETTE.towerWhite, 0, 0.23, 0.05),
+  ]),
+
+  wish_tree: () => merge([
+    cyl(0.07, 0.1, 0.46, 5, PALETTE.trunk, 0, 0.23, 0),
+    blob(0.34, PALETTE.leafRound, 0, 0.72, 0),
+    blob(0.2, PALETTE.leafLime, 0.22, 0.86, 0.08),
+    blob(0.16, PALETTE.leafPink, -0.2, 0.84, -0.06),
+    blob(0.05, PALETTE.gold, 0.1, 0.95, 0.12),
+  ]),
+
+  // ── 島民・雨天版 ──────────────────────────────────────
+  // 天氣是玩家決定的，島民會照著天氣換事情做：熊穿雨衣整理花園、
+  // 兔子撐傘出門買咖啡、狐狸撐傘繼續釣、貓躲到屋簷下。
+
+  animal_bear_rain: () => merge([
+    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, -0.05, 0.05, 0),
+    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, 0.05, 0.05, 0),
+    blob(0.135, PALETTE.leafTeal, 0, 0.20, 0),            // 雨衣
+    blob(0.1, PALETTE.leafTeal, 0, 0.35, -0.01),          // 連帽
+    blob(0.072, PALETTE.furBear, 0, 0.335, 0.055),        // 露出來的臉
+    blob(0.034, PALETTE.furRabbit, 0, 0.315, 0.095),
+    cone(0.085, 0.07, 6, PALETTE.leafTeal, 0, 0.43, -0.01),
+    // 澆花器
+    cyl(0.055, 0.062, 0.1, 6, PALETTE.gold, 0.15, 0.145, 0.06),
+    cyl(0.012, 0.012, 0.11, 4, PALETTE.gold, 0.22, 0.2, 0.06),
+    // 花圃
+    cyl(0.14, 0.14, 0.035, 6, PALETTE.trunk, 0.03, 0.018, 0.34),
+    blob(0.035, PALETTE.flowerA, -0.02, 0.07, 0.34),
+    blob(0.032, PALETTE.flowerB, 0.08, 0.065, 0.3),
+    blob(0.03, PALETTE.leafLime, 0.05, 0.06, 0.4),
+  ]),
+
+  animal_rabbit_brolly: () => merge([
+    cyl(0.045, 0.05, 0.07, 5, PALETTE.furRabbit, 0, 0.035, 0),
+    blob(0.095, PALETTE.furRabbit, 0, 0.145, 0),
+    blob(0.068, PALETTE.furRabbit, 0.012, 0.255, 0.015),
+    cone(0.028, 0.14, 4, PALETTE.furRabbit, -0.018, 0.355, 0),
+    cone(0.028, 0.14, 4, PALETTE.furRabbitIn, 0.042, 0.355, 0.01),
+    blob(0.018, PALETTE.furRabbitIn, 0.028, 0.245, 0.062),
+    box(0.1, 0.05, 0.04, PALETTE.clothWarm, 0.012, 0.175, 0.055),
+    // 傘
+    cyl(0.009, 0.009, 0.34, 4, PALETTE.woodDark, -0.1, 0.3, 0),
+    cone(0.23, 0.14, 8, PALETTE.rose, -0.1, 0.5, 0),
+    blob(0.018, PALETTE.gold, -0.1, 0.58, 0),
+    // 外帶咖啡
+    cyl(0.03, 0.025, 0.07, 6, PALETTE.teaCup, 0.1, 0.2, 0.05),
+    cyl(0.033, 0.033, 0.016, 6, PALETTE.woodDark, 0.1, 0.242, 0.05),
+  ]),
+
+  animal_fox_brolly: () => merge([
+    cyl(0.04, 0.045, 0.065, 5, PALETTE.furFox, 0, 0.032, 0),
+    blob(0.088, PALETTE.furFox, 0, 0.125, 0),
+    blob(0.062, PALETTE.furFox, 0, 0.225, 0.03),
+    cone(0.03, 0.07, 4, PALETTE.furFox, -0.042, 0.29, 0.02),
+    cone(0.03, 0.07, 4, PALETTE.furFox, 0.042, 0.29, 0.02),
+    blob(0.03, PALETTE.furRabbit, 0, 0.215, 0.082),
+    cyl(0.028, 0.012, 0.16, 4, PALETTE.furRabbit, -0.095, 0.105, -0.05),
+    box(0.012, 0.012, 0.3, PALETTE.woodDark, 0.06, 0.24, 0.13),
+    cyl(0.009, 0.009, 0.32, 4, PALETTE.woodDark, -0.08, 0.3, 0),
+    cone(0.22, 0.13, 8, PALETTE.leafTeal, -0.08, 0.49, 0),
+  ]),
+
+  animal_cat_shelter: () => merge([
+    // 小屋簷
+    box(0.36, 0.022, 0.3, PALETTE.woodDark, 0, 0.3, 0),
+    cyl(0.016, 0.016, 0.3, 4, PALETTE.woodDark, -0.15, 0.15, -0.12),
+    cyl(0.016, 0.016, 0.3, 4, PALETTE.woodDark, 0.15, 0.15, -0.12),
+    cyl(0.17, 0.17, 0.016, 8, PALETTE.rope, 0, 0.008, 0),
+    blob(0.085, PALETTE.furCat, 0, 0.075, 0.02),
+    blob(0.055, PALETTE.furCat, 0.065, 0.085, 0.06),
+    cone(0.022, 0.05, 4, PALETTE.furCat, 0.045, 0.125, 0.06),
+    cone(0.022, 0.05, 4, PALETTE.furCat, 0.085, 0.125, 0.06),
+    cyl(0.018, 0.012, 0.13, 4, PALETTE.furCat, -0.09, 0.055, -0.02),
   ]),
 };
 

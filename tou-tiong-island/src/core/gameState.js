@@ -154,6 +154,56 @@ export class GameState extends EventTarget {
     return { entry, keepsake: next };
   }
 
+  // ── 天氣（上帝視角） ────────────────────────────────────
+  /** 今天島上的天氣；沒打卡就維持晴天。 */
+  get todayWeather() {
+    return this.todayCheckin()?.mood_id ?? 'sunny';
+  }
+
+  // ── 時光郵局（E5） ──────────────────────────────────────
+  saveLetter({ text, openInDays, byAi = false }) {
+    const now = Date.now();
+    const letter = {
+      letter_id: `ltr_${now.toString(36)}`,
+      text: String(text ?? '').slice(0, 800),
+      written_at: now,
+      open_at: now + (openInDays ?? 7) * 86400000,
+      by_ai: byAi,
+      opened: false,
+    };
+    this.data.letters.push(letter);
+    this.persist();
+    return letter;
+  }
+
+  letters() {
+    const now = Date.now();
+    return this.data.letters.map((l) => ({ ...l, ready: now >= l.open_at }));
+  }
+
+  openLetter(id) {
+    const l = this.data.letters.find((x) => x.letter_id === id);
+    if (l) { l.opened = true; this.persist(); }
+    return l;
+  }
+
+  // ── 碼頭許願（E6） ──────────────────────────────────────
+  /** 原文只存在這台裝置。送到企業端的只有主題與次數，由後端的 AI 去識別化後彙整。 */
+  saveWish({ text, theme }) {
+    const wish = {
+      wish_id: `wsh_${Date.now().toString(36)}`,
+      text: String(text ?? '').slice(0, 300),
+      theme: theme ?? null,
+      created_at: Date.now(),
+      submitted: true,
+    };
+    this.data.wishes.push(wish);
+    this.persist();
+    return wish;
+  }
+
+  wishes() { return this.data.wishes; }
+
   // ── 收藏與統計 ──────────────────────────────────────────
   collection() {
     const cards = this.content.practiceCards.cards.filter((c) => this.data.cards.includes(c.card_id));

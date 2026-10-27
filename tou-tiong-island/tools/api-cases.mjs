@@ -133,21 +133,30 @@ check('不合法的選項回 400',
   (await call('POST', `/api/v1/sessions/${rsid}/choices`, { choice_id: 'c_not_real' })).status === 400);
 
 // 每日／每週任務
-const ci = await call('POST', '/api/v1/players/anon_api_test/checkins', { date: '2026-10-26', mood_id: 'storm', energy: 1 });
+const ci = await call('POST', '/api/v1/players/anon_api_test/checkins', { date: '2026-10-26', mood_id: 'rainy' });
 check('每日打卡寫入並回傳收尾文案', ci.status === 201 && Boolean(ci.data.closing));
 check('不合法的心情代碼回 400',
   (await call('POST', '/api/v1/players/anon_api_test/checkins', { date: '2026-10-26', mood_id: 'nope' })).status === 400);
 const list = await call('GET', '/api/v1/players/anon_api_test/checkins?from=2026-10-01&to=2026-10-31');
 check('查詢期間內的打卡紀錄', list.data.checkins?.length === 1);
 
+// BSRS-5：官方題號 b1–b5，附加題 b6 不計入總分
 const th = await call('POST', '/api/v1/players/anon_api_test/thermometer',
-  { week: '2026-W44', answers: { t1: 4, t2: 3, t3: 4, t4: 3, t5: 4 }, safety_value: 2 });
-check(`心情溫度計計分與區間（${th.data.entry?.score} 分 → ${th.data.band?.label}）`,
-  th.status === 201 && th.data.entry.score === 18 && th.data.band.band_id === 'high');
-check('安全題非零會觸發關懷流程並附上求助資源',
+  { week: '2026-W44', answers: { b1: 4, b2: 3, b3: 4, b4: 3, b5: 4 }, safety_value: 2 });
+check(`BSRS-5 計分與分級（${th.data.entry?.score} 分 → ${th.data.band?.label}）`,
+  th.status === 201 && th.data.entry.score === 18 && th.data.band.band_id === 'severe');
+check('附加題 2 分以上觸發關懷流程並附上求助資源',
   th.data.entry.safety_flagged === true && th.data.safety?.resources?.length >= 4);
+const th1 = await call('POST', '/api/v1/players/anon_bsrs_1/thermometer',
+  { week: '2026-W44', answers: { b1: 1, b2: 1, b3: 1, b4: 1, b5: 1 }, safety_value: 1 });
+check('前 5 題 5 分 → 身心適應狀況良好，且附加題 1 分不觸發',
+  th1.data.band.band_id === 'good' && th1.data.entry.safety_flagged === false);
+const th2 = await call('POST', '/api/v1/players/anon_bsrs_2/thermometer',
+  { week: '2026-W44', answers: { b1: 0, b2: 0, b3: 0, b4: 0, b5: 0 }, safety_value: 2 });
+check('總分 0 但附加題 2 分，仍要觸發關懷流程（官方規則）',
+  th2.data.band.band_id === 'good' && th2.data.entry.safety_flagged === true);
 check('缺題目的溫度計回 400',
-  (await call('POST', '/api/v1/players/anon_api_test/thermometer', { week: '2026-W45', answers: { t1: 1 } })).status === 400);
+  (await call('POST', '/api/v1/players/anon_api_test/thermometer', { week: '2026-W45', answers: { b1: 1 } })).status === 400);
 
 // 隱私：團隊統計的 k 匿名門檻
 const team = await call('GET', '/api/v1/insights/team');
