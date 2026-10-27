@@ -465,9 +465,11 @@ export class SceneManager {
       } else if (island.kind === 'wish') {
         growth = `<span class="map-label__sub">${island.boats ? `小船 ${island.boats}` : '還沒有船'}${island.trees ? ` ・ 樹 ${island.trees}` : ''}</span>`;
       }
+      const no = island.kind === 'story'
+        ? `<span class="map-label__no">${String(island.order).padStart(2, '0')}</span>` : '';
       el.innerHTML = island.unlocked
-        ? `<span class="map-label__name">${island.name}</span>${growth}`
-        : '<span class="map-label__name">未探索</span>';
+        ? `<span class="map-label__head">${no}<span class="map-label__name">${island.name}</span></span>${growth}`
+        : `<span class="map-label__head">${no}<span class="map-label__name">未探索</span></span>`;
       if (!island.unlocked) el.setAttribute('aria-label', `第 ${island.order} 座島，尚未探索`);
       if (!home) {
         el.addEventListener('click', (e) => { e.stopPropagation(); this.onSelectIsland?.(island.island_id); });
@@ -479,7 +481,8 @@ export class SceneManager {
 
       // 主島的互動點：文字一直看得到，直接點文字就進去
       if (island.kind === 'home') {
-        const RING = { daily: 0, lighthouse: 72, wish: 144, records: 216, letter: 288 };
+        // 「我的紀錄」搬到畫面上方的直排選單了，島上剩四個入口，角度重新平均分配
+        const RING = { daily: 0, lighthouse: 90, wish: 180, letter: 270 };
         for (const lm of this.map.home.landmarks) {
           if (!lm.interaction) continue;
           this.labels.set(`spot:${lm.interaction}`, {
@@ -550,6 +553,28 @@ export class SceneManager {
     const fade = 0.34 + near * 0.66;
     const shrink = 0.8 + near * 0.2;
 
+    // HUD 的標題卡與右側選單會蓋住標籤，所以把它們當成禁區：
+    // 撞到就往下讓開，而不是讓標籤躲在按鈕後面點不到。
+    const hudRects = this._hudRects ??= [];
+    if (!hudRects.length) {
+      for (const sel of ['.hud__brand', '.rail']) {
+        const node = document.querySelector(sel);
+        if (node) hudRects.push(node);
+      }
+    }
+    const blocked = hudRects.map((n) => {
+      const b = n.getBoundingClientRect();
+      return { l: b.left - rect.left - 6, r: b.right - rect.left + 6, b: b.bottom - rect.top + 6 };
+    });
+    /** 這個 x 位置上，標籤的上緣最高能到哪裡（HUD 擋住的地方要再往下）。 */
+    const floorFor = (cx, w) => {
+      let top = 8;
+      for (const z of blocked) {
+        if (cx + w / 2 > z.l && cx - w / 2 < z.r) top = Math.max(top, z.b);
+      }
+      return top;
+    };
+
     const place = (el, x, y, hidden) => {
       // 跑到畫面外的標籤就藏起來；硬擠回邊緣只會讓它們疊在一起、點錯
       const off = x < -30 || x > rect.width + 30 || y < -30 || y > rect.height + 30;
@@ -559,8 +584,9 @@ export class SceneManager {
         return;
       }
       const w = el.offsetWidth || 72;
+      const h = el.offsetHeight || 30;
       const cx = Math.min(Math.max(x, w / 2 + 8), rect.width - w / 2 - 8);
-      const cy = Math.min(Math.max(y, (el.offsetHeight || 30) + 8), rect.height - 8);
+      const cy = Math.min(Math.max(y, floorFor(cx, w) + h), rect.height - 8);
       el.style.transform = `translate(-50%, -100%) translate(${cx}px, ${cy}px) scale(${shrink.toFixed(3)})`;
       el.style.opacity = fade.toFixed(3);
       el.style.pointerEvents = 'auto';
@@ -603,17 +629,28 @@ export class SceneManager {
     named.sort((a, b) => b.p.y - a.p.y);
 
     for (const { entry, p } of named) {
-      let y = p.y;
       const w = entry.el.offsetWidth || 72;
       const h = entry.el.offsetHeight || 30;
-      for (let guard = 0; guard < 8; guard++) {
-        const box = { l: p.x - w / 2, r: p.x + w / 2, t: y - h, b: y };
+      const cx = Math.min(Math.max(p.x, w / 2 + 8), rect.width - w / 2 - 8);
+      const top = floorFor(cx, w);
+      let y = Math.max(p.y, top + h);
+      let fits = false;
+      let down = false;     // 一旦被迫往下，就一路往下，免得上下來回彈跳永遠喬不定
+      for (let guard = 0; guard < 16; guard++) {
+        const box = { l: cx - w / 2, r: cx + w / 2, t: y - h, b: y };
         const hit = taken.find((t) => !(box.r < t.l || box.l > t.r || box.b < t.t || box.t > t.b));
-        if (!hit) break;
-        y = hit.t - 6;          // 往上讓開，島名就不會蓋住島本身
+        if (!hit) { fits = true; break; }
+        const up = hit.t - 6;
+        // 預設往上讓（島名就不會蓋住島本身）；上面是 HUD 就只能往下，
+        // 否則讓完又鑽回按鈕底下，等於沒讓。
+        if (!down && up - h >= top) y = up;
+        else { down = true; y = hit.b + h + 6; }
+        if (y > rect.height - 8) break;
       }
-      place(entry.el, p.x, y, p.behind);
-      if (!p.behind) remember(entry.el, p.x, y);
+      // 喬不出位置就藏起來。疊在一起會點錯島，那比少一個名牌糟糕得多；
+      // 島本身還是點得到，轉一下或縮放一下它就會回來。
+      place(entry.el, cx, y, p.behind || !fits);
+      if (!p.behind && fits) remember(entry.el, cx, y);
     }
   }
 

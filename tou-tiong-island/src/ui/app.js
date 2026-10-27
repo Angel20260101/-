@@ -12,8 +12,8 @@ import { StoryView } from './storyView.js';
 import { ResultView } from './resultView.js';
 import {
   Sheet, trustPanel, islandPanel, dailyPanel, weeklyPanel, lighthousePanel,
-  letterPanel, wishPanel, wishBoardPanel, recordsPanel, backupPanel, atlasPanel,
-  collectionPanel, aboutPanel,
+  letterPanel, wishPanel, wishBoardPanel, recordsPanel, backupPanel, loginPanel,
+  atlasPanel, collectionPanel, aboutPanel,
 } from './panels.js';
 import * as vaultClient from '../core/vaultClient.js';
 
@@ -62,11 +62,17 @@ export class App {
 
   _wireHud() {
     const viewBtn = document.querySelector('[data-action="reset-view"]');
+    const viewLabel = viewBtn.querySelector('[data-label-view]');
     viewBtn.addEventListener('click', () => {
       const wide = this.scene.resetView();
-      viewBtn.textContent = wide ? '回島' : '全覽';
+      viewLabel.textContent = wide ? '回島' : '全景';
+      viewBtn.setAttribute('aria-label', wide ? '回到透中島' : '看整座群島');
       this.scene.select(null);
     });
+    document.querySelector('[data-action="records"]')
+      .addEventListener('click', () => this.openInteraction('records'));
+    document.querySelector('[data-action="login"]')
+      .addEventListener('click', () => this.openInteraction('login'));
     document.querySelector('[data-action="about"]')
       .addEventListener('click', () => aboutPanel(this.sheet, { content: this.content }));
   }
@@ -186,17 +192,15 @@ export class App {
           onCollection: () => this.openInteraction('collection'),
           onBackup: () => this.openInteraction('backup'),
         });
+      case 'login':
+        return loginPanel(this.sheet, {
+          state: this.state, vaultClient,
+          onRestored: () => this._afterRestore(),
+        });
       case 'backup':
         return backupPanel(this.sheet, {
           state: this.state, vaultClient,
-          // 還原進來的是另一台裝置的島：天氣、島嶼、小船全部重畫一次
-          onRestored: () => {
-            this.applyWeather(this.state.todayWeather, { animate: false });
-            this.refreshWorld();
-            this.scene.focusHome({ animate: true });
-            this.refreshCloudLabel();
-            this.toast('紀錄接回來了');
-          },
+          onRestored: () => this._afterRestore(),
         });
       case 'atlas':
         return atlasPanel(this.sheet, { state: this.state, onPlay: (s) => this.play(s) });
@@ -237,6 +241,15 @@ export class App {
     }
     if (outcome.firstPlay) this.toast('新的島嶼出現在地圖上了');
     else if (outcome.newRoute) this.toast('島上長出了新的地景');
+  }
+
+  /** 還原進來的是另一台裝置的島：天氣、島嶼、小船全部重畫一次。 */
+  _afterRestore() {
+    this.applyWeather(this.state.todayWeather, { animate: false });
+    this.refreshWorld();
+    this.scene.focusHome({ animate: true });
+    this.refreshCloudLabel();
+    this.toast('紀錄接回來了');
   }
 
   _maybeResume() {

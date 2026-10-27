@@ -143,8 +143,7 @@
         ],
         "scale": 0.85,
         "rot": 0.5,
-        "interaction": "records",
-        "label": "我的紀錄"
+        "_note": "小屋留著當建築。「我的紀錄」已經搬到畫面上方的直排選單，島上不再重複放一個入口。"
       },
       {
         "type": "bench",
@@ -210,12 +209,6 @@
         "landmark": "mailbox",
         "title": "時光郵局",
         "subtitle": "寫給未來的自己，只有你看得到"
-      },
-      {
-        "id": "records",
-        "landmark": "hut",
-        "title": "我的紀錄",
-        "subtitle": "天氣日曆與每週顏色"
       }
     ],
     "sky_anchor": {

@@ -90,7 +90,8 @@ export function trustPanel(sheet, { onDone }) {
           <span class="trust__text">公司只會看到<b>「有多少人提了哪些主題」</b>——看不到是誰說的，也看不到原文。</span>
         </div>
       </div>
-      <p class="tiny">這座島不做心理診斷，也不評價你的選擇。隨時可以離開。</p>`,
+      <p class="tiny">這座島不做心理診斷，也不評價你的選擇。隨時可以離開。</p>
+      <p class="tiny">以前來過、手上有<b>保存代碼</b>嗎？關掉這頁之後，右上角的「登入」可以把島接回來。</p>`,
     actions: [{ label: '我知道了，進去看看', onClick: () => { sheet.close(); onDone?.(); } }],
   });
 }
@@ -229,7 +230,7 @@ export function lighthousePanel(sheet, { content }) {
         <div class="atlas__name">${esc(r.name)}</div>
         <div class="atlas__story">${esc(r.hours)}${r.note ? '　・　' + esc(r.note) : ''}</div>
       </div>
-      <a class="hud__btn" href="tel:${esc(r.contact)}">${esc(r.contact)}</a>
+      <a class="pill-btn" href="tel:${esc(r.contact)}">${esc(r.contact)}</a>
     </div>`).join('');
   sheet.open({
     title: '燈塔',
@@ -256,7 +257,7 @@ export function letterPanel(sheet, { state, content }) {
           <div class="atlas__name">${l.ready ? (l.opened ? '已開封' : '可以開了') : '還在路上'}</div>
           <div class="atlas__story">${new Date(l.written_at).toLocaleDateString('zh-TW')} 寄出　・　${new Date(l.open_at).toLocaleDateString('zh-TW')} 開封</div>
         </div>
-        ${l.ready ? `<button type="button" class="hud__btn" data-open="${l.letter_id}">${l.opened ? '再看' : '開封'}</button>` : ''}
+        ${l.ready ? `<button type="button" class="pill-btn" data-open="${l.letter_id}">${l.opened ? '再看' : '開封'}</button>` : ''}
       </div>`).join('')}` : '';
 
   const el = sheet.open({
@@ -554,7 +555,7 @@ export function atlasPanel(sheet, { state, onPlay }) {
         <div class="atlas__story">《${esc(a.title)}》${a.unlocked ? `　・　走過 ${a.plays} 次` : ''}</div>
         <div class="atlas__routes">${pips}</div>
       </div>
-      <button type="button" class="hud__btn" data-story="${a.story_id}">${a.unlocked ? '再走' : '出航'}</button>
+      <button type="button" class="pill-btn" data-story="${a.story_id}">${a.unlocked ? '再走' : '出航'}</button>
     </div>`;
   }).join('');
   const found = state.atlas().reduce((s, a) => s + a.routes.filter((r) => r.found).length, 0);
@@ -796,21 +797,41 @@ function showCode(sheet, { state, vaultClient, code, durable }) {
   });
 }
 
-function restorePanel(sheet, { state, vaultClient, onRestored }) {
+/**
+ * 登入＝用保存代碼把島接回來。
+ *
+ * 這裡沒有帳號系統，所以「登入」這兩個字其實名不符實——但回頭的人就是會找這兩個字，
+ * 所以按鈕照這樣寫，面板裡第一句就說清楚它是代碼不是帳號，免得有人去找「忘記密碼」。
+ *
+ * standalone = 從 HUD 的「登入」進來（首頁入口）；false = 從「保存紀錄」那一頁進來。
+ */
+export function loginPanel(sheet, { state, vaultClient, onRestored, standalone = true }) {
+  restorePanel(sheet, { state, vaultClient, onRestored, standalone });
+}
+
+function restorePanel(sheet, { state, vaultClient, onRestored, standalone = false }) {
+  const hasIslands = Object.values(state.data.islands ?? {}).some((i) => i.unlocked);
   sheet.open({
-    title: '用代碼還原',
-    subtitle: '輸入代碼與密碼',
+    title: standalone ? '接回你的島' : '用代碼還原',
+    subtitle: '輸入保存代碼與密碼',
     mini: true,
     body: `
+      ${standalone ? `<div class="card">
+        <p class="card__text">《透中島》沒有帳號，也不用 email。「登入」就是輸入你之前拿到的<b>保存代碼</b>加上<b>你自己設的密碼</b>。</p>
+        <p class="tiny">沒有代碼也沒關係，直接玩就好，不用註冊。想保留紀錄再去「我的紀錄 → 保存紀錄」拿一組。</p>
+      </div>` : ''}
       <div class="section-label">保存代碼</div>
       <input class="field" id="rs-code" placeholder="TTI-XXXX-XXXX" autocapitalize="characters" spellcheck="false" />
       <div class="section-label">密碼</div>
       <input class="field" id="rs-pw" type="password" autocomplete="current-password" />
-      <p class="tiny" style="margin-top:10px">還原會把這台裝置現在的紀錄整份換掉。換之前可以先下載一份備份檔。</p>
+      <p class="tiny" style="margin-top:10px">${hasIslands
+        ? '還原會把這台裝置現在的紀錄<b>整份換掉</b>。換之前可以先去「我的紀錄 → 保存紀錄」下載一份備份檔。'
+        : '這台裝置還沒有任何紀錄，接回來不會蓋掉東西。'}</p>
       <div id="rs-msg"></div>`,
     actions: [
-      { label: '還原', onClick: go },
-      { label: '返回', className: 'btn btn--ghost', onClick: () => backupPanel(sheet, { state, vaultClient, onRestored }) },
+      { label: standalone ? '接回來' : '還原', onClick: go },
+      { label: standalone ? '還沒有代碼' : '返回', className: 'btn btn--ghost',
+        onClick: () => backupPanel(sheet, { state, vaultClient, onRestored }) },
     ],
   });
 
