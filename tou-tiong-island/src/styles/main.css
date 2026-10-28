@@ -451,3 +451,102 @@ body {
 
 /* 示範資料的提示條：要一眼看出「這不是你的紀錄」，所以用警示色而不是中性色 */
 .card--demo { border: 1px solid var(--gold); background: #fdf6e5; }
+
+/* ════════════════════════════════════════════════════════════
+   設計系統：結構層
+   ────────────────────────────────────────────────────────────
+   參考 puma.taipei 的 HEART 政策島。要借的不是他們的顏色
+   （珊瑚色是他們的品牌，我們是暖奶油＋苔綠），是五個結構決定：
+
+     1. 髮絲邊    只靠陰影的按鈕邊緣是糊的；一道 8% 的細邊讓形狀立刻變利
+     2. 群組      相關的控制收進同一個容器，讀成「一組」而不是四張飄浮的卡
+     3. 真膠囊    圓角給到高度的一半，而不是 15px 的圓角矩形
+     4. 文字對比  --ink 原本是灰綠 #395a51，在奶油底上偏糊；加深一階
+     5. 選中狀態  實心深底＋反白，毫不含糊
+
+   這五項都不改顏色語彙，只改形狀與層次，所以不會動到既有的品牌調性。
+   ════════════════════════════════════════════════════════════ */
+:root {
+  /* 髮絲邊：低 alpha 的墨色，疊在任何底色上都成立，不必為每種背景調一次 */
+  --hairline: rgba(42, 58, 52, .09);
+  --hairline-strong: rgba(42, 58, 52, .16);
+  /* 文字用的深墨，比 --ink 再深一階，專門給需要被讀清楚的字 */
+  --ink-strong: #22332d;
+  /* 群組容器的底：比卡片再淡，讓裡面的按鈕浮得起來 */
+  --group-bg: rgba(252, 248, 239, .72);
+}
+
+/* ── 群組容器 ───────────────────────────────────────────── */
+.group {
+  display: flex; gap: 4px; padding: 4px;
+  background: var(--group-bg);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  box-shadow: var(--shadow-s);
+  backdrop-filter: blur(8px);
+}
+.group--stack { flex-direction: column; border-radius: 22px; }
+
+/* ── 膠囊按鈕 ───────────────────────────────────────────── */
+.pill {
+  font: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: .02em;
+  border: 1px solid transparent; border-radius: 999px; cursor: pointer;
+  padding: 8px 14px;
+  display: flex; align-items: center; gap: 7px;
+  background: transparent; color: var(--ink-strong);
+  transition: background .14s ease, color .14s ease, transform .08s ease;
+}
+.pill:hover { background: rgba(255, 255, 255, .7); }
+.pill:active { transform: scale(.96); }
+.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 選中：實心深底反白。低彩度介面裡，只有明度翻轉才足夠明確 */
+.pill[aria-pressed="true"], .pill.is-on {
+  background: var(--ink-strong); color: var(--paper2);
+  border-color: var(--ink-strong);
+}
+.pill[aria-pressed="true"] .pill__icon, .pill.is-on .pill__icon { stroke: var(--paper2); }
+.pill__icon {
+  width: 16px; height: 16px; flex: none;
+  fill: none; stroke: var(--accent); stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ── 獨立卡片（不在群組裡的單一控制） ───────────────────── */
+.card-chip {
+  background: rgba(252, 248, 239, .94);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  box-shadow: var(--shadow-s);
+}
+
+/* ── 既有元件沿用新結構 ─────────────────────────────────── */
+.rail { gap: 0; }
+.hud__brand { border: 1px solid var(--hairline); }
+.hud__title { color: var(--ink-strong); }
+
+/* 信任說明：把第 3 行的「看得到／看不到」做成對照，
+   研究要觀察的就是受測者能不能複述這件事，對照比散文好記 */
+.trust__row { align-items: flex-start; }
+.trust__dot {
+  background: var(--ink-strong); color: var(--paper2);
+  border: 0; font-weight: 700;
+}
+.trust__see {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 10px;
+  margin-top: 10px; padding: 10px 12px;
+  background: rgba(255, 255, 255, .55);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  font-size: 12.5px; line-height: 1.5;
+}
+.trust__tag {
+  font-weight: 700; font-size: 11.5px; white-space: nowrap;
+  padding: 1px 8px; border-radius: 999px; align-self: start;
+}
+.trust__tag--yes { background: rgba(99, 140, 120, .16); color: var(--accent-d); }
+.trust__tag--no { background: rgba(224, 138, 106, .16); color: #b05f42; }
+
+@media (max-width: 560px) {
+  .pill { padding: 8px 10px; }
+  .pill .rail__text, .pill .pill__text { display: none; }
+}
