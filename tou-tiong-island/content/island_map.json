@@ -33,7 +33,6 @@
       "q": 0,
       "r": 0
     },
-    "flora": "temperate",
     "hexes": [
       {
         "q": 0,
@@ -323,7 +322,8 @@
           "note": "躲雨去了"
         }
       }
-    ]
+    ],
+    "biome": "oasis"
   },
   "wish_island": {
     "island_id": "island_wish",
@@ -333,7 +333,6 @@
       "q": 3,
       "r": 0
     },
-    "flora": "temperate",
     "hexes": [
       {
         "q": 0,
@@ -526,7 +525,8 @@
           "note": "雨天飛低一點"
         }
       }
-    ]
+    ],
+    "biome": "oasis"
   },
   "islands": [
     {
@@ -540,7 +540,6 @@
         "q": -5,
         "r": 2
       },
-      "flora": "temperate",
       "sea_route_from_home": [
         [
           -2,
@@ -733,7 +732,8 @@
             "note": "躲到屋簷下"
           }
         }
-      ]
+      ],
+      "biome": "desert"
     },
     {
       "island_id": "island_voice",
@@ -746,7 +746,6 @@
         "q": -3,
         "r": -3
       },
-      "flora": "pink",
       "sea_route_from_home": [
         [
           -1,
@@ -928,7 +927,8 @@
             "note": "撐傘出門買咖啡"
           }
         }
-      ]
+      ],
+      "biome": "blossom"
     },
     {
       "island_id": "island_night",
@@ -941,7 +941,6 @@
         "q": 2,
         "r": -5
       },
-      "flora": "pine",
       "sea_route_from_home": [
         [
           1,
@@ -1121,7 +1120,8 @@
             "note": "撐傘繼續釣"
           }
         }
-      ]
+      ],
+      "biome": "taiga"
     },
     {
       "island_id": "island_credit",
@@ -1134,7 +1134,6 @@
         "q": 6,
         "r": -3
       },
-      "flora": "temperate",
       "sea_route_from_home": [
         [
           2,
@@ -1303,7 +1302,8 @@
             "note": "穿雨衣在整理花園"
           }
         }
-      ]
+      ],
+      "biome": "plateau"
     },
     {
       "island_id": "island_kin",
@@ -1316,7 +1316,6 @@
         "q": 4,
         "r": 2
       },
-      "flora": "coral",
       "sea_route_from_home": [
         [
           2,
@@ -1509,7 +1508,8 @@
             "note": "躲雨去了"
           }
         }
-      ]
+      ],
+      "biome": "reef"
     },
     {
       "island_id": "island_rest",
@@ -1522,7 +1522,6 @@
         "q": -1,
         "r": 5
       },
-      "flora": "temperate",
       "sea_route_from_home": [
         [
           0,
@@ -1715,9 +1714,320 @@
             "note": "躲到屋簷下"
           }
         }
-      ]
+      ],
+      "biome": "meadow"
     }
   ],
+  "biomes": {
+    "_note": "氣候區：決定一座島的地表配色、植被與地面細節。surfaces 只覆寫有寫到的地表，沒寫的沿用 palette.js 的 SURFACE_COLORS；clutter 同理，沒寫的沿用全域 ground_clutter。加一個新氣候區＝在這裡多一筆，不用改任何程式。",
+    "oasis": {
+      "name": "綠洲",
+      "line": "有水、有樹、中午最暖的那一塊。",
+      "flora": "temperate"
+    },
+    "desert": {
+      "name": "沙漠",
+      "line": "地平線很清楚。你一眼就看得到邊界在哪裡。",
+      "flora": "desert",
+      "surfaces": {
+        "grass": {
+          "top": "#cdb87a",
+          "side": "#b8974f"
+        },
+        "grass_light": {
+          "top": "#ddc98c",
+          "side": "#c4a461"
+        },
+        "sand": {
+          "top": "#f4e2b0",
+          "side": "#dcb87a"
+        },
+        "rock": {
+          "top": "#c98f6b",
+          "side": "#a86f4f"
+        }
+      },
+      "clutter": {
+        "sand": {
+          "count": 10,
+          "types": [
+            "pebble",
+            "pebble",
+            "desert_shrub",
+            "shell"
+          ]
+        },
+        "grass": {
+          "count": 9,
+          "types": [
+            "desert_shrub",
+            "desert_shrub",
+            "pebble"
+          ]
+        },
+        "grass_light": {
+          "count": 9,
+          "types": [
+            "desert_shrub",
+            "pebble",
+            "pebble"
+          ]
+        },
+        "rock": {
+          "count": 8,
+          "types": [
+            "pebble",
+            "pebble",
+            "desert_shrub"
+          ]
+        }
+      }
+    },
+    "blossom": {
+      "name": "花季",
+      "line": "開得最滿的時候，風一吹就落一地。",
+      "flora": "pink",
+      "surfaces": {
+        "grass": {
+          "top": "#a8cf96",
+          "side": "#e3bf96"
+        },
+        "grass_light": {
+          "top": "#c6dfa4",
+          "side": "#d7b78f"
+        },
+        "sand": {
+          "top": "#f7e6cf",
+          "side": "#e6c6a4"
+        },
+        "rock": {
+          "top": "#cbbfc2",
+          "side": "#ab9fa4"
+        }
+      },
+      "clutter": {
+        "grass": {
+          "count": 16,
+          "types": [
+            "flower_sm",
+            "flower_sm",
+            "clover",
+            "bush",
+            "mushroom",
+            "pebble"
+          ]
+        },
+        "grass_light": {
+          "count": 16,
+          "types": [
+            "flower_sm",
+            "flower_sm_gold",
+            "clover",
+            "bush",
+            "pebble"
+          ]
+        }
+      }
+    },
+    "taiga": {
+      "name": "針葉林",
+      "line": "天黑得早，樹站得很直。",
+      "flora": "pine",
+      "surfaces": {
+        "grass": {
+          "top": "#6b9478",
+          "side": "#b89a7a"
+        },
+        "grass_light": {
+          "top": "#86ab8a",
+          "side": "#c0a584"
+        },
+        "sand": {
+          "top": "#ddd3bd",
+          "side": "#bba98c"
+        },
+        "rock": {
+          "top": "#9aa5a6",
+          "side": "#7e8a8c"
+        }
+      },
+      "clutter": {
+        "grass": {
+          "count": 15,
+          "types": [
+            "clover",
+            "clover",
+            "bush",
+            "mushroom",
+            "mushroom",
+            "pebble"
+          ]
+        },
+        "grass_light": {
+          "count": 15,
+          "types": [
+            "clover",
+            "bush",
+            "mushroom",
+            "pebble",
+            "grass_tuft"
+          ]
+        }
+      }
+    },
+    "plateau": {
+      "name": "高原",
+      "line": "風很大，但看得很遠。",
+      "flora": "temperate",
+      "surfaces": {
+        "grass": {
+          "top": "#9fb48d",
+          "side": "#c7a882"
+        },
+        "grass_light": {
+          "top": "#bac79a",
+          "side": "#d0b088"
+        },
+        "sand": {
+          "top": "#e6dcc2",
+          "side": "#c6b492"
+        },
+        "rock": {
+          "top": "#c3bdb0",
+          "side": "#a39d90"
+        }
+      },
+      "clutter": {
+        "grass": {
+          "count": 13,
+          "types": [
+            "clover",
+            "pebble",
+            "pebble",
+            "bush",
+            "grass_tuft"
+          ]
+        },
+        "sand": {
+          "count": 11,
+          "types": [
+            "pebble",
+            "pebble",
+            "pebble",
+            "grass_tuft"
+          ]
+        },
+        "rock": {
+          "count": 12,
+          "types": [
+            "pebble",
+            "pebble",
+            "clover"
+          ]
+        }
+      }
+    },
+    "reef": {
+      "name": "珊瑚海",
+      "line": "水很淺，踩得到底。",
+      "flora": "reef",
+      "surfaces": {
+        "grass": {
+          "top": "#8fcbb0",
+          "side": "#e3c4a0"
+        },
+        "grass_light": {
+          "top": "#b2dcc0",
+          "side": "#eacfa8"
+        },
+        "sand": {
+          "top": "#fbf0dd",
+          "side": "#ecd8bb"
+        },
+        "rock": {
+          "top": "#e3a898",
+          "side": "#c4877a"
+        }
+      },
+      "clutter": {
+        "sand": {
+          "count": 12,
+          "types": [
+            "shell",
+            "shell",
+            "coral_fan",
+            "pebble",
+            "driftwood"
+          ]
+        },
+        "grass": {
+          "count": 13,
+          "types": [
+            "coral_fan",
+            "clover",
+            "shell",
+            "grass_tuft",
+            "pebble"
+          ]
+        },
+        "grass_light": {
+          "count": 13,
+          "types": [
+            "coral_fan",
+            "shell",
+            "clover",
+            "pebble"
+          ]
+        }
+      }
+    },
+    "meadow": {
+      "name": "草原",
+      "line": "可以直接躺下來的那種地方。",
+      "flora": "temperate",
+      "surfaces": {
+        "grass": {
+          "top": "#a3c884",
+          "side": "#ddba8c"
+        },
+        "grass_light": {
+          "top": "#c2d99a",
+          "side": "#e0c194"
+        },
+        "sand": {
+          "top": "#f2e2bd",
+          "side": "#ddc099"
+        },
+        "rock": {
+          "top": "#c0c4b4",
+          "side": "#a2a795"
+        }
+      },
+      "clutter": {
+        "grass": {
+          "count": 17,
+          "types": [
+            "clover",
+            "clover",
+            "grass_tuft",
+            "flower_sm",
+            "bush",
+            "pebble"
+          ]
+        },
+        "grass_light": {
+          "count": 17,
+          "types": [
+            "clover",
+            "grass_tuft",
+            "flower_sm_gold",
+            "bush",
+            "pebble"
+          ]
+        }
+      }
+    }
+  },
   "flora_table": {
     "temperate": {
       "round_grove": [
@@ -1791,6 +2101,49 @@
       ],
       "pink_grove": [
         "tree_pink"
+      ],
+      "coral_grove": [
+        "tree_coral"
+      ],
+      "palm_pair": [
+        "palm"
+      ],
+      "grass_tufts": [
+        "grass_tuft"
+      ]
+    },
+    "desert": {
+      "round_grove": [
+        "cactus",
+        "desert_shrub"
+      ],
+      "pine_grove": [
+        "cactus"
+      ],
+      "pink_grove": [
+        "desert_shrub",
+        "cactus"
+      ],
+      "coral_grove": [
+        "cactus"
+      ],
+      "palm_pair": [
+        "palm"
+      ],
+      "grass_tufts": [
+        "desert_shrub"
+      ]
+    },
+    "reef": {
+      "round_grove": [
+        "palm",
+        "tree_coral"
+      ],
+      "pine_grove": [
+        "palm"
+      ],
+      "pink_grove": [
+        "tree_coral"
       ],
       "coral_grove": [
         "tree_coral"

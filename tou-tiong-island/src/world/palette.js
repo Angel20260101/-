@@ -77,7 +77,8 @@ export const PALETTE = {
   clothWarm:  '#e3a08a',
   teaCup:     '#fdf8ee',
   // 島民的臉。可愛感有一半來自這三樣：深色的眼睛、腮紅、淺色的口鼻
-  eyeDark:    '#3a4642',
+  eyeDark:    '#2e3a36',
+  eyeWhite:   '#ffffff',
   cheek:      '#f0a9a2',
   snout:      '#fbf1e2',
 
@@ -89,6 +90,13 @@ export const PALETTE = {
   bushLeaf:   '#86b283',
   shellIvory: '#fdf0e2',
   shellPink:  '#f1cfc8',
+  // 氣候區用
+  cactus:     '#7fa578',
+  cactusDark: '#688a63',
+  aridLeaf:   '#b6a877',
+  coralA:     '#f0a894',
+  coralB:     '#f3c6a8',
+  coralC:     '#e8908f',
 };
 
 /** 低多邊形在靜態光下的層次：側面一律比頂面暗一階。 */

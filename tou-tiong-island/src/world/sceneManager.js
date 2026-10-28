@@ -553,9 +553,12 @@ export class SceneManager {
     };
     // 鏡頭拉近是為了看島上的細節，這時候五個名牌壓在上面最礙事。
     // 近了就淡掉、縮小，但還是可以點；滑過或鍵盤聚焦會回到全不透明（CSS 處理）。
-    const near = THREE.MathUtils.clamp((this.controls.distance - 10) / 7, 0, 1);
+    const d = this.controls.distance;
+    const near = THREE.MathUtils.clamp((d - 10) / 7, 0, 1);
     const fade = 0.34 + near * 0.66;
-    const shrink = 0.8 + near * 0.2;
+    // 太近要讓位給細節，太遠則是島擠在一起、名牌會疊成一排。兩頭都縮小。
+    const far = THREE.MathUtils.clamp((d - 34) / 14, 0, 1);
+    const shrink = (0.8 + near * 0.2) * (1 - far * 0.26);
 
     // HUD 的標題卡與右側選單會蓋住標籤，所以把它們當成禁區：
     // 撞到就往下讓開，而不是讓標籤躲在按鈕後面點不到。
@@ -640,6 +643,9 @@ export class SceneManager {
       let y = Math.max(p.y, top + h);
       let fits = false;
       let down = false;     // 一旦被迫往下，就一路往下，免得上下來回彈跳永遠喬不定
+      // 讓位也有極限：名牌離自己的島超過這個距離就沒有意義了，
+      // 全覽時六座島擠在一起，一路往上讓會排成一整列浮在天上的字。
+      const MAX_SHIFT = 110;
       for (let guard = 0; guard < 16; guard++) {
         const box = { l: cx - w / 2, r: cx + w / 2, t: y - h, b: y };
         const hit = taken.find((t) => !(box.r < t.l || box.l > t.r || box.b < t.t || box.t > t.b));
@@ -649,7 +655,7 @@ export class SceneManager {
         // 否則讓完又鑽回按鈕底下，等於沒讓。
         if (!down && up - h >= top) y = up;
         else { down = true; y = hit.b + h + 6; }
-        if (y > rect.height - 8) break;
+        if (y > rect.height - 8 || Math.abs(y - p.y) > MAX_SHIFT) break;
       }
       // 喬不出位置就藏起來。疊在一起會點錯島，那比少一個名牌糟糕得多；
       // 島本身還是點得到，轉一下或縮放一下它就會回來。
@@ -685,7 +691,7 @@ export class SceneManager {
     this.controls.flyTo({ target: island.center, distance: distance ?? (island.kind === 'home' ? 16 : 13) }, 700);
   }
 
-  fitToWorld({ padding = 1.02, animate = false } = {}) {
+  fitToWorld({ padding = 1.0, animate = false } = {}) {
     const b = this.worldBounds;
     if (!b || !Number.isFinite(b.minX)) return;
     const cx = (b.minX + b.maxX) / 2;
@@ -702,7 +708,10 @@ export class SceneManager {
     const tanH = tanV * this.camera.aspect;
     let need = this.controls.minDistance;
     const w = new THREE.Vector3();
-    const pad = 3.2;   // 海域的邊緣
+    // 直向手機的水平視角很窄，群島又接近正方形，所以「把寬度塞進畫面」本來就得退得很遠。
+    // 邊緣每多留 1 單位，鏡頭就要再退好幾單位——原本留 3.2 會把距離推到 106，
+    // 島只剩畫面的三分之一。留一點點就好。
+    const pad = 1.1;
     for (const x of [b.minX - pad, b.maxX + pad]) {
       for (const z of [b.minZ - pad, b.maxZ + pad]) {
         for (const y of [0, 1.6]) {

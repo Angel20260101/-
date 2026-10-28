@@ -49,9 +49,10 @@ function paintHex(geo, topColor, sideColor) {
  * 產生一座島的地形幾何（已合併）。
  * @param {Array} hexes content/island_map.json 的 hexes 陣列
  * @param {object} cfg  { size, level_height, base_depth }
+ * @param {object} surfaces 氣候區的地表配色覆寫；沒寫到的地表沿用 SURFACE_COLORS
  * @returns {{ geometry: THREE.BufferGeometry, bounds: {minX,maxX,minZ,maxZ,maxY} }}
  */
-export function buildTerrainGeometry(hexes, cfg) {
+export function buildTerrainGeometry(hexes, cfg, surfaces = {}) {
   const { size = 1, level_height: levelH = 0.42, base_depth: depth = 0.55 } = cfg;
   const parts = [];
   const bounds = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity, maxY: 0 };
@@ -63,7 +64,7 @@ export function buildTerrainGeometry(hexes, cfg) {
 
     // radialSegments = 6，半徑略縮讓地塊之間留一道海水的縫
     const geo = new THREE.CylinderGeometry(size * 0.985, size * 0.985, height, 6, 1);
-    const colors = SURFACE_COLORS[hex.surface] ?? SURFACE_COLORS.sand;
+    const colors = surfaces[hex.surface] ?? SURFACE_COLORS[hex.surface] ?? SURFACE_COLORS.sand;
     paintHex(geo, colors.top, colors.side);
     geo.translate(x, height / 2 - depth, z);
     parts.push(geo);

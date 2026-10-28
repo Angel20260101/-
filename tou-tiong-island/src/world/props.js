@@ -81,11 +81,18 @@ const onHead = (head, dx, dy) =>
  *
  * @param head {x,y,z,r} 頭那顆球
  */
-const face = (head, { spread, up = 0.028, eye = 0.021, cheek = 0.023, cheekDown = 0.052, cheekOut = 0.05 } = {}) => {
+const face = (head, { spread, up = 0.028, eye = 0.03, cheek = 0.023, cheekDown = 0.055, cheekOut = 0.052 } = {}) => {
   const out = [];
   for (const sx of [-1, 1]) {
     const dx = sx * spread;
-    out.push(ball(eye, PALETTE.eyeDark, head.x + dx, head.y + up, onHead(head, dx, up), 1.15, 0.5, 0));
+    const z = onHead(head, dx, up);
+    const x = head.x + dx;
+    const y = head.y + up;
+    // 白眼球 → 黑眼珠 → 一點反光。三層一層一層往外疊，
+    // 單純一顆深色的點只會讓動物看起來沒有精神。
+    out.push(ball(eye, PALETTE.eyeWhite, x, y, z, 1.18, 0.42, 1));
+    out.push(ball(eye * 0.56, PALETTE.eyeDark, x, y - eye * 0.06, z + eye * 0.3, 1.1, 0.5, 1));
+    out.push(ball(eye * 0.2, PALETTE.eyeWhite, x - sx * eye * 0.18, y + eye * 0.3, z + eye * 0.46, 1, 0.6, 0));
     const cdx = sx * (spread + cheekOut);
     out.push(ball(cheek, PALETTE.cheek, head.x + cdx, head.y - cheekDown,
       onHead(head, cdx, cheekDown), 0.7, 0.35, 0));
@@ -170,6 +177,53 @@ export const PROP_FACTORIES = {
       const z = Math.sin(a) * 0.12;
       parts.push(cyl(0.012, 0.012, 0.14, 3, PALETTE.grassDark, x, 0.07, z));
       parts.push(blob(0.045, i % 2 ? PALETTE.flowerA : PALETTE.flowerB, x, 0.16, z));
+    }
+    return merge(parts);
+  },
+
+  // ── 氣候區專屬植被 ────────────────────────────────────
+  // 沙漠島長仙人掌與旱生灌木，珊瑚海島長珊瑚扇。
+  // 每種型別一個 draw call，所以氣候區的代價是固定的三個，不隨島數增加。
+
+  cactus: () => {
+    const parts = [
+      cyl(0.075, 0.095, 0.46, 7, PALETTE.cactus, 0, 0.23, 0),
+      ball(0.078, PALETTE.cactus, 0, 0.455, 0, 0.7, 1, 0),
+    ];
+    for (const sx of [-1, 1]) {
+      const arm = new THREE.CylinderGeometry(0.042, 0.048, 0.17, 6);
+      paint(arm, PALETTE.cactus);
+      arm.rotateZ(sx * Math.PI / 2);
+      arm.translate(sx * 0.105, 0.26, 0);
+      parts.push(arm);
+      parts.push(cyl(0.042, 0.046, 0.16, 6, PALETTE.cactus, sx * 0.175, 0.335, 0));
+      parts.push(ball(0.044, PALETTE.cactus, sx * 0.175, 0.412, 0, 0.7, 1, 0));
+    }
+    // 淡淡的縱紋：拉近才看得到，但那就是這個鏡頭現在做得到的距離
+    for (const sx of [-1, 1]) parts.push(box(0.012, 0.42, 0.012, PALETTE.cactusDark, sx * 0.07, 0.23, 0.045));
+    parts.push(ball(0.022, PALETTE.flowerA, 0, 0.5, 0, 1, 1, 0));
+    return merge(parts);
+  },
+
+  desert_shrub: () => merge([
+    cone(0.05, 0.12, 4, PALETTE.aridLeaf, 0, 0.06, 0),
+    cone(0.042, 0.095, 4, PALETTE.aridLeaf, 0.07, 0.048, 0.04),
+    cone(0.04, 0.085, 4, PALETTE.cactusDark, -0.062, 0.042, -0.045),
+    ball(0.055, PALETTE.pebbleWarm, 0, 0.012, 0, 0.35, 1, 0),
+  ]),
+
+  coral_fan: () => {
+    const parts = [ball(0.06, PALETTE.shellIvory, 0, 0.018, 0, 0.4, 1, 0)];
+    const cols = [PALETTE.coralA, PALETTE.coralC, PALETTE.coralB];
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + 0.5;
+      const fan = new THREE.CylinderGeometry(0.012, 0.02, 0.17, 5);
+      paint(fan, cols[i]);
+      fan.rotateZ(Math.cos(a) * 0.45);
+      fan.rotateX(Math.sin(a) * 0.45);
+      fan.translate(Math.cos(a) * 0.035, 0.095, Math.sin(a) * 0.035);
+      parts.push(fan);
+      parts.push(ball(0.045, cols[i], Math.cos(a) * 0.06, 0.18, Math.sin(a) * 0.06, 0.85, 0.5, 0));
     }
     return merge(parts);
   },
@@ -349,9 +403,12 @@ export const PROP_FACTORIES = {
     ball(0.04, PALETTE.furBear, 0.078, 0.375, -0.005, 0.9, 0.7),
     ball(0.021, PALETTE.furBearDark, -0.078, 0.381, 0.02, 0.9, 0.5, 0),
     ball(0.021, PALETTE.furBearDark, 0.078, 0.381, 0.02, 0.9, 0.5, 0),
+    cyl(0.072, 0.082, 0.05, 10, PALETTE.rope, 0, 0.395, 0.005),
+    cyl(0.155, 0.155, 0.014, 12, PALETTE.rope, 0, 0.372, 0.005),
+    cyl(0.085, 0.085, 0.012, 10, PALETTE.clothWarm, 0, 0.378, 0.005),
     ball(0.055, PALETTE.snout, 0, 0.272, 0.078, 0.78, 0.7),
     ball(0.019, PALETTE.eyeDark, 0, 0.288, onHead({ x: 0, y: 0.30, z: 0.012, r: 0.108 }, 0, -0.012) + 0.03, 0.8, 0.8, 0),
-    ...face({ x: 0, y: 0.30, z: 0.012, r: 0.108 }, { spread: 0.044 }),
+    ...face({ x: 0, y: 0.30, z: 0.012, r: 0.108 }, { spread: 0.048 }),
     // 水壺放在腳邊，不是拿在手上
     cyl(0.052, 0.06, 0.085, 8, PALETTE.leafTeal, 0.255, 0.043, 0.02),
     cyl(0.055, 0.052, 0.012, 8, PALETTE.leafPine, 0.255, 0.09, 0.02),
@@ -382,9 +439,12 @@ export const PROP_FACTORIES = {
     ball(0.032, PALETTE.furRabbit, -0.018, 0.40, -0.01, 2.1, 0.6),
     ball(0.016, PALETTE.furRabbitIn, -0.102, 0.405, 0.012, 2.0, 0.4, 0),
     ball(0.016, PALETTE.furRabbitIn, -0.018, 0.405, 0.012, 2.0, 0.4, 0),
+    ball(0.026, PALETTE.flowerA, -0.085, 0.378, 0.03, 0.8, 0.6, 0),
+    ball(0.026, PALETTE.flowerA, -0.035, 0.378, 0.03, 0.8, 0.6, 0),
+    ball(0.013, PALETTE.clothWarm, -0.06, 0.378, 0.038, 1, 0.8, 0),
     ball(0.044, PALETTE.snout, -0.06, 0.262, 0.072, 0.72, 0.7),
     ball(0.015, PALETTE.furRabbitIn, -0.06, 0.275, onHead({ x: -0.06, y: 0.285, z: 0.012, r: 0.095 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
-    ...face({ x: -0.06, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.04, eye: 0.019 }),
+    ...face({ x: -0.06, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.044, eye: 0.027 }),
   ]),
 
   animal_cat_nap: () => merge([
@@ -405,6 +465,7 @@ export const PROP_FACTORIES = {
     ball(0.02, PALETTE.cheek, 0.102, 0.085, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, 0.057, -0.01), 0.7, 0.35, 0),
     // 項圈：牠也有「穿」一件東西
     cyl(0.062, 0.066, 0.022, 10, PALETTE.clothWarm, 0.03, 0.055, 0.045),
+    ball(0.019, PALETTE.gold, 0.03, 0.05, 0.102, 1, 1, 0),
   ]),
 
   animal_fox_fish: () => merge([
@@ -418,9 +479,11 @@ export const PROP_FACTORIES = {
     ball(0.098, PALETTE.furFox, 0, 0.272, 0.012),
     ball(0.034, PALETTE.furFox, -0.072, 0.355, -0.008, 1.5, 0.55),
     ball(0.034, PALETTE.furFox, 0.072, 0.355, -0.008, 1.5, 0.55),
+    ball(0.098, PALETTE.leafPine, 0, 0.332, 0.004, 0.52, 1),
+    ball(0.072, PALETTE.leafPine, 0, 0.322, 0.082, 0.18, 0.7, 0),
     ball(0.042, PALETTE.snout, 0, 0.245, 0.08, 0.7, 0.85),
     ball(0.015, PALETTE.eyeDark, 0, 0.252, onHead({ x: 0, y: 0.272, z: 0.012, r: 0.098 }, 0, -0.02) + 0.032, 0.8, 0.8, 0),
-    ...face({ x: 0, y: 0.272, z: 0.012, r: 0.098 }, { spread: 0.04, eye: 0.019 }),
+    ...face({ x: 0, y: 0.272, z: 0.012, r: 0.098 }, { spread: 0.044, eye: 0.027 }),
     // 釣竿插在地上，魚簍放旁邊
     cyl(0.009, 0.009, 0.38, 4, PALETTE.woodDark, 0.175, 0.17, 0.02),
     box(0.005, 0.15, 0.005, PALETTE.rope, 0.175, 0.26, 0.175),
@@ -507,7 +570,7 @@ export const PROP_FACTORIES = {
     ball(0.1, PALETTE.furBear, 0, 0.298, 0.035),
     ball(0.052, PALETTE.snout, 0, 0.272, 0.095, 0.78, 0.7),
     ball(0.018, PALETTE.eyeDark, 0, 0.288, onHead({ x: 0, y: 0.298, z: 0.035, r: 0.1 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
-    ...face({ x: 0, y: 0.298, z: 0.035, r: 0.1 }, { spread: 0.042 }),
+    ...face({ x: 0, y: 0.298, z: 0.035, r: 0.1 }, { spread: 0.046 }),
     // 花圃：兩叢花在腳邊
     ball(0.055, PALETTE.leafRound, 0.24, 0.035, 0.03, 0.6, 1),
     ball(0.022, PALETTE.flowerA, 0.255, 0.075, 0.05, 1, 1, 0),
@@ -532,7 +595,7 @@ export const PROP_FACTORIES = {
     ball(0.016, PALETTE.furRabbitIn, -0.013, 0.405, 0.012, 2.0, 0.4, 0),
     ball(0.044, PALETTE.snout, -0.055, 0.262, 0.072, 0.72, 0.7),
     ball(0.015, PALETTE.furRabbitIn, -0.055, 0.275, onHead({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
-    ...face({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.04, eye: 0.019 }),
+    ...face({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.044, eye: 0.027 }),
     cyl(0.026, 0.022, 0.05, 8, PALETTE.teaCup, 0.075, 0.028, 0.08),
     cyl(0.028, 0.028, 0.008, 8, PALETTE.clothWarm, 0.075, 0.056, 0.08),
   ]),
@@ -548,7 +611,7 @@ export const PROP_FACTORIES = {
     ball(0.094, PALETTE.furFox, 0, 0.272, 0.028),
     ball(0.042, PALETTE.snout, 0, 0.245, 0.095, 0.7, 0.85),
     ball(0.015, PALETTE.eyeDark, 0, 0.252, onHead({ x: 0, y: 0.272, z: 0.028, r: 0.094 }, 0, -0.02) + 0.032, 0.8, 0.8, 0),
-    ...face({ x: 0, y: 0.272, z: 0.028, r: 0.094 }, { spread: 0.04, eye: 0.019 }),
+    ...face({ x: 0, y: 0.272, z: 0.028, r: 0.094 }, { spread: 0.044, eye: 0.027 }),
     cyl(0.008, 0.008, 0.4, 4, PALETTE.woodDark, 0.185, 0.2, 0.02),
     cone(0.17, 0.095, 10, PALETTE.leafTeal, 0.185, 0.425, 0.02),
     cyl(0.009, 0.009, 0.36, 4, PALETTE.woodDark, -0.015, 0.16, 0.19),

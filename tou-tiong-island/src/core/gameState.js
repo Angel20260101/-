@@ -223,6 +223,7 @@ export class GameState extends EventTarget {
         title: story?.title ?? '',
         subtitle: story?.subtitle ?? '',
         name: state.name || island.default_name,
+        biome: this.content.islandMap.biomes?.[island.biome]?.name ?? '',
         unlocked: state.unlocked,
         plays: state.plays ?? 0,
         routes: island.growth.map((g) => ({

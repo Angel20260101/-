@@ -61,6 +61,21 @@ export function buildWorld(map, progress = {}, wish = {}) {
    * 佔位半徑。散佈時用「兩者半徑相加」判斷太不太近，所以大東西讓得多、
    * 小東西可以擠在一起——地面細節本來就該密。
    */
+  /**
+   * 氣候區：決定一座島的地表配色、植被與地面細節。
+   * 沒寫到的部分沿用全域設定，所以加一個新氣候區只要在 biomes 裡多一筆。
+   */
+  const biomeOf = (id) => {
+    const b = map.biomes?.[id] ?? {};
+    return {
+      id: id ?? 'oasis',
+      name: b.name ?? '',
+      surfaces: b.surfaces ?? {},
+      flora: b.flora ?? 'temperate',
+      clutterFor: (surface) => b.clutter?.[surface] ?? map.ground_clutter?.[surface],
+    };
+  };
+
   const R = { landmark: 0.40, flora: 0.26, clutter: 0.085 };
   const clashes = (occupied, x, z, r) =>
     occupied.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < (p.r + r) ** 2);
@@ -95,12 +110,10 @@ export function buildWorld(map, progress = {}, wish = {}) {
    * 這一道照 hex 的 surface 鋪，所以連 flora 設成 none 的空地也有東西看。
    * 跟著同一組種子亂數，位置每次重建都一樣。
    */
-  const scatterClutter = (hexes, origin, seedKey, occupied) => {
-    const table = map.ground_clutter;
-    if (!table) return;
+  const scatterClutter = (hexes, origin, seedKey, occupied, biome) => {
     const rand = seeded(seedKey);
     for (const hex of hexes) {
-      const spec = table[hex.surface];
+      const spec = biome.clutterFor(hex.surface);
       if (!spec?.count || !spec.types?.length) continue;
       const base = hexTopPosition(hex, cfg, origin);
       // 亂丟點會越丟越容易撞到已經放好的東西，丟 count 次大概只會成功一半。
@@ -162,13 +175,14 @@ export function buildWorld(map, progress = {}, wish = {}) {
   {
     const home = map.home;
     const origin = home.origin;
+    const biome = biomeOf(home.biome);
     const hexes = home.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, biome.surfaces);
     const landmarks = home.landmarks;
     placeLandmarks(landmarks, home.hexes, origin);
     const homeOccupied = occupiedOf(landmarks, home.hexes, origin);
-    scatterFlora(home.hexes, origin, home.flora, `${home.island_id}-flora`, homeOccupied);
-    scatterClutter(home.hexes, origin, `${home.island_id}-clutter`, homeOccupied);
+    scatterFlora(home.hexes, origin, biome.flora, `${home.island_id}-flora`, homeOccupied);
+    scatterClutter(home.hexes, origin, `${home.island_id}-clutter`, homeOccupied, biome);
 
     const anchors = {};
     for (const lm of landmarks) {
@@ -185,6 +199,8 @@ export function buildWorld(map, progress = {}, wish = {}) {
     islands.push({
       island_id: home.island_id,
       kind: 'home',
+      biome: biome.id,
+      biome_name: biome.name,
       sky_anchor: home.sky_anchor ?? null,
       name: home.name,
       tagline: home.tagline,
@@ -204,8 +220,9 @@ export function buildWorld(map, progress = {}, wish = {}) {
   if (map.wish_island) {
     const w = map.wish_island;
     const origin = w.origin;
+    const biome = biomeOf(w.biome);
     const hexes = w.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, biome.surfaces);
     placeLandmarks(w.landmarks, w.hexes, origin);
 
     const statusOf = new Map((wish.board?.themes ?? []).map((t) => [t.theme, t.status]));
@@ -224,8 +241,8 @@ export function buildWorld(map, progress = {}, wish = {}) {
       occupied.push({ x: base.x + dx, z: base.z + dz });
       trees++;
     }
-    scatterFlora(w.hexes, origin, w.flora, `${w.island_id}-flora`, occupied);
-    scatterClutter(w.hexes, origin, `${w.island_id}-clutter`, occupied);
+    scatterFlora(w.hexes, origin, biome.flora, `${w.island_id}-flora`, occupied);
+    scatterClutter(w.hexes, origin, `${w.island_id}-clutter`, occupied, biome);
 
     const centre = axialToWorld(origin.q, origin.r, cfg.size);
     placeAnimals(w.animals, w.hexes, origin, centre);
@@ -254,6 +271,8 @@ export function buildWorld(map, progress = {}, wish = {}) {
     islands.push({
       island_id: w.island_id,
       kind: 'wish',
+      biome: biome.id,
+      biome_name: biome.name,
       name: w.name,
       tagline: w.tagline,
       geometry,
@@ -316,12 +335,13 @@ export function buildWorld(map, progress = {}, wish = {}) {
       grown.push(growth);
     }
 
+    const biome = biomeOf(island.biome);
     const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, biome.surfaces);
     placeLandmarks(localLandmarks, localHexes, origin);
     const occupied = occupiedOf(localLandmarks, localHexes, origin);
-    scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-${grown.length}`, occupied);
-    scatterClutter(localHexes, origin, `${island.island_id}-clutter-${grown.length}`, occupied);
+    scatterFlora(localHexes, origin, biome.flora, `${island.island_id}-flora-${grown.length}`, occupied);
+    scatterClutter(localHexes, origin, `${island.island_id}-clutter-${grown.length}`, occupied, biome);
     placeAnimals(island.animals, localHexes, origin, axialToWorld(origin.q, origin.r, cfg.size));
 
     islands.push({
@@ -329,6 +349,8 @@ export function buildWorld(map, progress = {}, wish = {}) {
       kind: 'story',
       story_id: island.story_id,
       order: island.order,
+      biome: biome.id,
+      biome_name: biome.name,
       name: state.name || island.default_name,
       default_name: island.default_name,
       unlocked: true,

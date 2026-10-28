@@ -482,3 +482,12 @@ body {
 
 /* 示範資料的提示條：要一眼看出「這不是你的紀錄」，所以用警示色而不是中性色 */
 .card--demo { border: 1px solid var(--gold); background: #fdf6e5; }
+
+/* 氣候區：島嶼面板與航海圖上標出這座島屬於哪一種地景 */
+.climate { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.climate__tag {
+  display: inline-block; margin-right: 8px; padding: 2px 9px; border-radius: 999px;
+  background: var(--paper2); border: 1px solid var(--line);
+  font-size: 11.5px; font-weight: 700; color: var(--accent);
+}
+.atlas__biome { font-size: 11px; color: var(--gold); font-weight: 700; margin-top: 1px; }

@@ -81,15 +81,44 @@ check('沒有陰影、後製、粒子、動態光源',
 const instances = [...full.props.values()].reduce((n, m) => n + m.length, 0);
 check(`道具實例總數 ${instances}，在 2000 以內`, instances <= 2000);
 
-// 地面細節的型別都真的存在，不然資料寫錯只會安靜地少東西
+// 地面細節與氣候區植被的型別都真的存在，不然資料寫錯只會安靜地少東西
 const { PROP_FACTORIES } = await import('../src/world/props.js');
 const missing = [];
-for (const [surface, spec] of Object.entries(map.ground_clutter ?? {})) {
-  if (surface.startsWith('_')) continue;
-  for (const t of spec.types ?? []) if (!PROP_FACTORIES[t]) missing.push(`${surface}:${t}`);
+const scanClutter = (table, where) => {
+  for (const [surface, spec] of Object.entries(table ?? {})) {
+    if (surface.startsWith('_')) continue;
+    for (const t of spec.types ?? []) if (!PROP_FACTORIES[t]) missing.push(`${where}/${surface}:${t}`);
+  }
+};
+scanClutter(map.ground_clutter, 'ground_clutter');
+for (const [id, b] of Object.entries(map.biomes ?? {})) {
+  if (id.startsWith('_')) continue;
+  scanClutter(b.clutter, `biome:${id}`);
 }
-check('ground_clutter 指到的道具型別都存在', missing.length === 0);
+for (const [name, table] of Object.entries(map.flora_table ?? {})) {
+  for (const [kind, types] of Object.entries(table)) {
+    for (const t of types) if (!PROP_FACTORIES[t]) missing.push(`flora:${name}/${kind}:${t}`);
+  }
+}
+check('ground_clutter、氣候區與植被表指到的道具型別都存在', missing.length === 0);
 if (missing.length) console.error('    找不到：' + missing.join(', '));
+
+// 氣候區：每座島指到的氣候區要存在，氣候區指到的植被表也要存在
+const biomeProblems = [];
+const allIslands = [map.home, map.wish_island, ...map.islands].filter(Boolean);
+for (const i of allIslands) {
+  const b = map.biomes?.[i.biome];
+  if (!b) { biomeProblems.push(`${i.island_id} 的氣候區 ${i.biome} 不存在`); continue; }
+  if (!map.flora_table?.[b.flora]) biomeProblems.push(`氣候區 ${i.biome} 的植被表 ${b.flora} 不存在`);
+}
+check('每座島的氣候區與它的植被表都存在', biomeProblems.length === 0);
+if (biomeProblems.length) console.error('    ' + biomeProblems.join('\n    '));
+
+// 氣候區要真的看得出不一樣，不然做了等於沒做
+const used = new Set(allIslands.map((i) => i.biome));
+check(`用到 ${used.size} 種氣候區，至少 4 種`, used.size >= 4);
+const tinted = [...used].filter((id) => Object.keys(map.biomes[id].surfaces ?? {}).length);
+check(`其中 ${tinted.length} 種有自己的地表配色`, tinted.length >= used.size - 1);
 
 // 每一種地表都要有細節，不然拉近會看到一整片空的色塊
 const surfaces = new Set();
@@ -97,7 +126,7 @@ for (const i of [map.home, map.wish_island, ...map.islands.flatMap((x) => [x.bas
   for (const h of i?.hexes ?? []) surfaces.add(h.surface);
 }
 const bare = [...surfaces].filter((s) => !(map.ground_clutter?.[s]?.count));
-check('所有用到的地表種類都有地面細節', bare.length === 0);
+check('所有用到的地表種類都有地面細節（全域表）', bare.length === 0);
 if (bare.length) console.error('    沒有細節的地表：' + bare.join(', '));
 
 console.log(failures ? `\n✗ ${failures} 項未通過\n` : '\n✓ 全部通過\n');
