@@ -6,7 +6,7 @@
  * 所以加地面細節的時候 draw calls 從 40 悄悄爬到 48 都沒人發現。
  * 這支把它變成會擋下來的測試。
  *
- * 這裡算的是**估算值**，而且刻意算得比實際高一點（目前估 50、瀏覽器實測 48），
+ * 這裡算的是**估算值**，而且刻意算得比實際高一點（全新存檔估 40、瀏覽器實測 38），
  * 寧可早一步擋下來。真正的數字以瀏覽器量到的為準，公式見下面 estimateDrawCalls()。
  */
 import { readFileSync } from 'node:fs';
@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { buildWorld } from '../src/world/islandBuilder.js';
 import { BUDGET } from '../src/world/perf.js';
+import { CAST, CHARACTER_KINDS } from '../src/world/characters.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
@@ -42,14 +43,25 @@ const fullProgress = Object.fromEntries(map.islands.map((i) => [
  * 點選用的代理圓柱 material.visible = false，不會進渲染，所以不算。
  */
 function estimateDrawCalls(world) {
-  const animalTypes = new Set();
-  const rainyTypes = new Set();
+  // 島民分兩類。列在 CAST 的走角色系統：部件依**幾何種類**分批，
+  // 所以不管島上有幾隻、幾種動物，固定就是 CHARACTER_KINDS 這麼多個批次——
+  // 加角色不再吃 draw call，這是能把島填滿的前提。
+  // 其餘維持舊的「一種型別一個 InstancedMesh」。
+  const legacy = new Set();
+  const legacyRainy = new Set();
+  const furniture = new Set();
+  let hasCast = false;
   for (const a of world.animals) {
-    animalTypes.add(a.forms.default.type);
-    rainyTypes.add(a.forms.rainy.type);
+    for (const [form, bucket] of [[a.forms.default, legacy], [a.forms.rainy, legacyRainy]]) {
+      const role = CAST[form.type];
+      if (role) { hasCast = true; if (role.furniture) furniture.add(role.furniture); }
+      else bucket.add(form.type);
+    }
   }
   return world.props.size
-    + Math.max(animalTypes.size, rainyTypes.size)
+    + Math.max(legacy.size, legacyRainy.size)
+    + (hasCast ? CHARACTER_KINDS.length : 0)
+    + furniture.size
     + world.islands.filter((i) => i.geometry).length
     + (world.boats.length ? 1 : 0)
     + 6;
@@ -74,8 +86,20 @@ console.log(`    還可以再加 ${room} 種新道具型別。不夠用的時候
 console.log('    要嘛重新檢討 BUDGET，不要偷偷超過。');
 
 check('沒有使用貼圖（BUDGET.maxTextureSize = 0）', BUDGET.maxTextureSize === 0);
-check('沒有陰影、後製、粒子、動態光源',
-  !BUDGET.shadows && !BUDGET.postProcessing && !BUDGET.particles && BUDGET.dynamicLights === 0);
+check('沒有後製、粒子、動態光源',
+  !BUDGET.postProcessing && !BUDGET.particles && BUDGET.dynamicLights === 0);
+
+/**
+ * 陰影自 2026-10 起是開的，但它便宜的唯一理由是「只烘焙一次」。
+ * 哪天有人把 autoUpdate 打開，每幀都會多跑一次完整的陰影 pass，
+ * 成本直接翻倍而且不會有任何錯誤訊息——所以在這裡把它釘死。
+ */
+const sceneSrc = readFileSync(join(ROOT, 'src/world/sceneManager.js'), 'utf8');
+check('陰影是靜態烘焙的（shadowMap.autoUpdate = false）',
+  /shadowMap\.autoUpdate\s*=\s*false/.test(sceneSrc));
+check('會動的物件不投影（島民、小船、雲用 cast: false）',
+  /MOVING_SHADOW\s*=\s*\{\s*cast:\s*false/.test(sceneSrc)
+  && /NO_SHADOW\s*=\s*\{\s*cast:\s*false/.test(sceneSrc));
 
 // 實例總數：三角形幾乎是免費的，但矩陣更新是 CPU 成本，還是要盯著
 const instances = [...full.props.values()].reduce((n, m) => n + m.length, 0);

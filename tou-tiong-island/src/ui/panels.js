@@ -87,7 +87,14 @@ export function trustPanel(sheet, { onDone }) {
         </div>
         <div class="trust__row">
           <span class="trust__dot">3</span>
-          <span class="trust__text">公司只會看到<b>「有多少人提了哪些主題」</b>——看不到是誰說的，也看不到原文。</span>
+          <span class="trust__text">公司那邊看得到的，只有這些：
+            <span class="trust__see">
+              <span class="trust__tag trust__tag--yes">看得到</span>
+              <span>有多少人參與、哪些主題被提到幾次</span>
+              <span class="trust__tag trust__tag--no">看不到</span>
+              <span>你寫的任何一個字、你是誰、你選了什麼</span>
+            </span>
+          </span>
         </div>
       </div>
       <p class="tiny">這座島不做心理診斷，也不評價你的選擇。隨時可以離開。</p>

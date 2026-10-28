@@ -2,9 +2,13 @@
  * WebGL 場景管理。
  *
  * 效能守則（都在這個檔案裡被執行，不是口號）：
- *   1. 沒有即時陰影：shadowMap 關閉。
- *   2. 只有兩盞靜態光：HemisphereLight ＋ 一盞不投影的 DirectionalLight。
+ *   1. 陰影是靜態烘焙的：shadowMap.autoUpdate = false，只在世界重建或光源
+ *      改變時重算一次。島不會動，所以沒有必要每幀重算。
+ *   2. 三盞靜態光：HemisphereLight（天空冷／地面暖）＋ 投影的主太陽
+ *      ＋ 一盞不投影的冷色補光。三者的冷暖對比就是立體感的來源。
  *   3. 沒有後製、沒有模糊濾鏡、不使用任何貼圖（顏色全走頂點色）。
+ *      tone mapping 不算後製：它沒有額外的 render pass，只是最終著色器
+ *      寫出顏色前的一次轉換，不佔 draw call。
  *   4. 天空是 CSS 漸層，不是 3D 物件——換天氣只是改兩個色碼，零 draw call。
  *   5. 同型別道具與島民各收成一個 InstancedMesh；雲與雨各只有一個。
  *   6. 動畫迴圈只在地圖可見時跑，並依裝置分級限制幀率；
@@ -18,6 +22,35 @@ import { PROP_FACTORIES } from './props.js';
 import { buildWorld } from './islandBuilder.js';
 import { CameraController } from './cameraController.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { CAST, CHARACTER_KINDS, buildCharacter, poseCharacter } from './characters.js';
+import { makeRoute, sampleRoute } from './routes.js';
+
+/**
+ * 光比。這兩個值分開調，因為畫面平不平取決於「太陽／環境」的比值，
+ * 而不是總亮度。
+ *
+ * palette.js 原本的 sunny 是 hemi 1.15、dir 1.45——半球光幾乎跟太陽一樣強。
+ * 半球光不會被陰影遮擋，所以它等於是均勻打亮整座島的底光：它愈強，
+ * 亮面與暗面的差距就愈小，畫面就愈平。這裡把 sunny 的比值從 1.26 拉到約 4.9。
+ *
+ * 絕對值刻意壓得比原本低，這點反直覺，值得寫下來免得有人又把它調高：
+ * ACES 在高光段會把對比壓掉。強度拉太高時，亮面與暗面雙雙被推進曲線的肩部，
+ * 線性空間 3.46 : 1.06 的差距，過完 ACES 只剩 0.96 : 0.80——陰影等於白做。
+ * 要讓陰影看得見，畫面必須待在曲線的線性段，也就是強度要低、不是要高。
+ *
+ * 調整順序：先用比值決定立體感，再用 toneMappingExposure 決定明暗。
+ * 不要用拉高強度的方式調亮，那會把對比一起吃掉。
+ */
+const HEMI_GAIN = 0.35;
+const SUN_GAIN = 1.35;
+/** 補光固定，不隨天氣起伏——它的工作是托住背光面，不是參與表演。 */
+const FILL_INTENSITY = 0.21;
+
+/** 會動的物件：不投影（影子會卡住），但照常受影。 */
+const MOVING_SHADOW = { cast: false, receive: true };
+/** 雲與雨：兩者都不要。 */
+const NO_SHADOW = { cast: false, receive: false };
 
 const MAX_CLOUDS = 10;
 const MAX_RAIN = 90;
@@ -43,25 +76,76 @@ export class SceneManager {
       alpha: true,                 // 天空交給 CSS 漸層，WebGL 只畫島
       powerPreference: 'high-performance', stencil: false, depth: true,
     });
-    this.renderer.shadowMap.enabled = false;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.profile.pixelRatio));
     this.renderer.setClearAlpha(0);
+
+    // 色彩管線。這兩行幾乎不花成本，但沒有它們，所有顏色都會偏灰偏淡：
+    // 頂點色是 sRGB，沒宣告的話 three 會當成線性空間直接送進著色器。
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
+
+    // 靜態陰影：開著，但不每幀更新。invalidate() 會在需要時補一次。
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(PALETTE.haze, 60, 150);
     this.camera = new THREE.PerspectiveCamera(34, 1, 1, 160);
 
-    this.hemi = new THREE.HemisphereLight(0xffffff, PALETTE.sandSide, 1.1);
-    this.dir = new THREE.DirectionalLight(0xfff6e2, 1.3);
+    this.hemi = new THREE.HemisphereLight(0xffffff, PALETTE.sandSide, 1.1 * HEMI_GAIN);
+    this.dir = new THREE.DirectionalLight(0xfff6e2, 1.3 * SUN_GAIN);
     this.dir.position.set(-14, 22, 10);
-    this.dir.castShadow = false;
-    this.scene.add(this.hemi, this.dir);
 
-    this.terrainMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    this.propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    this.cloudMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.95 });
+    // 主太陽是唯一投影的光源。shadow.camera 的範圍要剛好包住整座群島：
+    // 開太大，陰影貼圖的解析度會被稀釋成糊的；開太小，邊緣的島會沒有陰影。
+    this.dir.castShadow = true;
+    const sm = this.profile.shadowMapSize;
+    this.dir.shadow.mapSize.set(sm, sm);
+    Object.assign(this.dir.shadow.camera, {
+      left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 90,
+    });
+    // 這行是必要的，不是保險：three 的 LightShadow.updateMatrices() 只會更新
+    // matrixWorld，不會重算投影矩陣。少了它，上面那六個值完全不生效，
+    // 陰影相機會停在預設的 ±5，整座島都落在框外，陰影一個都看不到。
+    this.dir.shadow.camera.updateProjectionMatrix();
+    this.dir.shadow.bias = -0.0006;
+    this.dir.shadow.normalBias = 0.045;   // 低多邊形＋flatShading 不加這個會長出陰影痤瘡
+    this.dir.shadow.radius = 3;
+
+    // 冷色補光，不投影。它負責把背光面從死黑拉回來，
+    // 跟暖色的主太陽形成冷暖對比——這是塊面感的來源，不是亮度問題。
+    this.fill = new THREE.DirectionalLight(0xbfd6ff, FILL_INTENSITY);
+    this.fill.position.set(12, 14, -16);
+    this.fill.castShadow = false;
+
+    this.scene.add(this.hemi, this.dir, this.fill);
+
+    // Lambert 的表面沒有粗糙度概念，光打上去是平的；Standard 走 PBR，
+    // 同一個面會隨法線產生細微的明暗過渡，塊面之間才分得出來。
+    // 全部維持 metalness = 0：這座島上沒有金屬，給了只會變髒。
+    this.terrainMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0,
+    });
+    this.propMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: 0.82, metalness: 0,
+    });
+    this.cloudMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: 1, metalness: 0,
+      transparent: true, opacity: 0.95,
+    });
     this.rainMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.foam, transparent: true, opacity: 0.55 });
     this.pickMaterial = new THREE.MeshBasicMaterial({ visible: false });
+
+    // 角色材質。不開 flatShading——角色是圓的，塊面感留給地形與建築，
+    // 臉和身體平滑一點才不會每個轉角都切出一道硬邊。
+    this.characterMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.74, metalness: 0,
+    });
+    this._tmpColor = new THREE.Color();
+    this.cast = [];
 
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
@@ -78,7 +162,10 @@ export class SceneManager {
     this._buildRain();
 
     this.weather = WEATHER.sunny;
-    this._lightTarget = { hemi: this.weather.hemiIntensity, dir: this.weather.dirIntensity };
+    this._lightTarget = {
+      hemi: this.weather.hemiIntensity * HEMI_GAIN,
+      dir: this.weather.dirIntensity * SUN_GAIN,
+    };
     this._colourTarget = this._targetsFor(this.weather);
 
     this._raycaster = new THREE.Raycaster();
@@ -173,7 +260,7 @@ export class SceneManager {
     this._paintSky(w);
     if (this.veilLayer) this.veilLayer.style.background = w.veil ?? 'transparent';
     this._colourTarget = this._targetsFor(w);
-    this._lightTarget = { hemi: w.hemiIntensity, dir: w.dirIntensity };
+    this._lightTarget = { hemi: w.hemiIntensity * HEMI_GAIN, dir: w.dirIntensity * SUN_GAIN };
     if (this.clouds) {
       this.clouds.count = Math.min(w.clouds, MAX_CLOUDS);
       // 雲高跟著天氣走：晴天高而少，陰雨天低而密，低下來才進得了鏡頭
@@ -193,9 +280,11 @@ export class SceneManager {
       this.hemi.color.copy(this._colourTarget.hemiSky);
       this.hemi.groundColor.copy(this._colourTarget.hemiGround);
       this.cloudMaterial.color.copy(this._colourTarget.cloud);
-      this.hemi.intensity = w.hemiIntensity;
-      this.dir.intensity = w.dirIntensity;
+      this.hemi.intensity = this._lightTarget.hemi;
+      this.dir.intensity = this._lightTarget.dir;
     }
+    // 太陽的顏色與強度變了，烘焙好的陰影要重算一次
+    this.renderer.shadowMap.needsUpdate = true;
     this.invalidate();
     return w;
   }
@@ -211,6 +300,8 @@ export class SceneManager {
       if (island.geometry) {
         const mesh = new THREE.Mesh(island.geometry, this.terrainMaterial);
         mesh.matrixAutoUpdate = false;
+        mesh.castShadow = true;      // 島的側壁要在鄰島與海面上落下影子
+        mesh.receiveShadow = true;
         this.worldGroup.add(mesh);
       }
       const b = island.bounds;
@@ -254,12 +345,21 @@ export class SceneManager {
     return islands;
   }
 
-  _instanced(type, count, material = this.propMaterial) {
+  /**
+   * 陰影的 cast 與 receive 要分開看，差別在成本與正確性：
+   *   cast    烘焙進陰影貼圖，只在 needsUpdate 時算一次 → 會動的東西不能投影，
+   *           否則影子會留在原地。所以島民、小船、雲一律 cast = false。
+   *   receive 在主 pass 每幀計算 → 會動的東西受影完全正確。
+   *           島民走進樹蔭下會變暗，這是免費的。
+   */
+  _instanced(type, count, material = this.propMaterial, shadow = { cast: true, receive: true }) {
     const factory = PROP_FACTORIES[type];
     if (!factory || !count) return null;
     if (!this.propGeometryCache.has(type)) this.propGeometryCache.set(type, factory());
     const mesh = new THREE.InstancedMesh(this.propGeometryCache.get(type), material, count);
     mesh.frustumCulled = false;
+    mesh.castShadow = shadow.cast;
+    mesh.receiveShadow = shadow.receive;
     this.worldGroup.add(mesh);
     this.instancedMeshes.push(mesh);
     return mesh;
@@ -277,24 +377,214 @@ export class SceneManager {
       const i = this.instancedMeshes.indexOf(mesh);
       if (i >= 0) this.instancedMeshes.splice(i, 1);
     }
+    for (const mesh of this._castMeshes ?? []) {
+      this.worldGroup.remove(mesh);
+      mesh.dispose();
+      const i = this.instancedMeshes.indexOf(mesh);
+      if (i >= 0) this.instancedMeshes.splice(i, 1);
+    }
+    this._castMeshes = [];
     this._animalMeshes = [];
     this.animals = [];
+    this.cast = [];
 
     const key = this.weather?.id === 'rainy' ? 'rainy' : 'default';
-    const byType = new Map();
+    const resolved = [];
     for (const a of this._animalSource) {
       const form = a.forms[key] ?? a.forms.default;
       if (!form?.type || form.hidden) continue;
-      if (!byType.has(form.type)) byType.set(form.type, []);
-      byType.get(form.type).push({ ...a, ...form });
+      resolved.push({ ...a, ...form });
+    }
+
+    // 有列在選角表的走新的角色系統，其餘維持舊的整塊道具路徑。
+    // 這讓遷移可以一隻一隻搬，而不是全有全無。
+    this._buildCast(resolved.filter((a) => CAST[a.type]));
+
+    const byType = new Map();
+    for (const a of resolved) {
+      if (CAST[a.type]) continue;
+      if (!byType.has(a.type)) byType.set(a.type, []);
+      byType.get(a.type).push(a);
     }
     for (const [type, group] of byType) {
-      const mesh = this._instanced(type, group.length);
+      const mesh = this._instanced(type, group.length, this.propMaterial, MOVING_SHADOW);
       if (!mesh) continue;
       this._animalMeshes.push(mesh);
       group.forEach((a, i) => this.animals.push({ ...a, mesh, index: i }));
     }
     this._stepAnimals(this._clock ?? 0);
+    this._stepCast(this._clock ?? 0);
+  }
+
+  /**
+   * 角色用的單位幾何。
+   *
+   * 全部做成「單位尺寸」，實際大小交給每個部件的 scale——這樣全島所有角色的
+   * 所有頭共用同一個 geometry，不管有幾隻、幾種動物。
+   *
+   * 每個幾何都補一條全白的 color 屬性：材質開著 vertexColors，而 InstancedMesh
+   * 的 instanceColor 是「乘」上去的。沒有這條白色底，缺少的頂點屬性會被當成
+   * 黑色，整群角色會變成黑影。
+   */
+  _charGeometry(kind) {
+    if (!this._charGeo) this._charGeo = new Map();
+    if (this._charGeo.has(kind)) return this._charGeo.get(kind);
+    let g;
+    switch (kind) {
+      case 'rbox': g = new RoundedBoxGeometry(1, 1, 1, 2, 0.14); break;
+      case 'cyl': g = new THREE.CylinderGeometry(1, 1, 1, 10); break;
+      case 'cone': g = new THREE.ConeGeometry(1, 1, 8); break;
+      default: g = new THREE.IcosahedronGeometry(1, 1); break;
+    }
+    const n = g.attributes.position.count;
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+    this._charGeo.set(kind, g);
+    return g;
+  }
+
+  /**
+   * 建立角色。
+   *
+   * 部件依**幾何種類**分批，不是依角色種類：所有角色的頭進同一個 InstancedMesh，
+   * 所有身體進另一個。所以種類固定 4 個 draw call，角色數量不影響預算——
+   * 這是「把島填滿」而不撞到 BUDGET.maxDrawCalls 的前提。
+   */
+  _buildCast(list) {
+    const slots = new Map(CHARACTER_KINDS.map((k) => [k, 0]));
+    const actors = [];
+
+    for (const a of list) {
+      const role = CAST[a.type];
+      const seed = (a.base.x * 31.7 + a.base.z * 17.3) % 1;
+      const character = buildCharacter({ species: role.species, held: role.held, seed });
+      for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
+
+      // patrol 的資料原本只有「沿某軸來回 range 距離」。把它變成一條真正的路徑，
+      // 角色就會等速走完並在端點平順地轉身，而不是用 cos>=0 瞬間翻面。
+      let route = null;
+      if (a.behaviour === 'patrol' && a.range > 0) {
+        const ax = a.axis === 'z' ? 'z' : 'x';
+        const from = { ...a.base }, to = { ...a.base };
+        from[ax] -= a.range; to[ax] += a.range;
+        route = makeRoute([from, to], { loop: false, smooth: false });
+      }
+      actors.push({
+        character,
+        activity: route ? 'walk' : (role.activity ?? 'idle'),
+        route,
+        base: a.base,
+        rot: a.rot ?? 0,
+        speed: a.speed ?? 0.5,
+        phase: (seed * 97) % 10,
+      });
+    }
+
+    this._castMeshes = [];      // 全部角色相關批次，重建時要清掉
+    this._castPartMeshes = [];  // 只有會動的部件批次，每幀才需要重傳矩陣
+    const meshByKind = new Map();
+    for (const [kind, count] of slots) {
+      if (!count) continue;
+      const mesh = new THREE.InstancedMesh(this._charGeometry(kind), this.characterMaterial, count);
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;      // 會動，投影會卡住——理由見 _instanced 的說明
+      mesh.receiveShadow = true;
+      this.worldGroup.add(mesh);
+      this.instancedMeshes.push(mesh);
+      this._castMeshes.push(mesh);
+      this._castPartMeshes.push(mesh);
+      meshByKind.set(kind, { mesh, next: 0 });
+    }
+
+    // 配位：每個部件拿到自己在該種類批次裡的索引，之後每幀只更新矩陣
+    for (const actor of actors) {
+      actor.slots = actor.character.parts.map((p) => {
+        const b = meshByKind.get(p.kind);
+        const i = b.next++;
+        b.mesh.setColorAt(i, this._tmpColor.set(p.color));
+        return { mesh: b.mesh, index: i };
+      });
+    }
+    for (const { mesh } of meshByKind.values()) {
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    this.cast = actors;
+
+    // 家具。從舊的 merge 幾何裡拆出來之後，它需要有人擺回角色旁邊。
+    // 擺在角色的「基準位置」而不是當下位置：角色會走動，桌子不會跟著跑。
+    const furniture = new Map();
+    for (const a of list) {
+      const f = CAST[a.type]?.furniture;
+      if (!f) continue;
+      if (!furniture.has(f)) furniture.set(f, []);
+      furniture.set(f, [...furniture.get(f), a]);
+    }
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const one = new THREE.Vector3(1, 1, 1);
+    for (const [type, group] of furniture) {
+      const mesh = this._instanced(type, group.length, this.propMaterial);
+      if (!mesh) continue;
+      this._castMeshes.push(mesh);
+      group.forEach((a, i) => {
+        // 擺在角色面前一點，不然角色會站在桌子正中央
+        const r = a.rot ?? 0;
+        m.compose(
+          new THREE.Vector3(a.base.x + Math.sin(r) * 0.17, a.base.y, a.base.z + Math.cos(r) * 0.17),
+          q.setFromEuler(e.set(0, r, 0)), one,
+        );
+        mesh.setMatrixAt(i, m);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /**
+   * 每幀擺出所有角色的姿勢。
+   *
+   * 矩陣組法：世界位置 × 朝向 → 部件基準位置 → 繞 pivot 的通道旋轉 → 縮放。
+   * pivot 是關鍵：手臂的 pivot 在肩膀，所以舉手是繞著肩膀轉，
+   * 不是繞自己的中心翻轉。
+   */
+  _stepCast(t) {
+    if (!this.cast?.length) return;
+    const m = new THREE.Matrix4();
+    const mWorld = new THREE.Matrix4();
+    const mPart = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const v = new THREE.Vector3();
+    const one = new THREE.Vector3(1, 1, 1);
+
+    for (const actor of this.cast) {
+      let x = actor.base.x, y = actor.base.y, z = actor.base.z, heading = actor.rot;
+      if (actor.route) {
+        // 等速前進：距離 = 速度 × 時間。不用 sin()，所以沒有兩端變慢的滑冰感。
+        const s = sampleRoute(actor.route, (t + actor.phase) * actor.speed);
+        x = s.x; y = s.y; z = s.z;
+        heading = s.heading;      // 朝向直接取路徑切線，轉彎自然跟著轉
+      }
+      mWorld.compose(v.set(x, y, z), q.setFromEuler(e.set(0, heading, 0)), one);
+
+      const pose = poseCharacter(actor.character, actor.activity, t, actor.phase, actor.speed);
+      for (let i = 0; i < pose.length; i++) {
+        const p = pose[i];
+        const slot = actor.slots[i];
+        const [px, py, pz] = p.pos;
+        if (p.pivot) {
+          const [ax, ay, az] = p.pivot;
+          mPart.makeTranslation(px + ax, py + ay, pz + az);
+          mPart.multiply(m.makeRotationFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2])));
+          mPart.multiply(m.makeTranslation(-ax, -ay, -az));
+        } else {
+          mPart.makeTranslation(px, py, pz);
+          mPart.multiply(m.makeRotationFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2])));
+        }
+        mPart.multiply(m.makeScale(p.scale[0], p.scale[1], p.scale[2]));
+        slot.mesh.setMatrixAt(slot.index, m.multiplyMatrices(mWorld, mPart));
+      }
+    }
+    for (const mesh of this._castPartMeshes ?? []) mesh.instanceMatrix.needsUpdate = true;
   }
 
   /**
@@ -311,7 +601,7 @@ export class SceneManager {
     }
     this._boats = list;
     if (!list.length) return;
-    this._boatMesh = this._instanced('boat', list.length);
+    this._boatMesh = this._instanced('boat', list.length, this.propMaterial, MOVING_SHADOW);
     this._stepBoats(this._clock ?? 0);
   }
 
@@ -341,7 +631,7 @@ export class SceneManager {
           interaction: home.sky_anchor.interaction, label: home.sky_anchor.label }
       : null;
 
-    this.clouds = this._instanced('cloud', MAX_CLOUDS, this.cloudMaterial);
+    this.clouds = this._instanced('cloud', MAX_CLOUDS, this.cloudMaterial, NO_SHADOW);
     this._cloudState = Array.from({ length: MAX_CLOUDS }, (_, i) => {
       // 第 0 朵是打卡用的那一朵，固定在主島上空
       if (i === 0 && this.skyAnchor) {
@@ -920,6 +1210,7 @@ export class SceneManager {
     if (this.animating || beamActive) {
       this._clock += dt;
       this._stepAnimals(this._clock);
+      this._stepCast(this._clock);
       this._stepBoats(this._clock);
       this._stepClouds(dt);
       this._stepRain(dt);
