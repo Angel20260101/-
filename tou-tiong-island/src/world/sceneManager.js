@@ -22,6 +22,9 @@ import { PROP_FACTORIES } from './props.js';
 import { buildWorld } from './islandBuilder.js';
 import { CameraController } from './cameraController.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { CAST, CHARACTER_KINDS, buildCharacter, poseCharacter } from './characters.js';
+import { makeRoute, sampleRoute } from './routes.js';
 
 /**
  * 光比。這兩個值分開調，因為畫面平不平取決於「太陽／環境」的比值，
@@ -135,6 +138,14 @@ export class SceneManager {
     });
     this.rainMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.foam, transparent: true, opacity: 0.55 });
     this.pickMaterial = new THREE.MeshBasicMaterial({ visible: false });
+
+    // 角色材質。不開 flatShading——角色是圓的，塊面感留給地形與建築，
+    // 臉和身體平滑一點才不會每個轉角都切出一道硬邊。
+    this.characterMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.74, metalness: 0,
+    });
+    this._tmpColor = new THREE.Color();
+    this.cast = [];
 
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
@@ -366,16 +377,34 @@ export class SceneManager {
       const i = this.instancedMeshes.indexOf(mesh);
       if (i >= 0) this.instancedMeshes.splice(i, 1);
     }
+    for (const mesh of this._castMeshes ?? []) {
+      this.worldGroup.remove(mesh);
+      mesh.dispose();
+      const i = this.instancedMeshes.indexOf(mesh);
+      if (i >= 0) this.instancedMeshes.splice(i, 1);
+    }
+    this._castMeshes = [];
     this._animalMeshes = [];
     this.animals = [];
+    this.cast = [];
 
     const key = this.weather?.id === 'rainy' ? 'rainy' : 'default';
-    const byType = new Map();
+    const resolved = [];
     for (const a of this._animalSource) {
       const form = a.forms[key] ?? a.forms.default;
       if (!form?.type || form.hidden) continue;
-      if (!byType.has(form.type)) byType.set(form.type, []);
-      byType.get(form.type).push({ ...a, ...form });
+      resolved.push({ ...a, ...form });
+    }
+
+    // 有列在選角表的走新的角色系統，其餘維持舊的整塊道具路徑。
+    // 這讓遷移可以一隻一隻搬，而不是全有全無。
+    this._buildCast(resolved.filter((a) => CAST[a.type]));
+
+    const byType = new Map();
+    for (const a of resolved) {
+      if (CAST[a.type]) continue;
+      if (!byType.has(a.type)) byType.set(a.type, []);
+      byType.get(a.type).push(a);
     }
     for (const [type, group] of byType) {
       const mesh = this._instanced(type, group.length, this.propMaterial, MOVING_SHADOW);
@@ -384,6 +413,178 @@ export class SceneManager {
       group.forEach((a, i) => this.animals.push({ ...a, mesh, index: i }));
     }
     this._stepAnimals(this._clock ?? 0);
+    this._stepCast(this._clock ?? 0);
+  }
+
+  /**
+   * 角色用的單位幾何。
+   *
+   * 全部做成「單位尺寸」，實際大小交給每個部件的 scale——這樣全島所有角色的
+   * 所有頭共用同一個 geometry，不管有幾隻、幾種動物。
+   *
+   * 每個幾何都補一條全白的 color 屬性：材質開著 vertexColors，而 InstancedMesh
+   * 的 instanceColor 是「乘」上去的。沒有這條白色底，缺少的頂點屬性會被當成
+   * 黑色，整群角色會變成黑影。
+   */
+  _charGeometry(kind) {
+    if (!this._charGeo) this._charGeo = new Map();
+    if (this._charGeo.has(kind)) return this._charGeo.get(kind);
+    let g;
+    switch (kind) {
+      case 'rbox': g = new RoundedBoxGeometry(1, 1, 1, 2, 0.14); break;
+      case 'cyl': g = new THREE.CylinderGeometry(1, 1, 1, 10); break;
+      case 'cone': g = new THREE.ConeGeometry(1, 1, 8); break;
+      default: g = new THREE.IcosahedronGeometry(1, 1); break;
+    }
+    const n = g.attributes.position.count;
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+    this._charGeo.set(kind, g);
+    return g;
+  }
+
+  /**
+   * 建立角色。
+   *
+   * 部件依**幾何種類**分批，不是依角色種類：所有角色的頭進同一個 InstancedMesh，
+   * 所有身體進另一個。所以種類固定 4 個 draw call，角色數量不影響預算——
+   * 這是「把島填滿」而不撞到 BUDGET.maxDrawCalls 的前提。
+   */
+  _buildCast(list) {
+    const slots = new Map(CHARACTER_KINDS.map((k) => [k, 0]));
+    const actors = [];
+
+    for (const a of list) {
+      const role = CAST[a.type];
+      const seed = (a.base.x * 31.7 + a.base.z * 17.3) % 1;
+      const character = buildCharacter({ species: role.species, held: role.held, seed });
+      for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
+
+      // patrol 的資料原本只有「沿某軸來回 range 距離」。把它變成一條真正的路徑，
+      // 角色就會等速走完並在端點平順地轉身，而不是用 cos>=0 瞬間翻面。
+      let route = null;
+      if (a.behaviour === 'patrol' && a.range > 0) {
+        const ax = a.axis === 'z' ? 'z' : 'x';
+        const from = { ...a.base }, to = { ...a.base };
+        from[ax] -= a.range; to[ax] += a.range;
+        route = makeRoute([from, to], { loop: false, smooth: false });
+      }
+      actors.push({
+        character,
+        activity: route ? 'walk' : (role.activity ?? 'idle'),
+        route,
+        base: a.base,
+        rot: a.rot ?? 0,
+        speed: a.speed ?? 0.5,
+        phase: (seed * 97) % 10,
+      });
+    }
+
+    this._castMeshes = [];      // 全部角色相關批次，重建時要清掉
+    this._castPartMeshes = [];  // 只有會動的部件批次，每幀才需要重傳矩陣
+    const meshByKind = new Map();
+    for (const [kind, count] of slots) {
+      if (!count) continue;
+      const mesh = new THREE.InstancedMesh(this._charGeometry(kind), this.characterMaterial, count);
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;      // 會動，投影會卡住——理由見 _instanced 的說明
+      mesh.receiveShadow = true;
+      this.worldGroup.add(mesh);
+      this.instancedMeshes.push(mesh);
+      this._castMeshes.push(mesh);
+      this._castPartMeshes.push(mesh);
+      meshByKind.set(kind, { mesh, next: 0 });
+    }
+
+    // 配位：每個部件拿到自己在該種類批次裡的索引，之後每幀只更新矩陣
+    for (const actor of actors) {
+      actor.slots = actor.character.parts.map((p) => {
+        const b = meshByKind.get(p.kind);
+        const i = b.next++;
+        b.mesh.setColorAt(i, this._tmpColor.set(p.color));
+        return { mesh: b.mesh, index: i };
+      });
+    }
+    for (const { mesh } of meshByKind.values()) {
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    this.cast = actors;
+
+    // 家具。從舊的 merge 幾何裡拆出來之後，它需要有人擺回角色旁邊。
+    // 擺在角色的「基準位置」而不是當下位置：角色會走動，桌子不會跟著跑。
+    const furniture = new Map();
+    for (const a of list) {
+      const f = CAST[a.type]?.furniture;
+      if (!f) continue;
+      if (!furniture.has(f)) furniture.set(f, []);
+      furniture.set(f, [...furniture.get(f), a]);
+    }
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const one = new THREE.Vector3(1, 1, 1);
+    for (const [type, group] of furniture) {
+      const mesh = this._instanced(type, group.length, this.propMaterial);
+      if (!mesh) continue;
+      this._castMeshes.push(mesh);
+      group.forEach((a, i) => {
+        // 擺在角色面前一點，不然角色會站在桌子正中央
+        const r = a.rot ?? 0;
+        m.compose(
+          new THREE.Vector3(a.base.x + Math.sin(r) * 0.17, a.base.y, a.base.z + Math.cos(r) * 0.17),
+          q.setFromEuler(e.set(0, r, 0)), one,
+        );
+        mesh.setMatrixAt(i, m);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /**
+   * 每幀擺出所有角色的姿勢。
+   *
+   * 矩陣組法：世界位置 × 朝向 → 部件基準位置 → 繞 pivot 的通道旋轉 → 縮放。
+   * pivot 是關鍵：手臂的 pivot 在肩膀，所以舉手是繞著肩膀轉，
+   * 不是繞自己的中心翻轉。
+   */
+  _stepCast(t) {
+    if (!this.cast?.length) return;
+    const m = new THREE.Matrix4();
+    const mWorld = new THREE.Matrix4();
+    const mPart = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const v = new THREE.Vector3();
+    const one = new THREE.Vector3(1, 1, 1);
+
+    for (const actor of this.cast) {
+      let x = actor.base.x, y = actor.base.y, z = actor.base.z, heading = actor.rot;
+      if (actor.route) {
+        // 等速前進：距離 = 速度 × 時間。不用 sin()，所以沒有兩端變慢的滑冰感。
+        const s = sampleRoute(actor.route, (t + actor.phase) * actor.speed);
+        x = s.x; y = s.y; z = s.z;
+        heading = s.heading;      // 朝向直接取路徑切線，轉彎自然跟著轉
+      }
+      mWorld.compose(v.set(x, y, z), q.setFromEuler(e.set(0, heading, 0)), one);
+
+      const pose = poseCharacter(actor.character, actor.activity, t, actor.phase, actor.speed);
+      for (let i = 0; i < pose.length; i++) {
+        const p = pose[i];
+        const slot = actor.slots[i];
+        const [px, py, pz] = p.pos;
+        if (p.pivot) {
+          const [ax, ay, az] = p.pivot;
+          mPart.makeTranslation(px + ax, py + ay, pz + az);
+          mPart.multiply(m.makeRotationFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2])));
+          mPart.multiply(m.makeTranslation(-ax, -ay, -az));
+        } else {
+          mPart.makeTranslation(px, py, pz);
+          mPart.multiply(m.makeRotationFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2])));
+        }
+        mPart.multiply(m.makeScale(p.scale[0], p.scale[1], p.scale[2]));
+        slot.mesh.setMatrixAt(slot.index, m.multiplyMatrices(mWorld, mPart));
+      }
+    }
+    for (const mesh of this._castPartMeshes ?? []) mesh.instanceMatrix.needsUpdate = true;
   }
 
   /**
@@ -1009,6 +1210,7 @@ export class SceneManager {
     if (this.animating || beamActive) {
       this._clock += dt;
       this._stepAnimals(this._clock);
+      this._stepCast(this._clock);
       this._stepBoats(this._clock);
       this._stepClouds(dt);
       this._stepRain(dt);

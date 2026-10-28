@@ -335,6 +335,27 @@ export const PROP_FACTORIES = {
     box(0.1, 0.05, 0.04, PALETTE.clothWarm, -0.085, 0.175, 0.055),
   ]),
 
+  // ── 角色用家具 ──────────────────────────────────────────
+  // 從舊的 animal_* 幾何裡拆出來的靜態部分。拆開才能讓角色自己動：
+  // 舊版兔子和茶几是同一塊 geometry，所以「喝茶」只能讓整張桌子一起晃。
+  // 這些是純道具，不投影給自己找麻煩，照常走 props 的 instancing。
+  tea_table: () => merge([
+    cyl(0.028, 0.034, 0.13, 5, PALETTE.woodDark, 0, 0.065, 0),   // 桌腳
+    cyl(0.115, 0.115, 0.022, 8, PALETTE.wood, 0, 0.14, 0),       // 桌面
+    cyl(0.028, 0.034, 0.032, 6, PALETTE.teaCup, -0.03, 0.167, 0.02),  // 桌上多一杯，像有人作陪
+    blob(0.022, PALETTE.flowerA, 0.04, 0.168, -0.02),            // 小花瓶
+  ]),
+  nap_mat: () => merge([
+    cyl(0.17, 0.17, 0.016, 8, PALETTE.rope, 0, 0.008, 0),
+    cyl(0.055, 0.055, 0.02, 6, PALETTE.clothWarm, 0.075, 0.02, 0.05),  // 一顆小枕頭
+  ]),
+  fish_stool: () => merge([
+    box(0.016, 0.1, 0.016, PALETTE.woodDark, -0.05, 0.05, -0.04),
+    box(0.016, 0.1, 0.016, PALETTE.woodDark, 0.05, 0.05, -0.04),
+    box(0.14, 0.018, 0.1, PALETTE.wood, 0, 0.105, -0.02),
+    cyl(0.05, 0.055, 0.07, 6, PALETTE.rope, 0.1, 0.035, 0.03),   // 魚簍
+  ]),
+
   animal_cat_nap: () => merge([
     cyl(0.17, 0.17, 0.016, 8, PALETTE.rope, 0, 0.008, 0),      // 墊子
     blob(0.085, PALETTE.furCat, 0, 0.075, 0),
