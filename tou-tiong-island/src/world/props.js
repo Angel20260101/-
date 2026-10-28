@@ -111,6 +111,57 @@ const merge = (parts) => {
   return geo;
 };
 
+/**
+ * 一只有碟子、杯口與把手的茶杯。
+ *
+ * 原本只是一個 0.03 高的小圓柱——沒有開口、沒有把手，鏡頭拉近就是一個白點。
+ * 讓它看得出來是杯子的其實只有三件事：**薄一圈的杯口、看得到裡面的茶、側邊的把手**。
+ * 這些加起來才一百多個三角形，在這個鏡頭距離下值得。
+ */
+const teacup = (x, y, z) => {
+  const parts = [
+    cyl(0.055, 0.05, 0.007, 12, PALETTE.teaCup, 0, 0.0035, 0),        // 碟
+    cyl(0.056, 0.052, 0.003, 12, PALETTE.teaCupRim, 0, 0.0085, 0),    // 碟緣
+    cyl(0.038, 0.025, 0.044, 12, PALETTE.teaCup, 0, 0.032, 0),        // 杯身（上寬下窄）
+    cyl(0.041, 0.039, 0.004, 12, PALETTE.teaCupRim, 0, 0.056, 0),     // 杯口
+    // 茶要疊在杯口「上面」。圓柱是實心的，放在杯口下面會被它的頂蓋整個蓋住，
+    // 看起來就變成一只蓋著蓋子的白杯子。
+    cyl(0.036, 0.036, 0.0025, 12, PALETTE.tea, 0, 0.0593, 0),
+  ];
+  const handle = new THREE.TorusGeometry(0.019, 0.0055, 4, 10, Math.PI * 1.45);
+  paint(handle, PALETTE.teaCup);
+  handle.rotateZ(-Math.PI * 0.28);
+  handle.translate(0.044, 0.034, 0);
+  parts.push(handle);
+  const geo = merge(parts);
+  geo.translate(x, y, z);
+  return geo;
+};
+
+/** 外帶咖啡：杯身、杯蓋、中間一圈隔熱紙套。 */
+const coffeecup = (x, y, z) => {
+  const geo = merge([
+    cyl(0.03, 0.023, 0.058, 12, PALETTE.teaCup, 0, 0.029, 0),
+    cyl(0.029, 0.027, 0.022, 12, PALETTE.wood, 0, 0.027, 0),          // 紙套
+    cyl(0.033, 0.032, 0.008, 12, PALETTE.clothWarm, 0, 0.062, 0),     // 杯蓋
+    cyl(0.018, 0.018, 0.006, 8, PALETTE.clothWarm, 0, 0.069, 0),      // 飲口
+  ]);
+  geo.translate(x, y, z);
+  return geo;
+};
+
+/** 碟子上的小點心。原本是一顆粉紅色的球。 */
+const biscuit = (x, y, z) => {
+  const geo = merge([
+    cyl(0.042, 0.04, 0.005, 10, PALETTE.teaCup, 0, 0.0025, 0),
+    cyl(0.026, 0.026, 0.011, 10, PALETTE.biscuit, 0, 0.0105, 0),
+    cyl(0.025, 0.025, 0.006, 10, PALETTE.flowerA, 0, 0.019, 0),
+    cyl(0.026, 0.026, 0.011, 10, PALETTE.biscuit, 0, 0.0275, 0),
+  ]);
+  geo.translate(x, y, z);
+  return geo;
+};
+
 /** 道具工廠。key 對應 island_map.json 的 landmark.type 與 flora_table 的樹種。 */
 export const PROP_FACTORIES = {
   tree_pine: () => merge([
@@ -426,8 +477,8 @@ export const PROP_FACTORIES = {
     // 小圓桌
     cyl(0.026, 0.032, 0.125, 5, PALETTE.woodDark, 0.21, 0.062, 0),
     cyl(0.105, 0.105, 0.022, 10, PALETTE.wood, 0.21, 0.136, 0),
-    cyl(0.026, 0.032, 0.03, 8, PALETTE.teaCup, 0.185, 0.162, 0.02),
-    ball(0.02, PALETTE.flowerA, 0.245, 0.162, -0.02, 1, 1, 0),
+    teacup(0.188, 0.147, 0.022),
+    biscuit(0.246, 0.147, -0.028),
     // 兔子：圍一條圍巾
     ball(0.125, PALETTE.furRabbit, -0.06, 0.115, 0, 0.95),
     ball(0.042, PALETTE.furRabbit, -0.125, 0.025, 0.05, 0.45, 1.2),
@@ -596,8 +647,7 @@ export const PROP_FACTORIES = {
     ball(0.044, PALETTE.snout, -0.055, 0.262, 0.072, 0.72, 0.7),
     ball(0.015, PALETTE.furRabbitIn, -0.055, 0.275, onHead({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
     ...face({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.044, eye: 0.027 }),
-    cyl(0.026, 0.022, 0.05, 8, PALETTE.teaCup, 0.075, 0.028, 0.08),
-    cyl(0.028, 0.028, 0.008, 8, PALETTE.clothWarm, 0.075, 0.056, 0.08),
+    coffeecup(0.078, 0, 0.082),
   ]),
 
   animal_fox_brolly: () => merge([

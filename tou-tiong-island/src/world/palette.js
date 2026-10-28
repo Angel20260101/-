@@ -76,6 +76,9 @@ export const PALETTE = {
   cloth:      '#8fb3a3',
   clothWarm:  '#e3a08a',
   teaCup:     '#fdf8ee',
+  teaCupRim:  '#e8ddc6',
+  tea:        '#c08146',
+  biscuit:    '#e0b57e',
   // 島民的臉。可愛感有一半來自這三樣：深色的眼睛、腮紅、淺色的口鼻
   eyeDark:    '#2e3a36',
   eyeWhite:   '#ffffff',
