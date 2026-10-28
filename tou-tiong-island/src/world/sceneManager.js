@@ -59,7 +59,9 @@ export class SceneManager {
 
     this.terrainMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
     this.propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    this.cloudMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.95 });
+    // 雲幾乎不透明又是奶油色，在俯視角投影到海面上時會被看成一坨擱淺的沙。
+    // 壓低不透明度、顏色調冷調白，它才讀得出來是天上的東西而不是地上的東西。
+    this.cloudMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.7, depthWrite: false });
     this.rainMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.foam, transparent: true, opacity: 0.55 });
     this.pickMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
@@ -112,7 +114,9 @@ export class SceneManager {
   _paintSky(w) {
     this.skyLayer.style.background =
       `linear-gradient(170deg, ${w.skyTop} 0%, ${w.skyTop} 26%, ${w.skyBottom} 100%)`;
-    // 太陽畫在 CSS 圖層上：晴天整顆亮、陰天只剩一團光暈、雨天收起來
+    // 太陽與雲都畫在 CSS 圖層上：晴天整顆太陽、兩朵雲；
+    // 陰天太陽剩一團光暈、雲變多變灰；雨天太陽收起來、雲壓滿整片天。
+    this.skyLayer.dataset.weather = w.id;
     const sun = this.skyLayer.querySelector('.sky__sun');
     if (sun) sun.dataset.weather = w.id;
   }
@@ -175,13 +179,9 @@ export class SceneManager {
     this._colourTarget = this._targetsFor(w);
     this._lightTarget = { hemi: w.hemiIntensity, dir: w.dirIntensity };
     if (this.clouds) {
-      this.clouds.count = Math.min(w.clouds, MAX_CLOUDS);
-      // 雲高跟著天氣走：晴天高而少，陰雨天低而密，低下來才進得了鏡頭
-      const [lo, hi] = w.cloudY ?? [3.4, 6.8];
-      for (let i = 1; i < MAX_CLOUDS; i++) {
-        const c = this._cloudState?.[i];
-        if (c) c.y = lo + ((i * 0.37) % 1) * (hi - lo);
-      }
+      // 只留打卡用的那一朵（它在主島正上方、上面掛著標籤，讀得出來是雲）。
+      // 會飄的雲已經搬到 CSS 天空層了。
+      this.clouds.count = 1;
     }
     if (this.rain) this.rain.count = this.reducedMotion ? 0 : Math.min(w.rain, MAX_RAIN);
     if (changed && this._animalSource) this._buildAnimals();   // 島民換上這個天氣該做的事
@@ -347,9 +347,13 @@ export class SceneManager {
       if (i === 0 && this.skyAnchor) {
         return { x: this.skyAnchor.x, y: this.skyAnchor.y, z: this.skyAnchor.z, drift: 0, scale: 1.15, isAnchor: true };
       }
+      // 繞著群島外圍散開，不要正好生在島的上方——鏡頭俯視時那個位置最容易
+      // 讓雲看起來像貼在海面上
+      const a = Math.random() * Math.PI * 2;
+      const r = 11 + Math.random() * 9;
       return {
-        x: (Math.random() - 0.5) * 24, y: 3.4 + Math.random() * 3.4,
-        z: (Math.random() - 0.5) * 22, drift: 0.16 + Math.random() * 0.3,
+        x: Math.cos(a) * r, y: 5 + Math.random() * 3.4,
+        z: Math.sin(a) * r, drift: 0.16 + Math.random() * 0.3,
         scale: 0.65 + Math.random() * 0.7, isAnchor: false,
       };
     });

@@ -76,6 +76,10 @@ export const PALETTE = {
   cloth:      '#8fb3a3',
   clothWarm:  '#e3a08a',
   teaCup:     '#fdf8ee',
+  // 島民的臉。可愛感有一半來自這三樣：深色的眼睛、腮紅、淺色的口鼻
+  eyeDark:    '#3a4642',
+  cheek:      '#f0a9a2',
+  snout:      '#fbf1e2',
 
   // 地面細節（拉近才看得到的那一層）
   mushroomCap:'#e0a088',
@@ -111,7 +115,7 @@ export const WEATHER = {
     dirIntensity: 1.45, dirColor: '#fff2cc',
     fog: '#f3e8cf', fogScale: 3.2,
     veil: 'rgba(255, 226, 150, 0.10)',
-    clouds: 2, cloudColour: '#fffdf6', cloudY: [4.2, 6.4], rain: 0,
+    clouds: 2, cloudColour: '#ffffff', cloudY: [6.8, 9.6], rain: 0,
     islandLine: '今天島上出太陽。',
   },
   cloudy: {
@@ -122,7 +126,7 @@ export const WEATHER = {
     dirIntensity: 0.52, dirColor: '#e9ece7',
     fog: '#cfd4cc', fogScale: 2.1,
     veil: 'rgba(120, 132, 130, 0.17)',
-    clouds: 8, cloudColour: '#e8ebe6', cloudY: [2.6, 4.6], rain: 0,
+    clouds: 8, cloudColour: '#f2f6f7', cloudY: [5.2, 7.8], rain: 0,
     islandLine: '今天島上多雲。',
   },
   rainy: {
@@ -133,7 +137,7 @@ export const WEATHER = {
     dirIntensity: 0.34, dirColor: '#dde4e4',
     fog: '#b8c0bb', fogScale: 1.8,
     veil: 'rgba(66, 86, 96, 0.26)',
-    clouds: 10, cloudColour: '#cfd6d4', cloudY: [2.2, 4.0], rain: 80,
+    clouds: 10, cloudColour: '#dde6e8', cloudY: [4.6, 7.0], rain: 80,
     islandLine: '今天島上下雨。',
   },
 };

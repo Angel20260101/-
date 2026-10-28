@@ -51,6 +51,48 @@ const blob = (r, color, x = 0, y = 0, z = 0) => {
   return g;
 };
 
+/**
+ * 可以壓扁拉長的球。detail 1 是 80 面，比 blob 的 20 面圓得多。
+ *
+ * 島民身上才用它：鏡頭可以拉到看得見單一隻動物，20 面的球在那個距離是一顆
+ * 稜角分明的石頭，不是一隻動物。地形與草木維持 blob，遠看不出差別又便宜。
+ */
+const ball = (r, color, x = 0, y = 0, z = 0, sy = 1, sz = 1, detail = 1) => {
+  const g = new THREE.IcosahedronGeometry(r, detail);
+  paint(g, color);
+  g.scale(1, sy, sz);
+  g.translate(x, y, z);
+  return g;
+};
+
+/**
+ * 頭是一顆球，臉上的東西要貼在**球面**上。
+ * 直接寫死 z 座標會整個埋進頭裡面——第一版就是這樣，渲染出來一隻眼睛都看不到。
+ */
+const onHead = (head, dx, dy) =>
+  head.z + Math.sqrt(Math.max(head.r * head.r - dx * dx - dy * dy, 1e-4));
+
+/**
+ * 一張臉：兩顆眼睛、兩團腮紅。
+ *
+ * 原本的島民一隻眼睛都沒有——遠看沒差，拉近就是一團沒有表情的毛。
+ * 參考圖那隻企鵝之所以討喜，一半是這對眼睛，另一半是腮紅。
+ * 眼睛的球心就落在頭的表面上，所以剛好露出半顆，像兩顆豆子貼上去。
+ *
+ * @param head {x,y,z,r} 頭那顆球
+ */
+const face = (head, { spread, up = 0.028, eye = 0.021, cheek = 0.023, cheekDown = 0.052, cheekOut = 0.05 } = {}) => {
+  const out = [];
+  for (const sx of [-1, 1]) {
+    const dx = sx * spread;
+    out.push(ball(eye, PALETTE.eyeDark, head.x + dx, head.y + up, onHead(head, dx, up), 1.15, 0.5, 0));
+    const cdx = sx * (spread + cheekOut);
+    out.push(ball(cheek, PALETTE.cheek, head.x + cdx, head.y - cheekDown,
+      onHead(head, cdx, cheekDown), 0.7, 0.35, 0));
+  }
+  return out;
+};
+
 const merge = (parts) => {
   // IcosahedronGeometry 沒有 index，Cylinder/Cone/Box 有，混在一起無法合併。
   // 統一轉成非索引之後再合併——低多邊形的頂點數很少，付得起這點重複。
@@ -280,71 +322,124 @@ export const PROP_FACTORIES = {
     cone(0.32, 0.30, 8, PALETTE.towerRoof, 0, 1.89, 0),
   ]),
 
-  // ── 島民：擬人化的小動物 ──────────────────────────────
-  // 每一隻都連同牠正在做的事一起做成一個模型，所以一種行為＝一個 InstancedMesh。
-  // 體型刻意偏小（約 0.4 單位高），遠看是會動的小點，靠近才看得出在幹嘛。
+  // ── 島民 ──────────────────────────────────────────────
+  //
+  // 不做擬人化。沒有站立的人形姿勢、沒有圓柱腿、不讓動物拿工具——
+  // 那種做法在低多邊形下只會變成「一顆球插兩根棍子」，鏡頭一拉近就露餡。
+  //
+  // 改成：圓滾滾的動物本體 ＋ 一件衣服 ＋ 一張臉，牠在做的事交給旁邊的道具去講
+  //（水壺、茶几、釣竿、傘都跟動物合併成同一個模型，所以還是一個 draw call）。
+  // 討喜感的來源很具體：圓的身體、大眼睛、腮紅、一點點對比色。
+  //
+  // 體型約 0.4 單位高。遠看是會動的小點，靠近才看得出是誰、在幹嘛。
 
   animal_bear_mow: () => merge([
-    // 熊
-    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, -0.05, 0.05, 0),
-    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, 0.05, 0.05, 0),
-    blob(0.125, PALETTE.furBear, 0, 0.20, 0),
-    blob(0.085, PALETTE.furBear, 0, 0.345, 0.02),
-    blob(0.032, PALETTE.furBear, -0.062, 0.405, 0.01),
-    blob(0.032, PALETTE.furBear, 0.062, 0.405, 0.01),
-    blob(0.042, PALETTE.furRabbit, 0, 0.325, 0.085),
-    box(0.17, 0.06, 0.05, PALETTE.cloth, 0, 0.235, 0.085),
-    // 推草機：握把從熊的手往前下方
-    box(0.028, 0.025, 0.26, PALETTE.woodDark, -0.07, 0.235, 0.20),
-    box(0.028, 0.025, 0.26, PALETTE.woodDark, 0.07, 0.235, 0.20),
-    box(0.22, 0.09, 0.13, PALETTE.leafLime, 0, 0.075, 0.33),
-    cyl(0.045, 0.045, 0.03, 6, PALETTE.woodDark, -0.11, 0.045, 0.33),
-    cyl(0.045, 0.045, 0.03, 6, PALETTE.woodDark, 0.11, 0.045, 0.33),
+    // 熊：圓身體，下半身是吊帶工作褲
+    ball(0.145, PALETTE.furBear, 0, 0.135, 0, 0.98),
+    ball(0.148, PALETTE.cloth, 0, 0.105, 0, 0.62),
+    ball(0.062, PALETTE.cloth, 0, 0.19, 0.082, 0.8, 0.35, 0),
+    box(0.022, 0.075, 0.014, PALETTE.cloth, -0.052, 0.2, 0.108),
+    box(0.022, 0.075, 0.014, PALETTE.cloth, 0.052, 0.2, 0.108),
+    ball(0.048, PALETTE.furBear, -0.145, 0.15, 0.015, 0.9, 0.9),
+    ball(0.048, PALETTE.furBear, 0.145, 0.15, 0.015, 0.9, 0.9),
+    ball(0.05, PALETTE.furBearDark, -0.062, 0.028, 0.055, 0.45, 1.2),
+    ball(0.05, PALETTE.furBearDark, 0.062, 0.028, 0.055, 0.45, 1.2),
+    ball(0.108, PALETTE.furBear, 0, 0.30, 0.012),
+    ball(0.04, PALETTE.furBear, -0.078, 0.375, -0.005, 0.9, 0.7),
+    ball(0.04, PALETTE.furBear, 0.078, 0.375, -0.005, 0.9, 0.7),
+    ball(0.021, PALETTE.furBearDark, -0.078, 0.381, 0.02, 0.9, 0.5, 0),
+    ball(0.021, PALETTE.furBearDark, 0.078, 0.381, 0.02, 0.9, 0.5, 0),
+    ball(0.055, PALETTE.snout, 0, 0.272, 0.078, 0.78, 0.7),
+    ball(0.019, PALETTE.eyeDark, 0, 0.288, onHead({ x: 0, y: 0.30, z: 0.012, r: 0.108 }, 0, -0.012) + 0.03, 0.8, 0.8, 0),
+    ...face({ x: 0, y: 0.30, z: 0.012, r: 0.108 }, { spread: 0.044 }),
+    // 水壺放在腳邊，不是拿在手上
+    cyl(0.052, 0.06, 0.085, 8, PALETTE.leafTeal, 0.255, 0.043, 0.02),
+    cyl(0.055, 0.052, 0.012, 8, PALETTE.leafPine, 0.255, 0.09, 0.02),
+    (() => {                                   // 壺嘴：斜斜地往外指才看得出是水壺
+      const g = new THREE.CylinderGeometry(0.012, 0.019, 0.1, 5);
+      paint(g, PALETTE.leafTeal);
+      g.rotateZ(-0.75); g.translate(0.325, 0.072, 0.02);
+      return g;
+    })(),
+    box(0.012, 0.055, 0.03, PALETTE.leafPine, 0.205, 0.095, 0.02),
+    box(0.03, 0.012, 0.03, PALETTE.leafPine, 0.2165, 0.12, 0.02),
   ]),
 
   animal_rabbit_tea: () => merge([
     // 小圓桌
-    cyl(0.028, 0.034, 0.13, 5, PALETTE.woodDark, 0.15, 0.065, 0),
-    cyl(0.115, 0.115, 0.022, 8, PALETTE.wood, 0.15, 0.14, 0),
-    cyl(0.028, 0.034, 0.032, 6, PALETTE.teaCup, 0.12, 0.167, 0.02),
-    blob(0.022, PALETTE.flowerA, 0.19, 0.168, -0.02),
-    // 兔子
-    cyl(0.045, 0.05, 0.07, 5, PALETTE.furRabbit, -0.09, 0.035, 0),
-    blob(0.095, PALETTE.furRabbit, -0.09, 0.145, 0),
-    blob(0.068, PALETTE.furRabbit, -0.075, 0.255, 0.015),
-    cone(0.028, 0.14, 4, PALETTE.furRabbit, -0.105, 0.355, 0),
-    cone(0.028, 0.14, 4, PALETTE.furRabbitIn, -0.045, 0.355, 0.01),
-    blob(0.018, PALETTE.furRabbitIn, -0.06, 0.245, 0.062),
-    box(0.1, 0.05, 0.04, PALETTE.clothWarm, -0.085, 0.175, 0.055),
+    cyl(0.026, 0.032, 0.125, 5, PALETTE.woodDark, 0.21, 0.062, 0),
+    cyl(0.105, 0.105, 0.022, 10, PALETTE.wood, 0.21, 0.136, 0),
+    cyl(0.026, 0.032, 0.03, 8, PALETTE.teaCup, 0.185, 0.162, 0.02),
+    ball(0.02, PALETTE.flowerA, 0.245, 0.162, -0.02, 1, 1, 0),
+    // 兔子：圍一條圍巾
+    ball(0.125, PALETTE.furRabbit, -0.06, 0.115, 0, 0.95),
+    ball(0.042, PALETTE.furRabbit, -0.125, 0.025, 0.05, 0.45, 1.2),
+    ball(0.042, PALETTE.furRabbit, -0.005, 0.025, 0.05, 0.45, 1.2),
+    cyl(0.072, 0.078, 0.038, 10, PALETTE.clothWarm, -0.06, 0.215, 0),
+    box(0.035, 0.07, 0.016, PALETTE.clothWarm, -0.022, 0.19, 0.062),
+    ball(0.095, PALETTE.furRabbit, -0.06, 0.285, 0.012),
+    ball(0.032, PALETTE.furRabbit, -0.102, 0.40, -0.01, 2.1, 0.6),
+    ball(0.032, PALETTE.furRabbit, -0.018, 0.40, -0.01, 2.1, 0.6),
+    ball(0.016, PALETTE.furRabbitIn, -0.102, 0.405, 0.012, 2.0, 0.4, 0),
+    ball(0.016, PALETTE.furRabbitIn, -0.018, 0.405, 0.012, 2.0, 0.4, 0),
+    ball(0.044, PALETTE.snout, -0.06, 0.262, 0.072, 0.72, 0.7),
+    ball(0.015, PALETTE.furRabbitIn, -0.06, 0.275, onHead({ x: -0.06, y: 0.285, z: 0.012, r: 0.095 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
+    ...face({ x: -0.06, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.04, eye: 0.019 }),
   ]),
 
   animal_cat_nap: () => merge([
-    cyl(0.17, 0.17, 0.016, 8, PALETTE.rope, 0, 0.008, 0),      // 墊子
-    blob(0.085, PALETTE.furCat, 0, 0.075, 0),
-    blob(0.055, PALETTE.furCat, 0.065, 0.085, 0.045),
-    cone(0.022, 0.05, 4, PALETTE.furCat, 0.045, 0.125, 0.045),
-    cone(0.022, 0.05, 4, PALETTE.furCat, 0.085, 0.125, 0.045),
-    cyl(0.018, 0.012, 0.13, 4, PALETTE.furCat, -0.09, 0.055, -0.03),
+    // 貓：蜷成一團在墊子上睡覺。睡著的眼睛是一條線，不是兩顆珠子
+    cyl(0.175, 0.175, 0.018, 10, PALETTE.rope, 0, 0.009, 0),
+    ball(0.115, PALETTE.furCat, 0, 0.082, -0.012, 0.72, 1.05),
+    ball(0.028, PALETTE.furCat, -0.03, 0.055, -0.14, 0.6, 1.9),
+    ball(0.075, PALETTE.furCat, 0.045, 0.095, 0.085),
+    ball(0.026, PALETTE.furCat, 0.005, 0.148, 0.072, 1.1, 0.5),
+    ball(0.026, PALETTE.furCat, 0.085, 0.148, 0.072, 1.1, 0.5),
+    ball(0.013, PALETTE.furRabbitIn, 0.005, 0.151, 0.083, 1.0, 0.4, 0),
+    ball(0.013, PALETTE.furRabbitIn, 0.085, 0.151, 0.083, 1.0, 0.4, 0),
+    ball(0.03, PALETTE.snout, 0.045, 0.082, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, 0, -0.013) + 0.012, 0.7, 0.6),
+    ball(0.011, PALETTE.eyeDark, 0.045, 0.092, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, 0, -0.003) + 0.038, 0.7, 0.7, 0),
+    ball(0.016, PALETTE.eyeDark, 0.012, 0.107, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, -0.033, 0.012), 0.22, 0.5, 0),
+    ball(0.016, PALETTE.eyeDark, 0.078, 0.107, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, 0.033, 0.012), 0.22, 0.5, 0),
+    ball(0.02, PALETTE.cheek, -0.012, 0.085, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, -0.057, -0.01), 0.7, 0.35, 0),
+    ball(0.02, PALETTE.cheek, 0.102, 0.085, onHead({ x: 0.045, y: 0.095, z: 0.085, r: 0.075 }, 0.057, -0.01), 0.7, 0.35, 0),
+    // 項圈：牠也有「穿」一件東西
+    cyl(0.062, 0.066, 0.022, 10, PALETTE.clothWarm, 0.03, 0.055, 0.045),
   ]),
 
   animal_fox_fish: () => merge([
-    cyl(0.04, 0.045, 0.065, 5, PALETTE.furFox, 0, 0.032, 0),
-    blob(0.088, PALETTE.furFox, 0, 0.125, 0),
-    blob(0.062, PALETTE.furFox, 0, 0.225, 0.03),
-    cone(0.03, 0.07, 4, PALETTE.furFox, -0.042, 0.29, 0.02),
-    cone(0.03, 0.07, 4, PALETTE.furFox, 0.042, 0.29, 0.02),
-    blob(0.03, PALETTE.furRabbit, 0, 0.215, 0.082),
-    cyl(0.028, 0.012, 0.16, 4, PALETTE.furRabbit, -0.095, 0.105, -0.05),
-    box(0.012, 0.012, 0.34, PALETTE.woodDark, 0.06, 0.25, 0.14),   // 釣竿
-    box(0.006, 0.17, 0.006, PALETTE.rope, 0.06, 0.2, 0.3),
+    // 狐狸：穿一件小背心，釣竿插在旁邊
+    ball(0.128, PALETTE.furFox, 0, 0.118, 0, 0.95),
+    ball(0.131, PALETTE.cloth, 0, 0.098, 0, 0.58),
+    ball(0.042, PALETTE.furFox, -0.058, 0.024, 0.05, 0.45, 1.2),
+    ball(0.042, PALETTE.furFox, 0.058, 0.024, 0.05, 0.45, 1.2),
+    ball(0.06, PALETTE.furFox, -0.145, 0.085, -0.075, 1.0, 1.9),
+    ball(0.032, PALETTE.snout, -0.175, 0.075, -0.145, 1.0, 1.1),
+    ball(0.098, PALETTE.furFox, 0, 0.272, 0.012),
+    ball(0.034, PALETTE.furFox, -0.072, 0.355, -0.008, 1.5, 0.55),
+    ball(0.034, PALETTE.furFox, 0.072, 0.355, -0.008, 1.5, 0.55),
+    ball(0.042, PALETTE.snout, 0, 0.245, 0.08, 0.7, 0.85),
+    ball(0.015, PALETTE.eyeDark, 0, 0.252, onHead({ x: 0, y: 0.272, z: 0.012, r: 0.098 }, 0, -0.02) + 0.032, 0.8, 0.8, 0),
+    ...face({ x: 0, y: 0.272, z: 0.012, r: 0.098 }, { spread: 0.04, eye: 0.019 }),
+    // 釣竿插在地上，魚簍放旁邊
+    cyl(0.009, 0.009, 0.38, 4, PALETTE.woodDark, 0.175, 0.17, 0.02),
+    box(0.005, 0.15, 0.005, PALETTE.rope, 0.175, 0.26, 0.175),
+    cyl(0.05, 0.042, 0.075, 7, PALETTE.rope, 0.255, 0.038, -0.03),
   ]),
 
   animal_bird: () => merge([
-    blob(0.052, PALETTE.furBird, 0, 0.05, 0),
-    blob(0.034, PALETTE.furBird, 0, 0.105, 0.025),
-    cone(0.016, 0.045, 4, PALETTE.flowerB, 0, 0.105, 0.068),
-    box(0.11, 0.012, 0.05, PALETTE.furBird, -0.06, 0.06, -0.01),
-    box(0.11, 0.012, 0.05, PALETTE.furBird, 0.06, 0.06, -0.01),
+    // 小鳥：身體與頭連成一顆蛋，翅膀是壓扁的橢圓球而不是兩塊板子
+    ball(0.062, PALETTE.furBird, 0, 0.062, -0.008, 1.0, 1.15),
+    ball(0.046, PALETTE.furBird, 0, 0.122, 0.022),
+    cone(0.016, 0.046, 5, PALETTE.flowerB, 0, 0.118, 0.07),
+    ball(0.013, PALETTE.eyeDark, -0.025, 0.136, onHead({ x: 0, y: 0.122, z: 0.022, r: 0.046 }, -0.025, 0.014), 1.1, 0.5, 0),
+    ball(0.013, PALETTE.eyeDark, 0.025, 0.136, onHead({ x: 0, y: 0.122, z: 0.022, r: 0.046 }, 0.025, 0.014), 1.1, 0.5, 0),
+    ball(0.016, PALETTE.cheek, -0.044, 0.112, onHead({ x: 0, y: 0.122, z: 0.022, r: 0.046 }, -0.044, -0.01), 0.7, 0.35, 0),
+    ball(0.016, PALETTE.cheek, 0.044, 0.112, onHead({ x: 0, y: 0.122, z: 0.022, r: 0.046 }, 0.044, -0.01), 0.7, 0.35, 0),
+    ball(0.062, PALETTE.furBird, -0.072, 0.07, -0.015, 0.3, 0.55, 0),
+    ball(0.062, PALETTE.furBird, 0.072, 0.07, -0.015, 0.3, 0.55, 0),
+    ball(0.04, PALETTE.furBird, 0, 0.055, -0.08, 0.5, 1.4, 0),
+    cyl(0.04, 0.044, 0.016, 10, PALETTE.clothWarm, 0, 0.094, 0.005),
   ]),
 
   // ── 天氣 ───────────────────────────────────────────────
@@ -396,68 +491,88 @@ export const PROP_FACTORIES = {
   ]),
 
   // ── 島民・雨天版 ──────────────────────────────────────
-  // 天氣是玩家決定的，島民會照著天氣換事情做：熊穿雨衣整理花園、
-  // 兔子撐傘出門買咖啡、狐狸撐傘繼續釣、貓躲到屋簷下。
+  // 天氣是玩家決定的，島民會照著天氣換穿的、換做的事：熊換雨衣去整理花園、
+  // 兔子撐傘出門買咖啡、狐狸穿雨衣繼續釣、貓躲到屋簷下。
+  // 換的是模型與行為，不是多畫一次。
 
   animal_bear_rain: () => merge([
-    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, -0.05, 0.05, 0),
-    cyl(0.055, 0.055, 0.10, 5, PALETTE.furBearDark, 0.05, 0.05, 0),
-    blob(0.135, PALETTE.leafTeal, 0, 0.20, 0),            // 雨衣
-    blob(0.1, PALETTE.leafTeal, 0, 0.35, -0.01),          // 連帽
-    blob(0.072, PALETTE.furBear, 0, 0.335, 0.055),        // 露出來的臉
-    blob(0.034, PALETTE.furRabbit, 0, 0.315, 0.095),
-    cone(0.085, 0.07, 6, PALETTE.leafTeal, 0, 0.43, -0.01),
-    // 澆花器
-    cyl(0.055, 0.062, 0.1, 6, PALETTE.gold, 0.15, 0.145, 0.06),
-    cyl(0.012, 0.012, 0.11, 4, PALETTE.gold, 0.22, 0.2, 0.06),
-    // 花圃
-    cyl(0.14, 0.14, 0.035, 6, PALETTE.trunk, 0.03, 0.018, 0.34),
-    blob(0.035, PALETTE.flowerA, -0.02, 0.07, 0.34),
-    blob(0.032, PALETTE.flowerB, 0.08, 0.065, 0.3),
-    blob(0.03, PALETTE.leafLime, 0.05, 0.06, 0.4),
+    // 熊：黃色雨衣加帽兜，只露出一張臉
+    ball(0.148, PALETTE.flowerB, 0, 0.135, 0, 1.0),
+    ball(0.152, PALETTE.flowerB, 0, 0.105, 0, 0.66),
+    ball(0.05, PALETTE.furBearDark, -0.062, 0.028, 0.055, 0.45, 1.2),
+    ball(0.05, PALETTE.furBearDark, 0.062, 0.028, 0.055, 0.45, 1.2),
+    ball(0.05, PALETTE.flowerB, -0.145, 0.15, 0.015, 0.9, 0.9),
+    ball(0.05, PALETTE.flowerB, 0.145, 0.15, 0.015, 0.9, 0.9),
+    ball(0.122, PALETTE.flowerB, 0, 0.305, -0.015),
+    ball(0.1, PALETTE.furBear, 0, 0.298, 0.035),
+    ball(0.052, PALETTE.snout, 0, 0.272, 0.095, 0.78, 0.7),
+    ball(0.018, PALETTE.eyeDark, 0, 0.288, onHead({ x: 0, y: 0.298, z: 0.035, r: 0.1 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
+    ...face({ x: 0, y: 0.298, z: 0.035, r: 0.1 }, { spread: 0.042 }),
+    // 花圃：兩叢花在腳邊
+    ball(0.055, PALETTE.leafRound, 0.24, 0.035, 0.03, 0.6, 1),
+    ball(0.022, PALETTE.flowerA, 0.255, 0.075, 0.05, 1, 1, 0),
+    ball(0.02, PALETTE.flowerA, 0.215, 0.07, 0.005, 1, 1, 0),
   ]),
 
   animal_rabbit_brolly: () => merge([
-    cyl(0.045, 0.05, 0.07, 5, PALETTE.furRabbit, 0, 0.035, 0),
-    blob(0.095, PALETTE.furRabbit, 0, 0.145, 0),
-    blob(0.068, PALETTE.furRabbit, 0.012, 0.255, 0.015),
-    cone(0.028, 0.14, 4, PALETTE.furRabbit, -0.018, 0.355, 0),
-    cone(0.028, 0.14, 4, PALETTE.furRabbitIn, 0.042, 0.355, 0.01),
-    blob(0.018, PALETTE.furRabbitIn, 0.028, 0.245, 0.062),
-    box(0.1, 0.05, 0.04, PALETTE.clothWarm, 0.012, 0.175, 0.055),
-    // 傘
-    cyl(0.009, 0.009, 0.34, 4, PALETTE.woodDark, -0.1, 0.3, 0),
-    cone(0.23, 0.14, 8, PALETTE.rose, -0.1, 0.5, 0),
-    blob(0.018, PALETTE.gold, -0.1, 0.58, 0),
-    // 外帶咖啡
-    cyl(0.03, 0.025, 0.07, 6, PALETTE.teaCup, 0.1, 0.2, 0.05),
-    cyl(0.033, 0.033, 0.016, 6, PALETTE.woodDark, 0.1, 0.242, 0.05),
+    // 傘插在旁邊，不是拿在手上——拿在手上就又變成人形姿勢了
+    cyl(0.007, 0.007, 0.44, 4, PALETTE.woodDark, 0.17, 0.22, 0),
+    cone(0.185, 0.1, 10, PALETTE.flowerA, 0.17, 0.465, 0),
+    ball(0.016, PALETTE.wood, 0.17, 0.525, 0, 1, 1, 0),
+    // 兔子：圍巾＋手邊一杯咖啡
+    ball(0.125, PALETTE.furRabbit, -0.055, 0.115, 0, 0.95),
+    ball(0.042, PALETTE.furRabbit, -0.12, 0.025, 0.05, 0.45, 1.2),
+    ball(0.042, PALETTE.furRabbit, 0.0, 0.025, 0.05, 0.45, 1.2),
+    cyl(0.072, 0.078, 0.038, 10, PALETTE.clothWarm, -0.055, 0.215, 0),
+    box(0.035, 0.07, 0.016, PALETTE.clothWarm, -0.017, 0.19, 0.062),
+    ball(0.095, PALETTE.furRabbit, -0.055, 0.285, 0.012),
+    ball(0.032, PALETTE.furRabbit, -0.097, 0.40, -0.01, 2.1, 0.6),
+    ball(0.032, PALETTE.furRabbit, -0.013, 0.40, -0.01, 2.1, 0.6),
+    ball(0.016, PALETTE.furRabbitIn, -0.097, 0.405, 0.012, 2.0, 0.4, 0),
+    ball(0.016, PALETTE.furRabbitIn, -0.013, 0.405, 0.012, 2.0, 0.4, 0),
+    ball(0.044, PALETTE.snout, -0.055, 0.262, 0.072, 0.72, 0.7),
+    ball(0.015, PALETTE.furRabbitIn, -0.055, 0.275, onHead({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, 0, -0.01) + 0.028, 0.8, 0.8, 0),
+    ...face({ x: -0.055, y: 0.285, z: 0.012, r: 0.095 }, { spread: 0.04, eye: 0.019 }),
+    cyl(0.026, 0.022, 0.05, 8, PALETTE.teaCup, 0.075, 0.028, 0.08),
+    cyl(0.028, 0.028, 0.008, 8, PALETTE.clothWarm, 0.075, 0.056, 0.08),
   ]),
 
   animal_fox_brolly: () => merge([
-    cyl(0.04, 0.045, 0.065, 5, PALETTE.furFox, 0, 0.032, 0),
-    blob(0.088, PALETTE.furFox, 0, 0.125, 0),
-    blob(0.062, PALETTE.furFox, 0, 0.225, 0.03),
-    cone(0.03, 0.07, 4, PALETTE.furFox, -0.042, 0.29, 0.02),
-    cone(0.03, 0.07, 4, PALETTE.furFox, 0.042, 0.29, 0.02),
-    blob(0.03, PALETTE.furRabbit, 0, 0.215, 0.082),
-    cyl(0.028, 0.012, 0.16, 4, PALETTE.furRabbit, -0.095, 0.105, -0.05),
-    box(0.012, 0.012, 0.3, PALETTE.woodDark, 0.06, 0.24, 0.13),
-    cyl(0.009, 0.009, 0.32, 4, PALETTE.woodDark, -0.08, 0.3, 0),
-    cone(0.22, 0.13, 8, PALETTE.leafTeal, -0.08, 0.49, 0),
+    ball(0.128, PALETTE.leafTeal, 0, 0.118, 0, 0.98),
+    ball(0.131, PALETTE.leafTeal, 0, 0.098, 0, 0.6),
+    ball(0.042, PALETTE.furFox, -0.058, 0.024, 0.05, 0.45, 1.2),
+    ball(0.042, PALETTE.furFox, 0.058, 0.024, 0.05, 0.45, 1.2),
+    ball(0.06, PALETTE.furFox, -0.145, 0.085, -0.075, 1.0, 1.9),
+    ball(0.032, PALETTE.snout, -0.175, 0.075, -0.145, 1.0, 1.1),
+    ball(0.112, PALETTE.leafTeal, 0, 0.278, -0.012),
+    ball(0.094, PALETTE.furFox, 0, 0.272, 0.028),
+    ball(0.042, PALETTE.snout, 0, 0.245, 0.095, 0.7, 0.85),
+    ball(0.015, PALETTE.eyeDark, 0, 0.252, onHead({ x: 0, y: 0.272, z: 0.028, r: 0.094 }, 0, -0.02) + 0.032, 0.8, 0.8, 0),
+    ...face({ x: 0, y: 0.272, z: 0.028, r: 0.094 }, { spread: 0.04, eye: 0.019 }),
+    cyl(0.008, 0.008, 0.4, 4, PALETTE.woodDark, 0.185, 0.2, 0.02),
+    cone(0.17, 0.095, 10, PALETTE.leafTeal, 0.185, 0.425, 0.02),
+    cyl(0.009, 0.009, 0.36, 4, PALETTE.woodDark, -0.015, 0.16, 0.19),
+    box(0.005, 0.13, 0.005, PALETTE.rope, -0.015, 0.24, 0.33),
   ]),
 
   animal_cat_shelter: () => merge([
-    // 小屋簷
-    box(0.36, 0.022, 0.3, PALETTE.woodDark, 0, 0.3, 0),
-    cyl(0.016, 0.016, 0.3, 4, PALETTE.woodDark, -0.15, 0.15, -0.12),
-    cyl(0.016, 0.016, 0.3, 4, PALETTE.woodDark, 0.15, 0.15, -0.12),
-    cyl(0.17, 0.17, 0.016, 8, PALETTE.rope, 0, 0.008, 0),
-    blob(0.085, PALETTE.furCat, 0, 0.075, 0.02),
-    blob(0.055, PALETTE.furCat, 0.065, 0.085, 0.06),
-    cone(0.022, 0.05, 4, PALETTE.furCat, 0.045, 0.125, 0.06),
-    cone(0.022, 0.05, 4, PALETTE.furCat, 0.085, 0.125, 0.06),
-    cyl(0.018, 0.012, 0.13, 4, PALETTE.furCat, -0.09, 0.055, -0.02),
+    // 屋簷
+    box(0.38, 0.024, 0.32, PALETTE.woodDark, 0, 0.32, 0),
+    cyl(0.015, 0.015, 0.32, 4, PALETTE.woodDark, -0.16, 0.16, -0.13),
+    cyl(0.015, 0.015, 0.32, 4, PALETTE.woodDark, 0.16, 0.16, -0.13),
+    // 貓：醒著，看著外面的雨
+    cyl(0.175, 0.175, 0.018, 10, PALETTE.rope, 0, 0.009, 0),
+    ball(0.115, PALETTE.furCat, 0, 0.082, -0.012, 0.72, 1.05),
+    ball(0.028, PALETTE.furCat, -0.03, 0.055, -0.14, 0.6, 1.9),
+    ball(0.075, PALETTE.furCat, 0.03, 0.098, 0.082),
+    ball(0.026, PALETTE.furCat, -0.01, 0.151, 0.07, 1.1, 0.5),
+    ball(0.026, PALETTE.furCat, 0.07, 0.151, 0.07, 1.1, 0.5),
+    ball(0.013, PALETTE.furRabbitIn, -0.01, 0.154, 0.081, 1.0, 0.4, 0),
+    ball(0.013, PALETTE.furRabbitIn, 0.07, 0.154, 0.081, 1.0, 0.4, 0),
+    ball(0.03, PALETTE.snout, 0.03, 0.085, onHead({ x: 0.03, y: 0.098, z: 0.082, r: 0.075 }, 0, -0.013) + 0.012, 0.7, 0.6),
+    ball(0.011, PALETTE.eyeDark, 0.03, 0.095, onHead({ x: 0.03, y: 0.098, z: 0.082, r: 0.075 }, 0, -0.003) + 0.038, 0.7, 0.7, 0),
+    ...face({ x: 0.03, y: 0.098, z: 0.082, r: 0.075 }, { spread: 0.03, eye: 0.016, up: 0.022, cheekOut: 0.034, cheekDown: 0.03, cheek: 0.019 }),
+    cyl(0.062, 0.066, 0.022, 10, PALETTE.clothWarm, 0.03, 0.058, 0.042),
   ]),
 };
 

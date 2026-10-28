@@ -51,6 +51,37 @@ body {
 .sky__sun[data-weather="cloudy"] { opacity: .5; transform: scale(1.25); filter: blur(10px); }
 .sky__sun[data-weather="cloudy"]::after { opacity: 0; }
 .sky__sun[data-weather="rainy"] { opacity: 0; transform: scale(1.4); }
+
+/* 雲畫在天空圖層上，不是 3D 物件。
+   等角視角是往下看的，3D 的雲永遠低於視線高度，於是一定投影到海面上——
+   不管調成多白多透明，看起來都像一坨擱淺在水上的東西，而不是天上的雲。
+   搬到 CSS 之後它永遠在天空帶裡，而且 0 個 draw call。 */
+.sky__clouds { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.sky__clouds > i {
+  position: absolute; top: var(--y); left: 0;
+  width: 128px; height: 44px; border-radius: 999px;
+  background: #fff; opacity: 0;
+  transform: scale(var(--s));
+  animation: cloudDrift 120s linear infinite;
+  animation-delay: var(--t);
+  transition: opacity 1100ms ease, background 1100ms ease;
+}
+.sky__clouds > i::before, .sky__clouds > i::after {
+  content: ''; position: absolute; background: inherit; border-radius: 50%;
+}
+.sky__clouds > i::before { width: 58px; height: 58px; left: 24px; top: -22px; }
+.sky__clouds > i::after  { width: 42px; height: 42px; right: 22px; top: -14px; }
+@keyframes cloudDrift {
+  from { transform: translateX(-180px) scale(var(--s)); }
+  to   { transform: translateX(110vw) scale(var(--s)); }
+}
+/* 天氣決定看得到幾朵、什麼顏色 */
+.sky[data-weather="sunny"] .sky__clouds > i:nth-child(-n+2) { opacity: .72; }
+.sky[data-weather="cloudy"] .sky__clouds > i { opacity: .82; background: #eef2f1; }
+.sky[data-weather="rainy"]  .sky__clouds > i { opacity: .9;  background: #d9e2e3; }
+@media (prefers-reduced-motion: reduce) {
+  .sky__clouds > i { animation: none; left: calc(var(--y) * 3); }
+}
 #map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 /* 天氣罩：整個畫面蒙一層很淡的色，陰天與雨天一眼就分得出來。純 CSS，零成本 */
 .veil { position: absolute; inset: 0; pointer-events: none; transition: background 1100ms ease; }
