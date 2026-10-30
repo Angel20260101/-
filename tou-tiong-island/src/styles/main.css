@@ -491,3 +491,26 @@ body {
   font-size: 11.5px; font-weight: 700; color: var(--accent);
 }
 .atlas__biome { font-size: 11px; color: var(--gold); font-weight: 700; margin-top: 1px; }
+
+/* ── 走進島裡 ───────────────────────────────── */
+/* 島內是另一個場景，共用同一塊 canvas。群島的名牌與提示要讓開。 */
+#app.is-visiting .label-layer,
+#app.is-visiting .hud { display: none; }
+
+.visit-hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  padding: calc(var(--safe-top) + 12px) 14px 12px;
+  display: flex; align-items: center; gap: 12px; pointer-events: none;
+}
+.visit-hud__back {
+  pointer-events: auto; font: inherit; font-size: 13px; font-weight: 700;
+  border: 0; border-radius: 14px; padding: 10px 14px; cursor: pointer;
+  background: rgba(252, 248, 239, .94); color: var(--ink); box-shadow: var(--shadow-s);
+}
+.visit-hud__back:active { transform: scale(.96); }
+.visit-hud__title {
+  background: rgba(252, 248, 239, .9); border-radius: 14px;
+  padding: 7px 14px; box-shadow: var(--shadow-s);
+}
+.visit-hud__title b { display: block; font-size: 15px; letter-spacing: .06em; }
+.visit-hud__title span { display: block; font-size: 11px; color: var(--muted); }

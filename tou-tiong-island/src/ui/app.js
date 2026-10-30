@@ -17,6 +17,7 @@ import {
 } from './panels.js';
 import * as vaultClient from '../core/vaultClient.js';
 import { buildDemoSave } from '../core/demoData.js';
+import { hasIslandScene, loadIslandScene } from '../core/islandScenes.js';
 
 const WEATHER_LINE = { sunny: '今天島上出太陽', cloudy: '今天島上多雲', rainy: '今天島上下雨' };
 
@@ -163,6 +164,7 @@ export class App {
     return islandPanel(this.sheet, {
       island, state: this.state, content: this.content,
       onPlay: (storyId) => this.play(storyId),
+      onVisit: hasIslandScene(islandId) ? () => this.visitIsland(islandId) : null,
     });
   }
 
@@ -291,6 +293,82 @@ export class App {
     this.state.resetAll();
     this._afterRestore();
     this.toast('清掉了，這是一座全新的島');
+  }
+
+  /**
+   * 走進一座島。
+   *
+   * 群島暫停，島內場景接手同一個 renderer 與 canvas。這座島的道具與場景資料
+   * 到這一刻才下載（規格：進入單島才載入其完整道具與居民）。
+   */
+  async visitIsland(islandId) {
+    if (this._visiting) return;
+    this._visiting = true;
+    this.sheet.close();
+    this.toast('正在走進島上…', 1800);
+    try {
+      const { IslandScene, data, props } = await loadIslandScene(islandId);
+      this.scene.pause();
+      document.getElementById('hint')?.classList.add('is-hidden');
+      this.islandScene = new IslandScene({
+        renderer: this.scene.renderer,
+        canvas: this.scene.canvas,
+        skyLayer: this.scene.skyLayer,
+        labelLayer: this.scene.labelLayer,
+        data, props,
+        onPickResident: (id) => this._residentCard(data, id),
+      });
+      this._paintIslandSky(data);
+      this.islandScene.start();
+      this._showVisitHud(data);
+    } catch (err) {
+      console.error(err);
+      this.scene.resume();
+      this.toast('這座島還沒做好，先回群島');
+    } finally {
+      this._visiting = false;
+    }
+  }
+
+  leaveIsland() {
+    if (!this.islandScene) return;
+    this.islandScene.dispose();
+    this.islandScene = null;
+    document.getElementById('visit-hud')?.remove();
+    this.app.classList.remove('is-visiting');
+    this.scene.resume();
+    this.applyWeather(this.state.todayWeather, { animate: false });
+    this.scene.resize();
+  }
+
+  _paintIslandSky(data) {
+    const sky = data.sky ?? {};
+    this.scene.skyLayer.style.background =
+      `linear-gradient(170deg, ${sky.top} 0%, ${sky.top} 24%, ${sky.bottom} 100%)`;
+  }
+
+  /** 島內的頂部列：島名、主題，與一個回群島的鍵。 */
+  _showVisitHud(data) {
+    document.getElementById('visit-hud')?.remove();
+    const el = document.createElement('div');
+    el.id = 'visit-hud';
+    el.className = 'visit-hud';
+    el.innerHTML = `
+      <button type="button" class="visit-hud__back">← 回群島</button>
+      <div class="visit-hud__title">
+        <b>${data.name}</b>
+        <span>${data.theme}</span>
+      </div>`;
+    el.querySelector('.visit-hud__back').addEventListener('click', () => this.leaveIsland());
+    this.app.appendChild(el);
+    this.app.classList.add('is-visiting');
+  }
+
+  /** 點居民：說牠是誰、在做什麼。規格要的打招呼動作由場景本身播。 */
+  _residentCard(data, id) {
+    const r = (data.residents ?? []).find((x) => x.id === id);
+    if (!r) return;
+    this.toast(`${r.species}・${r.zone}　${r.action}`, 3200);
   }
 
   /** 還原進來的是另一台裝置的島：天氣、島嶼、小船全部重畫一次。 */
