@@ -60,7 +60,13 @@ export class App {
     this._wireHud();
     this.applyWeather(this.state.todayWeather, { animate: false });
     this.refreshWorld();
-    this.scene.focusHome();
+    // 開場框住整座群島，而不是只框主島與願望島。
+    // 研究裡最大的斷點在「進入」（擔心被貼標籤 6/9），而一張只看得到兩座島、
+    // 其餘都在畫面外的地圖，讀起來是空的、沒有「想去哪一座」可言。
+    // 先讓人看見整個世界，再讓他自己決定推進哪一座。
+    // padding 0.82 而不是預設的 1.02：預設值是給「全景」按鈕用的，留白較多；
+    // 開場這一眼要讓島夠大、看得出上面有東西，不是一張衛星照。
+    this.scene.fitToWorld({ padding: 0.82 });
     this.refreshCloudLabel();
     this._fadeHint();
     this._firstRun();
@@ -164,6 +170,7 @@ export class App {
     // 我的紀錄…）就全部被擠出畫面，人會卡在那裡不知道怎麼回去。
     if (island.kind === 'home') return undefined;   // 主島直接點島上的文字就好
     if (island.kind === 'wish') return this.openInteraction('wishboard');
+    if (island.kind === 'post') return this.openInteraction('letter');   // E5 時光郵局
     this.scene.focus(islandId);
     return islandPanel(this.sheet, {
       island, state: this.state, content: this.content,

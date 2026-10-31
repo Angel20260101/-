@@ -51,7 +51,32 @@ function paintHex(geo, topColor, sideColor) {
  * @param {object} cfg  { size, level_height, base_depth }
  * @returns {{ geometry: THREE.BufferGeometry, bounds: {minX,maxX,minZ,maxZ,maxY} }}
  */
-export function buildTerrainGeometry(hexes, cfg) {
+/**
+ * 褪色：把顏色往同明度的灰色拉，再稍微提亮。
+ *
+ * 用在還沒破關的島。不是「調暗」——調暗會讀成「夜晚」或「壞掉」；
+ * 往灰色拉並提亮才讀得出「在霧裡、還沒醒過來」，而且破關後恢復彩度的
+ * 前後對比最明顯。保留明度是關鍵，動的只有彩度。
+ */
+function fade(color, amount = 0.6, lift = 0.08) {
+  // PALETTE 的色票是 '#rrggbb' 字串，不是數字。直接對字串做位元運算會得到
+  // NaN，整座島會畫成純黑——看起來像渲染壞掉，不像「在霧裡」。
+  const hex = typeof color === 'string' ? parseInt(color.replace('#', ''), 16) : color;
+  if (!Number.isFinite(hex)) return color;
+  const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
+  const grey = 0.299 * r + 0.587 * g + 0.114 * b;     // 感知明度，不是算術平均
+  const mix = (c) => {
+    const v = c + (grey - c) * amount;
+    return Math.round(Math.min(255, v + (255 - v) * lift));
+  };
+  return (mix(r) << 16) | (mix(g) << 8) | mix(b);
+}
+
+/**
+ * @param opts.dormant  未破關的島：地形照蓋，但整塊褪成霧色
+ */
+export function buildTerrainGeometry(hexes, cfg, opts = {}) {
+  const { dormant = false } = opts;
   const { size = 1, level_height: levelH = 0.42, base_depth: depth = 0.55 } = cfg;
   const parts = [];
   const bounds = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity, maxY: 0 };
@@ -64,7 +89,9 @@ export function buildTerrainGeometry(hexes, cfg) {
     // radialSegments = 6，半徑略縮讓地塊之間留一道海水的縫
     const geo = new THREE.CylinderGeometry(size * 0.985, size * 0.985, height, 6, 1);
     const colors = SURFACE_COLORS[hex.surface] ?? SURFACE_COLORS.sand;
-    paintHex(geo, colors.top, colors.side);
+    paintHex(geo,
+      dormant ? fade(colors.top) : colors.top,
+      dormant ? fade(colors.side) : colors.side);
     geo.translate(x, height / 2 - depth, z);
     parts.push(geo);
 

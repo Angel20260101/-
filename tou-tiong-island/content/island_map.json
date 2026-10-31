@@ -117,21 +117,6 @@
         "label": "碼頭"
       },
       {
-        "type": "mailbox",
-        "hex": [
-          -1,
-          0
-        ],
-        "offset": [
-          -0.2,
-          0.35
-        ],
-        "scale": 1.0,
-        "rot": -0.3,
-        "interaction": "letter",
-        "label": "郵筒"
-      },
-      {
         "type": "hut",
         "hex": [
           -1,
@@ -203,12 +188,6 @@
         "landmark": "pier",
         "title": "碼頭許願",
         "subtitle": "寫下希望工作環境改變什麼"
-      },
-      {
-        "id": "letter",
-        "landmark": "mailbox",
-        "title": "時光郵局",
-        "subtitle": "寫給未來的自己，只有你看得到"
       }
     ],
     "sky_anchor": {
@@ -351,6 +330,20 @@
       },
       {
         "q": 0,
+        "r": 1,
+        "level": 0,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      },
+      {
+        "q": 0,
+        "r": -1,
+        "level": 1,
+        "surface": "grass_light",
+        "flora": "round_grove"
+      },
+      {
+        "q": -1,
         "r": 1,
         "level": 0,
         "surface": "sand",
@@ -524,6 +517,120 @@
           "height": 2.0,
           "speed": 0.2,
           "note": "雨天飛低一點"
+        }
+      }
+    ]
+  },
+  "post_island": {
+    "island_id": "post_island",
+    "name": "時光郵局島",
+    "tagline": "寫給未來的自己",
+    "_note": "E5 時光郵局。原本是本島上的一個郵筒，獨立成島讓它在地圖上有自己的份量。",
+    "origin": {
+      "q": -2,
+      "r": -1
+    },
+    "flora": "temperate",
+    "hexes": [
+      {
+        "q": 0,
+        "r": 0,
+        "level": 1,
+        "surface": "grass",
+        "flora": "round_grove"
+      },
+      {
+        "q": 1,
+        "r": 0,
+        "level": 0,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      },
+      {
+        "q": 0,
+        "r": 1,
+        "level": 0,
+        "surface": "sand",
+        "flora": "none"
+      },
+      {
+        "q": 0,
+        "r": -1,
+        "level": 1,
+        "surface": "grass_light",
+        "flora": "pine_grove"
+      },
+      {
+        "q": -1,
+        "r": 1,
+        "level": 0,
+        "surface": "sand",
+        "flora": "grass_tufts"
+      }
+    ],
+    "landmarks": [
+      {
+        "type": "mailbox",
+        "hex": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0.2
+        ],
+        "scale": 1.15,
+        "rot": -0.3,
+        "interaction": "letter",
+        "label": "時光郵局"
+      },
+      {
+        "type": "hut",
+        "hex": [
+          0,
+          -1
+        ],
+        "offset": [
+          0.1,
+          0
+        ],
+        "scale": 0.8,
+        "rot": 0.6
+      },
+      {
+        "type": "bench",
+        "hex": [
+          1,
+          0
+        ],
+        "offset": [
+          0,
+          0.2
+        ],
+        "scale": 1.0,
+        "rot": 1.0
+      }
+    ],
+    "animals": [
+      {
+        "type": "animal_rabbit_tea",
+        "hex": [
+          1,
+          0
+        ],
+        "offset": [
+          -0.3,
+          -0.3
+        ],
+        "behaviour": "sip",
+        "speed": 0.9,
+        "rot": 2.0,
+        "rainy": {
+          "type": "animal_rabbit_brolly",
+          "behaviour": "patrol",
+          "speed": 0.3,
+          "range": 0.4,
+          "axis": "x"
         }
       }
     ]

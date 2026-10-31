@@ -65,11 +65,12 @@ export function buildWorld(map, progress = {}, wish = {}) {
   const clashes = (occupied, x, z, r) =>
     occupied.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < (p.r + r) ** 2);
 
-  const scatterFlora = (hexes, origin, floraKind, seedKey, occupied) => {
+  /** @param density 1 = 照密度表；未破關的島用 0.5，有輪廓但比較冷清 */
+  const scatterFlora = (hexes, origin, floraKind, seedKey, occupied, density = 1) => {
     const rand = seeded(seedKey);
     for (const hex of hexes) {
       const kind = hex.flora ?? 'none';
-      const count = map.flora_density[kind] ?? 0;
+      const count = Math.round((map.flora_density[kind] ?? 0) * density);
       if (!count) continue;
       const kinds = map.flora_table[floraKind]?.[kind] ?? [];
       if (!kinds.length) continue;
@@ -198,6 +199,43 @@ export function buildWorld(map, progress = {}, wish = {}) {
     });
   }
 
+  // ── 時光郵局島 ───────────────────────────────────────────
+  // E5 原本只是本島上的一個郵筒。獨立成一座中型島，是為了讓地圖上的
+  // 三個常駐去處（許願、寫信、求助）在尺度上各有份量，而不是全部擠在本島。
+  if (map.post_island) {
+    const pi = map.post_island;
+    const origin = pi.origin;
+    const hexes = pi.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    placeLandmarks(pi.landmarks, pi.hexes, origin);
+    const occupied = occupiedOf(pi.landmarks, pi.hexes, origin);
+    scatterFlora(pi.hexes, origin, pi.flora, `${pi.island_id}-flora`, occupied);
+    scatterClutter(pi.hexes, origin, `${pi.island_id}-clutter`, occupied);
+    const centre = axialToWorld(origin.q, origin.r, cfg.size);
+    placeAnimals(pi.animals, pi.hexes, origin, centre);
+
+    const sign = (pi.landmarks ?? []).find((lm) => lm.interaction);
+    const anchors = {};
+    if (sign) {
+      const hex = pi.hexes.find((h) => h.q === sign.hex[0] && h.r === sign.hex[1]);
+      const base = hexTopPosition(hex, cfg, origin);
+      const [dx, dz] = sign.offset ?? [0, 0];
+      anchors[sign.interaction] = { x: base.x + dx, y: base.y + 0.5, z: base.z + dz, label: sign.label };
+    }
+
+    islands.push({
+      island_id: pi.island_id,
+      kind: 'post',
+      name: pi.name,
+      tagline: pi.tagline,
+      geometry, bounds, anchors,
+      interaction: sign?.interaction ?? null,
+      unlocked: true,
+      growthCount: 0,
+      growthTotal: 0,
+    });
+  }
+
   // ── 願望島 ───────────────────────────────────────────────
   // 碼頭放出的每一艘小船都停在這裡；公司回應一個主題，島上就長出一棵樹。
   // 玩家自己寫的願望原文從來不會離開這台裝置，這裡呈現的只有「船的數量」與公司的回應。
@@ -284,12 +322,26 @@ export function buildWorld(map, progress = {}, wish = {}) {
     }
 
     if (!state.unlocked) {
-      // 未解鎖：海面上只有一小叢礁石與一個浮標
-      const rand = seeded(`${island.island_id}-locked`);
-      const { x, z } = axialToWorld(origin.q, origin.r, cfg.size);
-      addProp('rock', matrixOf(x, -0.05, z, rand() * Math.PI, 1.1));
-      addProp('rock', matrixOf(x + 0.8, -0.08, z + 0.5, rand() * Math.PI, 0.8));
-      addProp('buoy', matrixOf(x - 0.7, -0.05, z - 0.6, 0, 0.9));
+      /* 未破關的島：地形照蓋，只是還沒醒過來。
+       *
+       * 舊版這裡是 geometry: null——整座島只有兩顆礁石和一個浮標，
+       * 六座裡五座是空海面，所以地圖一打開就是空的，沒有「想去哪一座」可言。
+       *
+       * 改成蓋出完整地形與地標，但褪成霧色、沒有名字、沒有居民。
+       * 看得到、走得到、點得進去；破關之後它會長出名字、恢復彩度、住進島民。
+       * 這樣既解決「空空的」，也保住 PDF 第 24 頁「破關一座」的獎勵——
+       * 而且前後對比比「多出一座島」更看得出來。
+       */
+      const localHexes = [...island.base.hexes];
+      const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+      const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { dormant: true });
+      // 不放地標。道具是跨島依型別分批的 InstancedMesh，沒辦法只把某幾座島上的
+      // 屋頂調色——結果會是褪色的地配上全彩的橘屋頂，比沒有建築更突兀。
+      // 剛好「建築長出來」也可以當成破關的獎勵之一。
+      const occupied = [];
+      // 植被照長，但密度減半：有輪廓、但看得出來比已破關的島冷清
+      scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-dormant`, occupied, 0.5);
+      // 不放島民——「住進居民」是破關的獎勵
       islands.push({
         island_id: island.island_id,
         kind: 'story',
@@ -297,8 +349,8 @@ export function buildWorld(map, progress = {}, wish = {}) {
         order: island.order,
         name: island.locked_label,
         unlocked: false,
-        geometry: null,
-        bounds: { minX: x - 1.4, maxX: x + 1.4, minZ: z - 1.4, maxZ: z + 1.4, maxY: 0 },
+        geometry,
+        bounds,
         growthCount: 0,
         growthTotal: island.growth.length,
       });
