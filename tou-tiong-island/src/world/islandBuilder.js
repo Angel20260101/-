@@ -150,6 +150,42 @@ export function buildWorld(map, progress = {}, wish = {}) {
     }
   };
 
+  /**
+   * 島與島之間的步道。
+   *
+   * 走的路線不是我發明的——每座故事島的 sea_route_from_home 本來就已經
+   * 標好了兩個海上航點，過去只拿來擺踏腳石。這裡沿同一條折線鋪木橋，
+   * 所以「看得到的橋」與「資料上的航線」永遠是同一條，不會各走各的。
+   *
+   * 兩端各退一個島半徑，橋才會從岸邊開始、不會插進島裡。
+   */
+  const BRIDGE_SPAN = 2.0;      // rope_bridge 的幾何跨距，沿 X 軸
+  const placeBridge = (points, { trimFrom = 2.0, trimTo = 1.5 } = {}) => {
+    // 把折線切成等長段，每段放一座橋
+    for (let i = 0; i < points.length - 1; i++) {
+      let [ax, az] = points[i];
+      let [bx, bz] = points[i + 1];
+      const dx = bx - ax, dz = bz - az;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.01) continue;
+      const ux = dx / len, uz = dz / len;
+      // 第一段從起點島的岸邊開始，最後一段到終點島的岸邊為止
+      const start = i === 0 ? trimFrom : 0;
+      const end = i === points.length - 2 ? len - trimTo : len;
+      const usable = end - start;
+      if (usable < 0.4) continue;
+      const n = Math.max(1, Math.round(usable / BRIDGE_SPAN));
+      const step = usable / n;
+      // rope_bridge 沿 +X 鋪。繞 Y 轉 rotY 後，X 軸會指向 (cos, -sin)，
+      // 所以要讓它對齊 (ux, uz)，rotY = atan2(-uz, ux)。
+      const rotY = Math.atan2(-uz, ux);
+      for (let k = 0; k < n; k++) {
+        const t = start + step * (k + 0.5);
+        addProp('rope_bridge', matrixOf(ax + ux * t, -0.08, az + uz * t, rotY, step / BRIDGE_SPAN));
+      }
+    }
+  };
+
   const occupiedOf = (landmarks, hexes, origin) =>
     (landmarks ?? []).flatMap((lm) => {
       const hex = hexes.find((h) => h.q === lm.hex[0] && h.r === lm.hex[1]);
@@ -390,6 +426,29 @@ export function buildWorld(map, progress = {}, wish = {}) {
       growthTotal: island.growth.length,
       grown: grown.map((g) => ({ growth_id: g.growth_id, route_id: g.route_id, label: g.label })),
     });
+  }
+
+  // ── 島間步道 ─────────────────────────────────────────────
+  // 本島是樞紐：每一座島都有一條橋通回本島，所以主角從哪裡出發都走得到。
+  // 橋對所有島都鋪，包含還沒破關的——「走得過去」是邀請，
+  // 把橋藏起來等於又回到那張看不出能去哪裡的空地圖。
+  {
+    const w = (q, r) => {
+      const { x, z } = axialToWorld(q, r, cfg.size);
+      return [x, z];
+    };
+    const homePt = w(map.home.origin.q, map.home.origin.r);
+    // 本島 7 格、中型島 5 格、故事島 3 格，半徑依序約 2 / 1.7 / 1.4
+    for (const [key, trimTo] of [['post_island', 1.7], ['wish_island', 1.7]]) {
+      const isl = map[key];
+      if (!isl) continue;
+      placeBridge([homePt, w(isl.origin.q, isl.origin.r)], { trimFrom: 2.0, trimTo });
+    }
+    for (const island of map.islands) {
+      const via = (island.sea_route_from_home ?? []).map(([q, r]) => w(q, r));
+      placeBridge([homePt, ...via, w(island.origin.q, island.origin.r)],
+        { trimFrom: 2.0, trimTo: 1.4 });
+    }
   }
 
   return { islands, props, animals, boats };
