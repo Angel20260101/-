@@ -25,6 +25,7 @@ import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { CAST, CHARACTER_KINDS, buildCharacter, poseCharacter } from './characters.js';
 import { makeRoute, sampleRoute } from './routes.js';
+import { createRidges } from './ridges.js';
 
 /**
  * 光比。這兩個值分開調，因為畫面平不平取決於「太陽／環境」的比值，
@@ -160,6 +161,9 @@ export class SceneManager {
     this._buildWater();
     this._buildSky();
     this._buildRain();
+    // 遠景稜線。群島以外原本只剩 CSS 天空漸層，鏡頭一拉遠畫面就剩兩塊色。
+    // 三層共約 1,300 個三角形、3 個 draw call，是整個畫面裡最便宜的一筆投資。
+    this.ridges = createRidges(this.scene, { horizon: WEATHER.sunny.fog });
 
     this.weather = WEATHER.sunny;
     this._lightTarget = {
@@ -280,6 +284,7 @@ export class SceneManager {
       this.hemi.color.copy(this._colourTarget.hemiSky);
       this.hemi.groundColor.copy(this._colourTarget.hemiGround);
       this.cloudMaterial.color.copy(this._colourTarget.cloud);
+      this.ridges?.setHorizon(this._colourTarget.fog);
       this.hemi.intensity = this._lightTarget.hemi;
       this.dir.intensity = this._lightTarget.dir;
     }
@@ -1183,6 +1188,9 @@ export class SceneManager {
     this.hemi.color.lerp(t.hemiSky, k);
     this.hemi.groundColor.lerp(t.hemiGround, k);
     this.cloudMaterial.color.lerp(t.cloud, k);
+    // 遠山跟著地平線色走。山的朦朧來自「混了多少天空色」，不是來自霧距離，
+    // 所以這裡要主動更新，不能靠 scene.fog。
+    this.ridges?.setHorizon(this.scene.fog.color);
     this.hemi.intensity += (this._lightTarget.hemi - this.hemi.intensity) * k;
     this.dir.intensity += (this._lightTarget.dir - this.dir.intensity) * k;
   }
@@ -1230,7 +1238,8 @@ export class SceneManager {
       const d = this.controls.distance;
       this.scene.fog.near = d * 0.85;
       this.scene.fog.far = d * this.weather.fogScale;
-      const far = Math.max(160, d * 2.8);
+      // 遠景稜線最外層在半徑 190，相機偏離中心最多約 40，所以遠裁面要能涵蓋 230 以上
+      const far = Math.max(280, d * 3.2);
       if (this.camera.far !== far) { this.camera.far = far; this.camera.updateProjectionMatrix(); }
       this.renderer.render(this.scene, this.camera);
       this._updateLabels();
