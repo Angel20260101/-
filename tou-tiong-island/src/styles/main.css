@@ -545,8 +545,76 @@ body {
 }
 .trust__tag--yes { background: rgba(99, 140, 120, .16); color: var(--accent-d); }
 .trust__tag--no { background: rgba(224, 138, 106, .16); color: #b05f42; }
+/* 第三類：既不是「看得到」也不是「看不到」，而是「要你主動開口才會發生」。
+   用中性的藍而不是紅綠——它不是警告也不是保證，是一個選項。 */
+.trust__tag--ask { background: rgba(99, 126, 160, .16); color: #4e6d8f; }
 
 @media (max-width: 560px) {
   .pill { padding: 8px 10px; }
   .pill .rail__text, .pill .pill__text { display: none; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   燈塔的三個出口
+   ────────────────────────────────────────────────────────────
+   研究裡高壓時的需求是分歧的（諮詢 4／狀態 3／自助 2，n=9），
+   所以三個出口要平等並列、一眼看完，不能做成一個主按鈕加兩個次要連結——
+   那等於替使用者決定了他現在需要什麼。
+   ════════════════════════════════════════════════════════════ */
+.exit {
+  margin: 14px 0;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, .5);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+}
+.exit__head { font-weight: 700; color: var(--ink-strong); margin-bottom: 4px; }
+.exit__lead { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.exit__promise {
+  margin: 0 0 10px; padding-left: 18px;
+  font-size: 12.5px; line-height: 1.7; color: var(--ink);
+}
+.exit__items { display: grid; gap: 8px; }
+.exit__item {
+  font: inherit; text-align: left; cursor: pointer;
+  display: grid; gap: 2px;
+  padding: 10px 12px;
+  background: var(--paper2);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  transition: background .14s ease, transform .08s ease;
+}
+.exit__item:hover { background: #fff; }
+.exit__item:active { transform: scale(.985); }
+.exit__item-name { font-weight: 700; color: var(--ink-strong); font-size: 13.5px; }
+.exit__item-desc { font-size: 12px; color: var(--muted); }
+
+/* ── 一分鐘呼吸 ─────────────────────────────────────────────
+   12 秒一個循環：4 秒吸（脹大）、2 秒停（維持）、6 秒吐（縮小）。
+   keyframe 的百分比就是這個節奏：0→33% 吸、33→50% 停、50→100% 吐。
+   用 CSS 跑而不是 JS，分頁切到背景時瀏覽器會自己暫停，不會偷跑。 */
+.breathe { display: grid; justify-items: center; gap: 12px; padding: 10px 0 4px; }
+.breathe__ring {
+  width: 148px; height: 148px; border-radius: 50%;
+  border: 2px solid var(--hairline-strong);
+  display: grid; place-items: center;
+  animation: breathe-scale 12s ease-in-out infinite;
+}
+.breathe__dot {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--accent); opacity: .22;
+  animation: breathe-scale 12s ease-in-out infinite;
+}
+@keyframes breathe-scale {
+  0%   { transform: scale(.72); }
+  33%  { transform: scale(1); }
+  50%  { transform: scale(1); }
+  100% { transform: scale(.72); }
+}
+.breathe__phase { font-weight: 700; font-size: 17px; color: var(--ink-strong); letter-spacing: .08em; }
+.breathe__left { font-size: 12.5px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* 開了「減少動態」的人不該被一個一直脹縮的圓追著跑 */
+  .breathe__ring, .breathe__dot { animation: none; }
 }

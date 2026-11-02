@@ -13,6 +13,7 @@ import { ResultView } from './resultView.js';
 import {
   Sheet, trustPanel, islandPanel, dailyPanel, weeklyPanel, lighthousePanel,
   letterPanel, wishPanel, wishBoardPanel, recordsPanel, backupPanel, loginPanel,
+  breathePanel, noisePanel,
   atlasPanel, collectionPanel, aboutPanel,
 } from './panels.js';
 import * as vaultClient from '../core/vaultClient.js';
@@ -199,12 +200,27 @@ export class App {
       case 'lighthouse':
         // 先亮燈、光束掃出去，面板稍後才進來——燈塔代表的是有人在指路
         this.scene.lightTheLighthouse();
-        setTimeout(() => lighthousePanel(this.sheet, { content: this.content }), 650);
+        setTimeout(() => lighthousePanel(this.sheet, {
+          content: this.content,
+          onRecords: () => this.openInteraction('records'),
+          onCalm: (id) => this.openInteraction(id === 'noise' ? 'calm-noise' : 'calm-breathe'),
+        }), 650);
         return undefined;
       case 'lighthouse-now':
         // 從心情溫度計導過來的：需要電話的人不該等動畫
         this.scene.lightTheLighthouse();
-        return lighthousePanel(this.sheet, { content: this.content });
+        return lighthousePanel(this.sheet, {
+          content: this.content,
+          onRecords: () => this.openInteraction('records'),
+          onCalm: (id) => this.openInteraction(id === 'noise' ? 'calm-noise' : 'calm-breathe'),
+        });
+      // 燈塔出口二：當場就能做的自助。不留紀錄、不回報，所以沒有 state 參與
+      case 'calm-breathe': {
+        const cfg = this.content.dailyWeekly.safety.calm?.items?.find((i) => i.id === 'breathe');
+        return breathePanel(this.sheet, { seconds: cfg?.seconds ?? 60 });
+      }
+      case 'calm-noise':
+        return noisePanel(this.sheet);
       case 'letter':
         return letterPanel(this.sheet, { state: this.state, content: this.content });
       case 'wish':

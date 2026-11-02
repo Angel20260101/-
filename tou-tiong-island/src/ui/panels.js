@@ -17,7 +17,11 @@ export class Sheet {
     });
   }
 
-  open({ title, subtitle, body, actions = [], dismissable = true, mini = false }) {
+  /**
+   * @param onMount 面板插進 DOM 之後呼叫，拿到 sheet 元素。
+   *   內容是用 innerHTML 寫進去的，所以事件只能在這一刻之後才掛得上去。
+   */
+  open({ title, subtitle, body, actions = [], dismissable = true, mini = false, onMount }) {
     clearTimeout(this._timer);
     this.dismissable = dismissable;
     this.mount.hidden = false;
@@ -48,6 +52,7 @@ export class Sheet {
     sheet.querySelector('.sheet__close')?.addEventListener('click', () => this.close());
     this.mount.appendChild(sheet);
     this.el = sheet;
+    onMount?.(sheet);
     return sheet;
   }
 
@@ -87,12 +92,14 @@ export function trustPanel(sheet, { onDone }) {
         </div>
         <div class="trust__row">
           <span class="trust__dot">3</span>
-          <span class="trust__text">公司那邊看得到的，只有這些：
+          <span class="trust__text">這座島<b>不會替你通報任何人</b>。誰看得到什麼，就這三種：
             <span class="trust__see">
-              <span class="trust__tag trust__tag--yes">看得到</span>
+              <span class="trust__tag trust__tag--yes">公司看得到</span>
               <span>有多少人參與、哪些主題被提到幾次</span>
-              <span class="trust__tag trust__tag--no">看不到</span>
+              <span class="trust__tag trust__tag--no">公司看不到</span>
               <span>你寫的任何一個字、你是誰、你選了什麼</span>
+              <span class="trust__tag trust__tag--ask">你開口才有</span>
+              <span>只有你自己按下「預約面談」，<b>職護</b>才會知道你是誰。職護不是公司，依法不能通報主管或人資，也不列入考績。</span>
             </span>
           </span>
         </div>
@@ -229,7 +236,21 @@ export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
 }
 
 /* ──────────────── 燈塔：求助資源 ──────────────── */
-export function lighthousePanel(sheet, { content }) {
+/**
+ * 燈塔：三個出口。
+ *
+ * 研究裡高壓時的需求是分歧的——諮詢 4／看狀態 3／自助 2（員工問卷 n=9）。
+ * 舊版只給一串電話號碼，等於只服務到想諮詢的那四個人，而且連他們也只拿到
+ * 號碼、沒有真的入口。三個出口分別接住三種人：
+ *
+ *   想找人談    → 預約面談（職護）。這是島上唯一會知道你是誰的地方，
+ *                 而且是你自己按下去才會發生
+ *   想先喘口氣  → 呼吸與白噪音。不用預約、不留任何東西，當場就能做
+ *   想看狀態    → 我的紀錄
+ *
+ * 緊急電話永遠在最下面，不被任何出口擋住。
+ */
+export function lighthousePanel(sheet, { content, onRecords, onCalm }) {
   const s = content.dailyWeekly.safety;
   const rows = s.resources.map((r) => `
     <div class="atlas__row">
@@ -239,15 +260,185 @@ export function lighthousePanel(sheet, { content }) {
       </div>
       <a class="pill-btn" href="tel:${esc(r.contact)}">${esc(r.contact)}</a>
     </div>`).join('');
+
+  const b = s.booking ?? {};
+  const promises = (b.promise ?? []).map((t) => `<li>${esc(t)}</li>`).join('');
+  // 沒設定預約網址時不給一個按了沒反應的按鈕——寧可明說「還沒開放」
+  const bookCta = b.url
+    ? `<a class="btn" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">${esc(b.cta ?? '去預約')}</a>`
+    : '<p class="tiny">預約入口還在接，先用下面的電話。</p>';
+
+  const calm = s.calm ?? {};
+  const calmItems = (calm.items ?? []).map((i) => `
+    <button type="button" class="exit__item" data-calm="${esc(i.id)}">
+      <span class="exit__item-name">${esc(i.name)}</span>
+      <span class="exit__item-desc">${esc(i.desc)}</span>
+    </button>`).join('');
+
   sheet.open({
     title: '燈塔',
     subtitle: '隨時可以點，不必說原因',
     body: `
       <p class="muted">燈亮著不代表你一定要走過去。但它會一直亮著。</p>
+
+      <div class="exit">
+        <div class="exit__head">${esc(b.title ?? '預約一次面談')}</div>
+        <p class="exit__lead">${esc(b.lead ?? '')}</p>
+        <ul class="exit__promise">${promises}</ul>
+        <p class="tiny">${esc(b.note ?? '')}</p>
+        ${bookCta}
+      </div>
+
+      <div class="exit">
+        <div class="exit__head">${esc(calm.title ?? '先喘一口氣')}</div>
+        <p class="exit__lead">${esc(calm.lead ?? '')}</p>
+        <div class="exit__items">${calmItems}</div>
+      </div>
+
+      <div class="exit">
+        <div class="exit__head">${esc(s.status?.title ?? '看看自己的狀態')}</div>
+        <p class="exit__lead">${esc(s.status?.lead ?? '')}</p>
+        <button type="button" class="btn btn--ghost" data-go="records">打開我的紀錄</button>
+      </div>
+
+      <div class="section-label">現在就可以打的電話</div>
       ${rows}
       <p class="card__note" style="margin-top:14px">${esc(s.closing)}</p>
       <p class="tiny">點電話號碼可以直接撥出。這些資源與你在島上的任何紀錄無關，也不會留下你來過的痕跡。</p>`,
+    onMount: (root) => {
+      root.querySelector('[data-go="records"]')?.addEventListener('click', () => {
+        sheet.close();
+        onRecords?.();
+      });
+      for (const el of root.querySelectorAll('[data-calm]')) {
+        el.addEventListener('click', () => onCalm?.(el.dataset.calm));
+      }
+    },
   });
+}
+
+/* ──────────────── 燈塔出口二：當場就能做的自助 ──────────────── */
+
+/**
+ * 一分鐘呼吸。
+ *
+ * 4 秒吸、2 秒停、6 秒吐——吐氣比吸氣長，是為了讓副交感神經接手；
+ * 這個比例來自臨床上常用的延長吐氣法，不是隨便挑的。
+ *
+ * 動畫交給 CSS：一個 12 秒的 keyframe 循環，JS 只負責倒數與收尾。
+ * 不用 requestAnimationFrame，面板關掉之後不會留下跑著的迴圈。
+ */
+export function breathePanel(sheet, { seconds = 60 } = {}) {
+  let left = seconds;
+  const el = sheet.open({
+    title: '一分鐘呼吸',
+    subtitle: '跟著圈圈走就好',
+    mini: true,
+    body: `
+      <div class="breathe">
+        <div class="breathe__ring"><div class="breathe__dot"></div></div>
+        <div class="breathe__phase" id="bp">吸氣</div>
+        <div class="breathe__left"><span id="bl">${seconds}</span> 秒</div>
+      </div>
+      <p class="tiny" style="text-align:center">吸氣 4 秒 ・ 停 2 秒 ・ 吐氣 6 秒。做不滿也沒關係，隨時可以關掉。</p>`,
+  });
+
+  const phase = el.querySelector('#bp');
+  const label = el.querySelector('#bl');
+  const PHASES = [[4, '吸氣'], [2, '停'], [6, '吐氣']];
+  let t = 0;
+  const timer = setInterval(() => {
+    left -= 1;
+    t = (t + 1) % 12;
+    let acc = 0;
+    for (const [d, name] of PHASES) {
+      acc += d;
+      if (t < acc) { phase.textContent = name; break; }
+    }
+    label.textContent = Math.max(0, left);
+    if (left <= 0) {
+      clearInterval(timer);
+      sheet.open({
+        title: '做完了',
+        mini: true,
+        body: '<p class="card__text" style="text-align:center">就這樣。不用記錄，也不用回報給誰。</p>',
+      });
+      sheet.autoClose(2200);
+    }
+  }, 1000);
+  // 面板關掉就把計時器收掉，不然關了還在背景跑
+  const prev = sheet.onClose;
+  sheet.onClose = () => { clearInterval(timer); sheet.onClose = prev; prev?.(); };
+}
+
+/**
+ * 白噪音。
+ *
+ * 用 Web Audio 即時合成，不下載任何音檔——這個產品的首載是進入漏斗最大的
+ * 斷點，為了一段環境音多幾百 KB 不划算。
+ *
+ * 合成的是「棕噪音」而不是純白噪音：白噪音在高頻能量太集中，聽久了刺耳；
+ * 把前一個樣本累積進來（一階低通）會讓能量往低頻偏，接近雨聲或風聲。
+ */
+export function noisePanel(sheet) {
+  let ctx = null;
+  let src = null;
+  let gain = null;
+
+  const start = () => {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const len = ctx.sampleRate * 4;                 // 4 秒的循環，夠長到聽不出接縫
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.02 * white) / 1.02;           // 一階低通 → 棕噪音
+      d[i] = last * 3.2;
+    }
+    src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    gain = ctx.createGain();
+    gain.gain.value = 0;
+    src.connect(gain).connect(ctx.destination);
+    src.start();
+    // 淡入 1.5 秒。突然開始的環境音會嚇到人，那跟目的正好相反。
+    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 1.5);
+  };
+
+  const stop = () => {
+    try { src?.stop(); ctx?.close(); } catch { /* 已經關掉就算了 */ }
+    ctx = src = gain = null;
+  };
+
+  const el = sheet.open({
+    title: '白噪音',
+    subtitle: '戴耳機效果比較好',
+    mini: true,
+    body: `
+      <p class="card__text" style="text-align:center">蓋掉辦公室的人聲。<br>關掉面板就會停。</p>
+      <p style="text-align:center;margin-top:16px">
+        <button type="button" class="btn" id="noise-toggle">開始</button>
+      </p>
+      <div style="margin-top:14px">
+        <input type="range" id="noise-vol" min="0" max="40" value="18" style="width:100%" aria-label="音量">
+      </div>
+      <p class="tiny" style="text-align:center">聲音是當場合成的，沒有下載任何音檔，也不會留下紀錄。</p>`,
+  });
+
+  const toggle = el.querySelector('#noise-toggle');
+  const vol = el.querySelector('#noise-vol');
+  toggle.addEventListener('click', () => {
+    if (ctx) { stop(); toggle.textContent = '開始'; }
+    else { start(); toggle.textContent = '停止'; }
+  });
+  vol.addEventListener('input', () => {
+    if (gain) gain.gain.value = Number(vol.value) / 100;
+  });
+
+  const prev = sheet.onClose;
+  sheet.onClose = () => { stop(); sheet.onClose = prev; prev?.(); };
 }
 
 /* ──────────────── 時光郵局（E5） ──────────────── */

@@ -13,11 +13,18 @@ const TAP_PX = 8;
 const DEG = Math.PI / 180;
 
 export class CameraController {
-  constructor(camera, dom, cfg, onChange, onTap) {
+  /**
+   * @param onChange   任何鏡頭變動後呼叫（包含程式自己移動的）。
+   * @param onUserInput 只有在「人」真的拖曳或縮放時呼叫。
+   *   兩者要分開：場景用它來判斷要不要繼續自動取景，而程式自己呼叫
+   *   fitToWorld 時也會觸發 onChange，不該被當成使用者接手。
+   */
+  constructor(camera, dom, cfg, onChange, onTap, onUserInput) {
     this.camera = camera;
     this.dom = dom;
     this.onChange = onChange;
     this.onTap = onTap;
+    this.onUserInput = onUserInput;
 
     this.target = new THREE.Vector3(...(cfg.default_target ?? [0, 0, 0]));
     this.distance = cfg.default_distance ?? 26;
@@ -67,6 +74,7 @@ export class CameraController {
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       if (this.pointers.size === 1) {
+        this.onUserInput?.();
         this._moved += Math.abs(dx) + Math.abs(dy);
         const dAz = -dx * 0.006, dPo = -dy * 0.005;
         this.azimuth += dAz;
@@ -79,6 +87,7 @@ export class CameraController {
         this._lastMove = now;
         this.apply();
       } else if (this.pointers.size === 2 && this._pinchStart > 0) {
+        this.onUserInput?.();
         this._moved += 20;
         const ratio = this._pinchStart / Math.max(this._pinchDistance(), 1);
         this.distance = THREE.MathUtils.clamp(this._pinchStartDist * ratio, this.minDistance, this.maxDistance);
@@ -96,6 +105,7 @@ export class CameraController {
     this._onWheel = (e) => {
       if (!this.enabled) return;
       e.preventDefault();
+      this.onUserInput?.();
       // 乘法縮放，不是加減。線性的 step 會讓近處遠比遠處敏感：
       // 距離 6 時滾一格移動 1.2 單位（20%），距離 140 時同一格只有 0.86%，
       // 差了二十幾倍，所以手感永遠對不準。按比例縮放，每一格的「倍率」才一致。

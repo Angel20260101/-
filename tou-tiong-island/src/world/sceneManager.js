@@ -182,11 +182,14 @@ export class SceneManager {
     this._beamUntil = 0;
     this._tick = this._tick.bind(this);
     this.animating = !this.reducedMotion;
+    // 一開始由程式決定取景；使用者一碰鏡頭就交還給他
+    this.autoFit = true;
 
     this.controls = new CameraController(
       this.camera, canvas, map.camera,
       () => this.invalidate(),
       (pos) => this._handleTap(pos),
+      () => { this.autoFit = false; },     // 只有人真的動了鏡頭才交還控制權
     );
 
     this._onResize = () => this.resize();
@@ -1278,7 +1281,12 @@ export class SceneManager {
     this.camera.aspect = w / h;
     this.camera.fov = this.camera.aspect < 0.78 ? 46 : 34;
     this.camera.updateProjectionMatrix();
-    if (this._wideView) this.fitToWorld(); else this.focusHome();
+    // 只有在使用者還沒自己動過鏡頭時才重新取景。
+    // autoFit 這個旗標本來就存在（app.js 點島時會關掉），但 sceneManager
+    // 從來沒讀過它——所以每次轉螢幕、開合側欄都會把人家調好的視角打回原點。
+    if (this.autoFit) {
+      if (this._wideView) this.fitToWorld(); else this.fitToWorld({ padding: 0.82 });
+    }
     this.invalidate();
   }
 
