@@ -23,7 +23,8 @@ import { buildWorld } from './islandBuilder.js';
 import { CameraController } from './cameraController.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { CAST, CHARACTER_KINDS, buildCharacter, poseCharacter } from './characters.js';
+import { CHARACTER_KINDS, buildCharacter } from './characters.js';
+import { poseCharacter } from './activities.js';
 import { makeRoute, sampleRoute } from './routes.js';
 import { createRidges } from './ridges.js';
 
@@ -59,12 +60,13 @@ const RAIN_AREA = 26;
 const RAIN_TOP = 9;
 
 export class SceneManager {
-  constructor({ canvas, labelLayer, skyLayer, veilLayer, map, onSelectIsland, onSelectInteraction }) {
+  constructor({ canvas, labelLayer, skyLayer, veilLayer, map, residents, onSelectIsland, onSelectInteraction }) {
     this.canvas = canvas;
     this.labelLayer = labelLayer;
     this.skyLayer = skyLayer;
     this.veilLayer = veilLayer ?? null;
     this.map = map;
+    this.residentData = residents ?? null;
     this.onSelectIsland = onSelectIsland;
     this.onSelectInteraction = onSelectInteraction;
 
@@ -300,7 +302,8 @@ export class SceneManager {
   // ── 建立／重建世界 ───────────────────────────────────────
   rebuild(progress, wish = {}) {
     this._clearWorld();
-    const { islands, props, animals, boats } = buildWorld(this.map, progress, wish);
+    const { islands, props, animals, boats, residents } = buildWorld(this.map, progress, wish, this.residentData);
+    this._residents = residents ?? [];
     this.islandsById.clear();
 
     for (const island of islands) {
@@ -404,13 +407,12 @@ export class SceneManager {
       resolved.push({ ...a, ...form });
     }
 
-    // 有列在選角表的走新的角色系統，其餘維持舊的整塊道具路徑。
-    // 這讓遷移可以一隻一隻搬，而不是全有全無。
-    this._buildCast(resolved.filter((a) => CAST[a.type]));
+    // 美術文件的 60 隻居民走角色系統；island_map.json 裡原本的 animal_*
+    // （鳥、雨天替身那些）維持舊的整塊道具路徑，兩邊並存。
+    this._buildCast(this._residents ?? []);
 
     const byType = new Map();
     for (const a of resolved) {
-      if (CAST[a.type]) continue;
       if (!byType.has(a.type)) byType.set(a.type, []);
       byType.get(a.type).push(a);
     }
@@ -461,29 +463,31 @@ export class SceneManager {
     const slots = new Map(CHARACTER_KINDS.map((k) => [k, 0]));
     const actors = [];
 
+    const MOVING = new Set(['walk', 'hop', 'carry', 'waddle', 'paddle']);
     for (const a of list) {
-      const role = CAST[a.type];
-      const seed = (a.base.x * 31.7 + a.base.z * 17.3) % 1;
-      const character = buildCharacter({ species: role.species, held: role.held, seed });
+      const character = buildCharacter({ species: a.species, held: a.held, seed: a.phase });
       for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
 
-      // patrol 的資料原本只有「沿某軸來回 range 距離」。把它變成一條真正的路徑，
-      // 角色就會等速走完並在端點平順地轉身，而不是用 cos>=0 瞬間翻面。
+      // 會移動的動作要有一條真的路徑可走，否則原地踏步會比不動還怪。
+      // 文件給的是「沿兩個停靠點走動」「沿彎曲路線緩走」這類描述，
+      // 場景還沒建之前先用居民自己位置附近的一段短路徑代替。
       let route = null;
-      if (a.behaviour === 'patrol' && a.range > 0) {
-        const ax = a.axis === 'z' ? 'z' : 'x';
-        const from = { ...a.base }, to = { ...a.base };
-        from[ax] -= a.range; to[ax] += a.range;
+      if (MOVING.has(a.activity)) {
+        const len = 0.5 + (a.phase % 1) * 0.7;
+        const ang = a.rot;
+        const from = { x: a.base.x - Math.sin(ang) * len, y: a.base.y, z: a.base.z - Math.cos(ang) * len };
+        const to = { x: a.base.x + Math.sin(ang) * len, y: a.base.y, z: a.base.z + Math.cos(ang) * len };
         route = makeRoute([from, to], { loop: false, smooth: false });
       }
       actors.push({
         character,
-        activity: route ? 'walk' : (role.activity ?? 'idle'),
+        activity: a.activity,
         route,
         base: a.base,
-        rot: a.rot ?? 0,
-        speed: a.speed ?? 0.5,
-        phase: (seed * 97) % 10,
+        rot: a.rot,
+        speed: a.speed,
+        phase: a.phase,
+        meta: { island: a.island_id, no: a.no, species: a.species, greet: a.greet, spot: a.spot },
       });
     }
 
@@ -517,34 +521,6 @@ export class SceneManager {
     }
     this.cast = actors;
 
-    // 家具。從舊的 merge 幾何裡拆出來之後，它需要有人擺回角色旁邊。
-    // 擺在角色的「基準位置」而不是當下位置：角色會走動，桌子不會跟著跑。
-    const furniture = new Map();
-    for (const a of list) {
-      const f = CAST[a.type]?.furniture;
-      if (!f) continue;
-      if (!furniture.has(f)) furniture.set(f, []);
-      furniture.set(f, [...furniture.get(f), a]);
-    }
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const e = new THREE.Euler();
-    const one = new THREE.Vector3(1, 1, 1);
-    for (const [type, group] of furniture) {
-      const mesh = this._instanced(type, group.length, this.propMaterial);
-      if (!mesh) continue;
-      this._castMeshes.push(mesh);
-      group.forEach((a, i) => {
-        // 擺在角色面前一點，不然角色會站在桌子正中央
-        const r = a.rot ?? 0;
-        m.compose(
-          new THREE.Vector3(a.base.x + Math.sin(r) * 0.17, a.base.y, a.base.z + Math.cos(r) * 0.17),
-          q.setFromEuler(e.set(0, r, 0)), one,
-        );
-        mesh.setMatrixAt(i, m);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
-    }
   }
 
   /**

@@ -7,6 +7,7 @@
  */
 import * as THREE from 'three';
 import { buildTerrainGeometry, axialToWorld, hexTopPosition } from './hexGeometry.js';
+import { SPECIES, SPECIES_BY_ZH } from './species.js';
 
 /** 以字串為種子的亂數：同一座島每次重建長出來的草木位置都一樣。 */
 function seeded(str) {
@@ -36,12 +37,13 @@ const matrixOf = (x, y, z, rotY = 0, scale = 1) =>
  * @param {object} progress  { [island_id]: { unlocked, name, routes: string[] } }
  * @param {object} wish      { count: number, board: content/wish_board.json }
  */
-export function buildWorld(map, progress = {}, wish = {}) {
+export function buildWorld(map, progress = {}, wish = {}, residentData = null) {
   const cfg = map.hex;
   const islands = [];
   const props = new Map();   // type -> Matrix4[]（靜態道具）
   const animals = [];        // 會動的島民，交給 sceneManager 逐幀更新
   const boats = [];          // 停在願望島的小船，會隨海浪上下
+  const residents = [];      // 動物居民：每島 10 隻，照美術文件的配置表
   const addProp = (type, matrix) => {
     if (!props.has(type)) props.set(type, []);
     props.get(type).push(matrix);
@@ -184,6 +186,110 @@ export function buildWorld(map, progress = {}, wish = {}) {
         addProp('rope_bridge', matrixOf(ax + ux * t, -0.08, az + uz * t, rotY, step / BRIDGE_SPAN));
       }
     }
+  };
+
+/**
+ * 從美術文件的中文描述推導動作。
+ *
+ * 文件的「日常動作與路線」是給人看的散文，不是列舉型別。與其另外維護一份
+ * 對照表（一定會跟文件走鐘），不如用關鍵字直接從原文推——文件改了，行為跟著改。
+ * 推不出來就回 idle，不會是錯的，只是比較安靜。
+ */
+const ACTIVITY_KEYWORDS = [
+  [/舉杯|喝水|喝|啜|保溫杯/, 'sip'],
+  [/翻書|翻頁|看書|閱讀|讀地圖/, 'read'],
+  [/澆水|傾壺|水壺/, 'water'],
+  [/搬|送|推車|推小|運|托盤|郵袋|包裹|箱/, 'carry'],
+  [/洗|擦拭|擦乾|梳理/, 'wash'],
+  [/揉陶|壓陶|織|挑揀|挑色|分類|整理|修理|工作|鋤|曬/, 'work'],
+  [/泡腳|泡湯|足湯|浸/, 'soak'],
+  [/曬背|伏下|趴/, 'bask'],
+  [/划行|游|水路/, 'paddle'],
+  [/涉水|單腳站立/, 'wade'],
+  [/棲|轉頭|看時鐘|觀察|看景|看水|看遠方|看風向/, 'perch'],
+  [/小跳|跳兩段|跳/, 'hop'],
+  [/走|巡|散步|來回|移動|前進|繞/, 'walk'],
+  [/坐|躺|休息|曬太陽/, 'sit'],
+];
+function activityFromLoop(text, rig) {
+  for (const [re, act] of ACTIVITY_KEYWORDS) if (re.test(text)) return act;
+  return rig === 'bird' ? 'perch' : rig === 'pinniped' ? 'bask' : 'idle';
+}
+
+/** 手持物也從原文推。沒提到就空手——文件說「居民動作各對應一件可見道具」，但不是每一隻都有。 */
+const HELD_KEYWORDS = [
+  [/托盤/, 'tray'], [/郵袋|包裹/, 'mail'], [/箱/, 'box'], [/籃/, 'basket'],
+  [/水壺|澆/, 'can'], [/杯|壺/, 'cup'], [/書|地圖/, 'book'],
+  [/工具|鋤|鏟|推車/, 'tool'],
+];
+function heldFromLoop(text) {
+  for (const [re, id] of HELD_KEYWORDS) if (re.test(text)) return id;
+  return 'none';
+}
+
+  /**
+   * 島民配置。
+   *
+   * 美術文件給的「固定位置」是描述性的（「前景 咖啡桌」「中景 池畔」），
+   * 而那些場景元素還沒建——六座島的完整場景排在凍結後。所以這一階段用
+   * 演算法配置，只保住文件真正在意的那件事：**前後景的層次**。
+   *
+   *   01–03 前景重點互動居民 → 放在最靠鏡頭的那一排，彼此拉開
+   *   04–10 中後景生活居民   → 散佈到其餘地塊
+   *
+   * 等場景建好之後，這裡換成讀座標就行，資料結構不用動。
+   */
+  const placeResidents = (islandId, hexes, origin, list, occupied) => {
+    if (!list?.length) return;
+    const rand = seeded(`${islandId}-residents`);
+    // 鏡頭從 +z 方向俯看，所以 z 大的是前景
+    const spots = hexes.map((h) => ({ h, p: hexTopPosition(h, cfg, origin) }))
+      .sort((a, b) => b.p.z - a.p.z);
+
+    list.forEach((r, i) => {
+      const front = r.no <= 3;
+      // 前景三隻擠在最前面那一兩格，中後景平均散到其餘格
+      const spot = front
+        ? spots[i % Math.min(2, spots.length)]
+        : spots[(i - 3) % spots.length];
+      const base = spot.p;
+
+      // 在格子裡找一個不撞到地標與樹的位置。找不到就退而求其次放在偏移處——
+      // 少一隻居民比把牠塞進樹裡糟。
+      let x = base.x, z = base.z;
+      for (let k = 0; k < 14; k++) {
+        const a = rand() * Math.PI * 2;
+        const rad = (front ? 0.2 : 0.25) + rand() * 0.45;
+        const cx = base.x + Math.cos(a) * rad;
+        const cz = base.z + Math.sin(a) * rad;
+        if (!clashes(occupied, cx, cz, 0.16)) { x = cx; z = cz; break; }
+        if (k === 13) { x = base.x + Math.cos(a) * rad; z = base.z + Math.sin(a) * rad; }
+      }
+      occupied.push({ x, z, r: 0.16 });
+
+      const species = SPECIES_BY_ZH[r.animal];
+      if (!species) return;                        // 資料寫錯時安靜跳過，不要整座島爆掉
+      const rig = SPECIES[species]?.rig ?? 'quad';
+      let activity = activityFromLoop(r.loop, rig);
+      // 兔子的「走」在文件裡明確是小跳，不是一般步行
+      if (species === 'rabbit' && activity === 'walk') activity = 'hop';
+
+      residents.push({
+        island_id: islandId,
+        no: r.no,
+        front,
+        species,
+        activity,
+        held: heldFromLoop(r.loop),
+        greet: r.greet,
+        spot: r.spot,
+        base: { x, y: base.y, z },
+        // 面向大致朝鏡頭，前景的更正對一點，中後景隨機一些才不會像列隊
+        rot: front ? (rand() - 0.5) * 0.9 : rand() * Math.PI * 2,
+        phase: rand() * 12,
+        speed: 0.28 + rand() * 0.16,
+      });
+    });
   };
 
   const occupiedOf = (landmarks, hexes, origin) =>
@@ -411,6 +517,10 @@ export function buildWorld(map, progress = {}, wish = {}) {
     scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-${grown.length}`, occupied);
     scatterClutter(localHexes, origin, `${island.island_id}-clutter-${grown.length}`, occupied);
     placeAnimals(island.animals, localHexes, origin, axialToWorld(origin.q, origin.r, cfg.size));
+    // 美術文件的十隻居民。只有破關的島才有人——未破關的島是褪色、無人的，
+    // 「住進居民」本來就是破關的獎勵之一。
+    placeResidents(island.island_id, localHexes, origin,
+      residentData?.islands?.[island.island_id]?.residents, occupied);
 
     islands.push({
       island_id: island.island_id,
@@ -451,5 +561,5 @@ export function buildWorld(map, progress = {}, wish = {}) {
     }
   }
 
-  return { islands, props, animals, boats };
+  return { islands, props, animals, boats, residents };
 }

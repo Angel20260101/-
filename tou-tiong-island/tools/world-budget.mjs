@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { buildWorld } from '../src/world/islandBuilder.js';
 import { BUDGET } from '../src/world/perf.js';
-import { CAST, CHARACTER_KINDS } from '../src/world/characters.js';
+import { CHARACTER_KINDS } from '../src/world/characters.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
@@ -25,6 +25,7 @@ const fail = (m) => { failures += 1; console.error('  ✗ ' + m); };
 const check = (m, cond) => (cond ? ok(m) : fail(m));
 
 const map = read('content/island_map.json');
+const residentData = read('content/residents.json');
 const board = read('content/wish_board.json');
 
 /** 全部解鎖、所有航線都長出來——這是最吃資源的狀態。 */
@@ -43,25 +44,19 @@ const fullProgress = Object.fromEntries(map.islands.map((i) => [
  * 點選用的代理圓柱 material.visible = false，不會進渲染，所以不算。
  */
 function estimateDrawCalls(world) {
-  // 島民分兩類。列在 CAST 的走角色系統：部件依**幾何種類**分批，
-  // 所以不管島上有幾隻、幾種動物，固定就是 CHARACTER_KINDS 這麼多個批次——
-  // 加角色不再吃 draw call，這是能把島填滿的前提。
-  // 其餘維持舊的「一種型別一個 InstancedMesh」。
+  // 動物居民（美術文件那 60 隻）走角色系統：部件依**幾何種類**分批，
+  // 所以不管島上有幾隻、幾種動物，固定就是 CHARACTER_KINDS 這麼多個批次。
+  // 加居民不再吃 draw call——這是「每島 10 隻、六島 60 席」能成立的前提。
+  // island_map.json 裡原本的 animal_*（鳥、雨天替身）維持「一種型別一個 mesh」。
   const legacy = new Set();
   const legacyRainy = new Set();
-  const furniture = new Set();
-  let hasCast = false;
   for (const a of world.animals) {
-    for (const [form, bucket] of [[a.forms.default, legacy], [a.forms.rainy, legacyRainy]]) {
-      const role = CAST[form.type];
-      if (role) { hasCast = true; if (role.furniture) furniture.add(role.furniture); }
-      else bucket.add(form.type);
-    }
+    legacy.add(a.forms.default.type);
+    legacyRainy.add(a.forms.rainy.type);
   }
   return world.props.size
     + Math.max(legacy.size, legacyRainy.size)
-    + (hasCast ? CHARACTER_KINDS.length : 0)
-    + furniture.size
+    + (world.residents?.length ? CHARACTER_KINDS.length : 0)
     + world.islands.filter((i) => i.geometry).length
     + (world.boats.length ? 1 : 0)
     + 6;
@@ -69,8 +64,8 @@ function estimateDrawCalls(world) {
 
 console.log('\n效能預算（src/world/perf.js 的 BUDGET）\n');
 
-const full = buildWorld(map, fullProgress, { count: 6, board });
-const fresh = buildWorld(map, {}, { count: 0, board });
+const full = buildWorld(map, fullProgress, { count: 6, board }, residentData);
+const fresh = buildWorld(map, {}, { count: 0, board }, residentData);
 
 const estFull = estimateDrawCalls(full);
 const estFresh = estimateDrawCalls(fresh);
@@ -100,6 +95,13 @@ check('陰影是靜態烘焙的（shadowMap.autoUpdate = false）',
 check('會動的物件不投影（島民、小船、雲用 cast: false）',
   /MOVING_SHADOW\s*=\s*\{\s*cast:\s*false/.test(sceneSrc)
   && /NO_SHADOW\s*=\s*\{\s*cast:\s*false/.test(sceneSrc));
+
+// 美術文件要求每島 10 隻、六島 60 席。少掉就是資料或物種對照表出錯，
+// 而那會安靜地少幾隻動物，不會有任何錯誤訊息。
+const resCount = full.residents?.length ?? 0;
+check(`六島全開時有 ${resCount} 隻動物居民（文件要求 60）`, resCount === 60);
+const species = new Set(full.residents?.map((r) => r.species));
+check(`用到 ${species.size} 個物種（文件要求 20）`, species.size === 20);
 
 // 實例總數：三角形幾乎是免費的，但矩陣更新是 CPU 成本，還是要盯著
 const instances = [...full.props.values()].reduce((n, m) => n + m.length, 0);

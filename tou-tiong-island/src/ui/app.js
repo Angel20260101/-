@@ -37,6 +37,7 @@ export class App {
       skyLayer: document.getElementById('sky'),
       veilLayer: document.getElementById('veil'),
       map: content.islandMap,
+      residents: content.residents,
       onSelectIsland: (id) => this.selectIsland(id),
       onSelectInteraction: (id) => this.openInteraction(id),
     });
