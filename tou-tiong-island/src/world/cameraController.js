@@ -34,6 +34,9 @@ export class CameraController {
     this._downAt = 0;
     this._downPos = { x: 0, y: 0 };
     this._moved = 0;
+    // 慣性用的角速度（每秒弧度）。放開手之後由 step() 繼續消化。
+    this._velAz = 0;
+    this._velPo = 0;
 
     this._bind();
     this.apply();
@@ -57,6 +60,7 @@ export class CameraController {
     };
     this._onMove = (e) => {
       if (!this.enabled || !this.pointers.has(e.pointerId)) return;
+      const now = performance.now();
       const prev = this.pointers.get(e.pointerId);
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
@@ -64,8 +68,15 @@ export class CameraController {
 
       if (this.pointers.size === 1) {
         this._moved += Math.abs(dx) + Math.abs(dy);
-        this.azimuth -= dx * 0.006;
-        this.polar = THREE.MathUtils.clamp(this.polar - dy * 0.005, this.minPolar, this.maxPolar);
+        const dAz = -dx * 0.006, dPo = -dy * 0.005;
+        this.azimuth += dAz;
+        this.polar = THREE.MathUtils.clamp(this.polar + dPo, this.minPolar, this.maxPolar);
+        // 記下瞬時角速度，放開手之後才有東西可以滑。用混合而不是直接覆蓋，
+        // 免得最後一個微小的 pointermove 把前面累積的甩動歸零。
+        const dt = Math.max(1, now - (this._lastMove ?? now)) / 1000;
+        this._velAz = this._velAz * 0.4 + (dAz / dt) * 0.6;
+        this._velPo = this._velPo * 0.4 + (dPo / dt) * 0.6;
+        this._lastMove = now;
         this.apply();
       } else if (this.pointers.size === 2 && this._pinchStart > 0) {
         this._moved += 20;
@@ -85,8 +96,11 @@ export class CameraController {
     this._onWheel = (e) => {
       if (!this.enabled) return;
       e.preventDefault();
-      const step = e.deltaY * 0.012;
-      this.distance = THREE.MathUtils.clamp(this.distance + step, this.minDistance, this.maxDistance);
+      // 乘法縮放，不是加減。線性的 step 會讓近處遠比遠處敏感：
+      // 距離 6 時滾一格移動 1.2 單位（20%），距離 140 時同一格只有 0.86%，
+      // 差了二十幾倍，所以手感永遠對不準。按比例縮放，每一格的「倍率」才一致。
+      const factor = Math.exp(e.deltaY * 0.0014);
+      this.distance = THREE.MathUtils.clamp(this.distance * factor, this.minDistance, this.maxDistance);
       this.apply();
     };
 
@@ -103,6 +117,30 @@ export class CameraController {
   }
 
   /** 把球面座標套到相機上，並通知場景需要重繪。 */
+  /**
+   * 慣性。
+   *
+   * 原本放開手指鏡頭就停死，使用者得靠一連串小拖曳去對準角度，而不是甩一下
+   * 讓它滑到定位——這是「很難操控」的主因之一。puma 用 OrbitControls 的
+   * dampingFactor 0.07；這裡自己做，因為我們的渲染是按需的，不能每幀無條件更新。
+   *
+   * @returns {boolean} 還在動嗎。還在動就讓場景排下一幀，停了就讓迴圈睡掉。
+   */
+  step(dt) {
+    if (this.pointers.size) return false;          // 手還按著的時候不要插手
+    const speed = Math.abs(this._velAz) + Math.abs(this._velPo);
+    if (speed < 0.0015) { this._velAz = this._velPo = 0; return false; }
+    const decay = Math.pow(0.0022, Math.min(dt, 0.05));   // 每秒衰減到約 0.2%
+    this.azimuth += this._velAz * dt;
+    this.polar = THREE.MathUtils.clamp(this.polar + this._velPo * dt, this.minPolar, this.maxPolar);
+    // 撞到俯角上下限就把那個方向的速度吃掉，否則會沿著邊界一直滑
+    if (this.polar <= this.minPolar || this.polar >= this.maxPolar) this._velPo = 0;
+    this._velAz *= decay;
+    this._velPo *= decay;
+    this.apply();
+    return true;
+  }
+
   apply() {
     const sinPolar = Math.sin(this.polar);
     this.camera.position.set(

@@ -1206,6 +1206,10 @@ export class SceneManager {
     const dt = this._lastFrame ? Math.min((now - this._lastFrame) / 1000, 0.1) : 0.016;
     this._lastFrame = now;
 
+    // 相機慣性：放開手之後把剩餘的甩動消化掉。還在動就標記要重畫，
+    // 停了就什麼都不做，讓按需渲染的迴圈自己睡掉。
+    if (this.controls.step?.(dt)) this._dirty = true;
+
     const beamActive = this._beamUntil > now;
     if (this.animating || beamActive) {
       this._clock += dt;

@@ -251,10 +251,16 @@ for (const i of islandMap.islands) {
     if (band.band_id !== w.band_id) bad(`${w.week} 的分級應該是 ${band.band_id}，不是 ${w.band_id}`);
   }
   for (const w of demo.wishes) if (!themes.has(w.theme)) bad(`願望主題「${w.theme}」不在看板上`);
-  // 這份資料是拿來示範「島會長大」的，所以不能全空也不能全滿
+  // 這份資料是拿來示範「島會長大」的，所以不能全空。
+  // 2026-11-02：改成六座全開。示範資料的主要用途已經是競賽展示與評審期操作，
+  // 評審看到一半是褪色無人的島，讀起來是「做不完」而不是「還有得玩」。
+  // 「島會長大」改由航線來示範——所以這裡改成檢查航線不可以全部走完。
   const unlocked = Object.keys(demo.islands).length;
   if (unlocked === 0) bad('一座島都沒解鎖，看不出島會長大');
-  if (unlocked === islandMap.islands.length) bad('六座島全開，看不出還有東西可以探索');
+  if (unlocked < islandMap.islands.length) bad(`示範資料只解鎖 ${unlocked}/${islandMap.islands.length} 座島，展示用應該全開`);
+  const totalRoutes = islandMap.islands.reduce((n, i) => n + i.growth.length, 0);
+  const walkedRoutes = Object.values(demo.islands).reduce((n, i) => n + (i.routes?.length ?? 0), 0);
+  if (walkedRoutes >= totalRoutes) bad('所有航線都走完了，看不出島還會長大');
   // 打卡要有缺口：這個產品主張沒有連續紀錄的壓力，示範資料不該演全勤
   const span = 42;
   if (Object.keys(demo.daily).length >= span) bad('打卡沒有任何缺口，與「沒有連續紀錄壓力」的主張衝突');

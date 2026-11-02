@@ -93,15 +93,28 @@ export function buildDemoSave(content) {
     if (!save.keepsakes.includes(keepsake.keepsake_id)) save.keepsakes.push(keepsake.keepsake_id);
   });
 
-  // ── 島嶼：三座解鎖、一座走完三條航線，其他留白 ──
-  // 全部解鎖反而看不出「還有東西可以探索」，留白才是正在玩的樣子。
+  // ── 島嶼：六座全部解鎖 ──
+  // 2026-11-02：原本刻意只解鎖三座（「留白才是正在玩的樣子」），但示範資料的
+  // 主要用途已經變成競賽展示與評審期操作（12/01–12/15）。評審打開看到一半是
+  // 褪色無人的島，讀起來是「做不完」而不是「還有得玩」。
+  //
+  // 打卡的缺口與溫度計的起伏仍然保留——那是產品主張（連續紀錄不是這裡的美德），
+  // 跟「島上有沒有人」是兩件事。
+  //
+  // 航線刻意不走完：留 1–2 條沒走的島，才看得出島會長大。
   const ISLANDS = [
     { id: 'island_boundary', name: '我的界線島', routes: ['r_01_boundary', 'r_01_dialogue', 'r_01_carry'],
       plays: 4, endings: { e_01_line: 2, e_01_deal: 1, e_01_carry: 1 }, ago: 50 },
     { id: 'island_voice', name: '', routes: ['r_02_protect', 'r_02_support'],
       plays: 2, endings: { e_02_shield: 1, e_02_echo: 1 }, ago: 31 },
-    { id: 'island_night', name: '夜哨島', routes: ['r_03_safety'],
-      plays: 1, endings: { e_03_railing: 1 }, ago: 12 },
+    { id: 'island_night', name: '夜哨島', routes: ['r_03_safety', 'r_03_hold'],
+      plays: 2, endings: { e_03_railing: 1, e_03_half: 1 }, ago: 12 },
+    { id: 'island_credit', name: '署名島', routes: ['r_04_speak', 'r_04_rules'],
+      plays: 2, endings: { e_04_name: 1, e_04_table: 1 }, ago: 24 },
+    { id: 'island_kin', name: '我的歸返島', routes: ['r_05_connect', 'r_05_autonomy', 'r_05_comply'],
+      plays: 3, endings: { e_05_closer: 2, e_05_room: 1 }, ago: 40 },
+    { id: 'island_rest', name: '歇腳島', routes: ['r_06_adjust'],
+      plays: 1, endings: { e_06_hammock: 1 }, ago: 6 },
   ];
   for (const i of ISLANDS) {
     save.islands[i.id] = {

@@ -309,7 +309,10 @@ export class App {
   _afterRestore() {
     this.applyWeather(this.state.todayWeather, { animate: false });
     this.refreshWorld();
-    this.scene.focusHome({ animate: true });
+    // 還原存檔會改變群島的形狀（解鎖了哪些島、長出了哪些航線），
+    // 所以要重新取景而不是回到主島——否則新解鎖的島會留在畫面外，
+    // 載入示範資料的人會以為「怎麼還是只有這幾座」。
+    this.scene.fitToWorld({ padding: 0.82, animate: true });
     this.refreshCloudLabel();
     this.toast('紀錄接回來了');
   }

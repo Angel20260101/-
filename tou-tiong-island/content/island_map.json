@@ -15,7 +15,7 @@
     ],
     "default_distance": 44,
     "min_distance": 6,
-    "max_distance": 140,
+    "max_distance": 72,
     "polar_deg": {
       "min": 22,
       "max": 68,
@@ -23,7 +23,8 @@
     },
     "azimuth_deg": {
       "default": -38
-    }
+    },
+    "_note": "max_distance 從 140 降到 72：群島實際只有約 20 單位寬，140 等於可以拉到世界的七倍遠、看到一片空藍。72 剛好容得下「全景」。"
   },
   "home": {
     "island_id": "island_home",
