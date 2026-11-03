@@ -699,3 +699,38 @@ body {
   .index { transform: none; }
   .hud { right: min(330px, 86vw); }
 }
+
+/* ════════════════════════════════════════════════════════════
+   轉介預約登記
+   ────────────────────────────────────────────────────────────
+   全系統唯一會留下稱呼與聯絡方式的畫面。選項做成大塊可點的卡片而不是
+   下拉選單：下拉會把「我要跟誰談」藏起來，而那正是使用者最需要看清楚、
+   也最需要時間決定的一題。
+   ════════════════════════════════════════════════════════════ */
+.picks { display: grid; gap: 8px; margin-bottom: 4px; }
+.picks--row { grid-template-columns: 1fr 1fr; }
+.pickbox {
+  font: inherit; text-align: left; cursor: pointer;
+  display: grid; gap: 3px; padding: 11px 13px;
+  background: var(--paper2);
+  border: 1px solid var(--hairline); border-radius: 13px;
+  transition: background .14s ease, border-color .14s ease;
+}
+.pickbox:hover { background: #fff; }
+.pickbox.is-on { border-color: var(--accent); background: rgba(99, 140, 120, .09); }
+.pickbox__name { font-weight: 700; font-size: 13.5px; color: var(--ink-strong); }
+.pickbox__desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.pickbox__note { font-size: 11.5px; color: var(--accent-d); line-height: 1.6; }
+
+/* 日期與時段：只列開放的。讓人撞到沒開放的日子，每撞一次就多一個放棄的理由。 */
+.slots { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chip-day {
+  font: inherit; font-size: 12.5px; cursor: pointer;
+  padding: 7px 12px;
+  background: var(--paper2);
+  border: 1px solid var(--hairline); border-radius: 999px;
+  color: var(--ink-strong);
+  transition: background .14s ease, color .14s ease;
+}
+.chip-day:hover { background: #fff; }
+.chip-day.is-on { background: var(--ink-strong); color: var(--paper2); border-color: var(--ink-strong); }

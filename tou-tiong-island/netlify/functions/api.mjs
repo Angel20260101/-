@@ -120,6 +120,85 @@ class VaultStore {
 
 const vault = new VaultStore();
 
+/**
+ * 轉介預約登記。
+ *
+ * 這是整個系統裡**唯一**會存到可識別資料的地方——稱呼與聯絡方式。
+ * 其餘所有畫面（天氣、溫度計、故事、願望）都只有匿名代碼。
+ * E1 的第三行就是在講這件事：「只有你自己按下預約，職護才會知道你是誰。」
+ *
+ * 所以這裡刻意跟 vault 分開一個 store：
+ *   - 兩者的保存期限與存取對象不同（備份是玩家自己的，預約是要給職護看的）
+ *   - 混在一起會讓「哪些資料含個資」這件事變得說不清楚
+ *
+ * 安全邊界：
+ *   - 預約代碼才查得到自己那一筆，沒有列表端點，不能枚舉
+ *   - 不接受自由文字以外的任何欄位，長度全部設上限
+ *   - 跟遊戲存檔完全不關聯，查預約不會洩漏玩了哪些島
+ */
+class BookingStore {
+  constructor() { this.memory = new Map(); this.blobs = undefined; }
+
+  async _store() {
+    if (this.blobs !== undefined) return this.blobs;
+    try {
+      const { getStore } = await import('@netlify/blobs');
+      this.blobs = getStore({ name: 'tti-bookings', consistency: 'strong' });
+    } catch {
+      this.blobs = null;      // 本機沒開 Blobs：記憶體頂著，但 durable=false 會傳到介面
+    }
+    return this.blobs;
+  }
+
+  async durable() { return (await this._store()) !== null; }
+
+  async get(ref) {
+    const b = await this._store();
+    if (!b) return this.memory.get(ref) ?? null;
+    try { return await b.get(ref, { type: 'json' }); } catch { return null; }
+  }
+
+  async put(ref, row) {
+    const b = await this._store();
+    if (!b) { this.memory.set(ref, row); return row; }
+    await b.setJSON(ref, row);
+    return row;
+  }
+}
+
+const bookings = new BookingStore();
+
+const BOOK_RE = /^BK-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+const BOOK_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // 去掉 0/O/1/I/L，唸出來不會聽錯
+function newBookingRef() {
+  let out = '';
+  for (let i = 0; i < 6; i++) out += BOOK_ALPHABET[Math.floor(Math.random() * BOOK_ALPHABET.length)];
+  return `BK-${out}`;
+}
+
+const BOOK_TARGETS = new Set(['nurse', 'counselor']);
+const BOOK_MODES = new Set(['onsite', 'remote']);
+const BOOK_CATEGORIES = new Set(['work', 'life', 'private']);
+
+/** 只接受白名單欄位，長度全部設上限。自由文字最短的那條防線。 */
+function validateBooking(b) {
+  if (!b || typeof b !== 'object') return '沒有內容';
+  if (!BOOK_TARGETS.has(b.target)) return '轉介對象不合法';
+  if (!BOOK_MODES.has(b.mode)) return '會談方式不合法';
+  if (!BOOK_CATEGORIES.has(b.category)) return '主題分類不合法';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date ?? '')) return '日期格式不對';
+  if (!/^\d{2}:\d{2}$/.test(b.slot ?? '')) return '時段格式不對';
+  const day = new Date(`${b.date}T00:00:00`);
+  if (Number.isNaN(day.getTime())) return '日期不存在';
+  const days = Math.round((day - new Date(new Date().toDateString())) / 86400000);
+  if (days < 0) return '不能預約過去的日期';
+  if (days > 60) return '只能預約兩個月內';
+  if (!b.name || String(b.name).trim().length > 40) return '稱呼不能空白，也不要超過 40 字';
+  if (!b.contact || String(b.contact).trim().length > 60) return '請留一個聯絡方式';
+  if (b.note && String(b.note).length > 500) return '備註太長了';
+  return null;
+}
+
 const CODE_RE = /^TTI-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}$/;
 const MAX_CIPHERTEXT = 512 * 1024;   // 存檔再大也不該超過這個，超過就是有人在亂丟東西
 const B64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
@@ -373,6 +452,47 @@ export default async (request) => {
         };
         await vault.put(code, row);
         return json({ code, updated_at: row.updated_at, durable: await vault.durable() }, existing ? 200 : 201);
+      }
+    }
+
+    // ── 轉介預約登記 ──────────────────────────────────────
+    // POST /api/v1/bookings          建立一筆，回傳預約代碼
+    // GET  /api/v1/bookings/:ref     用代碼查自己那一筆
+    // 沒有列表端點：代碼是唯一的入口，不能枚舉。
+    if (seg[0] === 'bookings') {
+      if (!seg[1] && method === 'POST') {
+        const bad = validateBooking(body);
+        if (bad) return err('invalid_request', bad, 400);
+        const ref = newBookingRef();
+        const row = {
+          ref,
+          target: body.target, mode: body.mode, category: body.category,
+          date: body.date, slot: body.slot,
+          name: String(body.name).trim(),
+          contact: String(body.contact).trim(),
+          note: body.note ? String(body.note).trim() : '',
+          status: 'requested',
+          created_at: new Date().toISOString(),
+        };
+        await bookings.put(ref, row);
+        return json({
+          ref, date: row.date, slot: row.slot, status: row.status,
+          durable: await bookings.durable(),
+        }, 201);
+      }
+      if (seg[1] === 'status' && method === 'GET') {
+        return json({ durable: await bookings.durable() });
+      }
+      if (seg[1] && method === 'GET') {
+        const ref = seg[1].toUpperCase();
+        if (!BOOK_RE.test(ref)) return err('invalid_code', '預約代碼格式不對', 400);
+        const row = await bookings.get(ref);
+        if (!row) return err('not_found', '查不到這組預約代碼', 404);
+        // 聯絡方式不回傳：知道代碼的人不該因此看到別人的電話
+        return json({
+          ref: row.ref, target: row.target, mode: row.mode, category: row.category,
+          date: row.date, slot: row.slot, status: row.status, created_at: row.created_at,
+        });
       }
     }
 

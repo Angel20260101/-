@@ -13,7 +13,7 @@ import { ResultView } from './resultView.js';
 import {
   Sheet, trustPanel, islandPanel, dailyPanel, weeklyPanel, lighthousePanel,
   letterPanel, wishPanel, wishBoardPanel, recordsPanel, backupPanel, loginPanel,
-  breathePanel, noisePanel,
+  breathePanel, noisePanel, bookingPanel,
   atlasPanel, collectionPanel, aboutPanel,
 } from './panels.js';
 import * as vaultClient from '../core/vaultClient.js';
@@ -234,6 +234,7 @@ export class App {
           content: this.content,
           onRecords: () => this.openInteraction('records'),
           onCalm: (id) => this.openInteraction(id === 'noise' ? 'calm-noise' : 'calm-breathe'),
+          onBook: () => this.openInteraction('booking'),
         }), 650);
         return undefined;
       case 'lighthouse-now':
@@ -243,6 +244,7 @@ export class App {
           content: this.content,
           onRecords: () => this.openInteraction('records'),
           onCalm: (id) => this.openInteraction(id === 'noise' ? 'calm-noise' : 'calm-breathe'),
+          onBook: () => this.openInteraction('booking'),
         });
       // 燈塔出口二：當場就能做的自助。不留紀錄、不回報，所以沒有 state 參與
       case 'calm-breathe': {
@@ -251,6 +253,12 @@ export class App {
       }
       case 'calm-noise':
         return noisePanel(this.sheet);
+      // 轉介預約登記：全系統唯一會留下稱呼與聯絡方式的地方
+      case 'booking':
+        return bookingPanel(this.sheet, {
+          content: this.content,
+          onDone: () => this.toast('登記好了，職護會跟你聯絡'),
+        });
       case 'letter':
         return letterPanel(this.sheet, { state: this.state, content: this.content });
       case 'wish':

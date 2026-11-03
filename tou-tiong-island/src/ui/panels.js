@@ -250,7 +250,7 @@ export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
  *
  * 緊急電話永遠在最下面，不被任何出口擋住。
  */
-export function lighthousePanel(sheet, { content, onRecords, onCalm }) {
+export function lighthousePanel(sheet, { content, onRecords, onCalm, onBook }) {
   const s = content.dailyWeekly.safety;
   const rows = s.resources.map((r) => `
     <div class="atlas__row">
@@ -263,10 +263,11 @@ export function lighthousePanel(sheet, { content, onRecords, onCalm }) {
 
   const b = s.booking ?? {};
   const promises = (b.promise ?? []).map((t) => `<li>${esc(t)}</li>`).join('');
-  // 沒設定預約網址時不給一個按了沒反應的按鈕——寧可明說「還沒開放」
+  // 預約做在系統內。booking.url 留空＝走系統內流程；
+  // 填了網址才改成導向外部平台（例如公司換了別的職護系統）。
   const bookCta = b.url
     ? `<a class="btn" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">${esc(b.cta ?? '去預約')}</a>`
-    : '<p class="tiny">預約入口還在接，先用下面的電話。</p>';
+    : `<button type="button" class="btn" data-go="booking">${esc(b.cta ?? '去預約')}</button>`;
 
   const calm = s.calm ?? {};
   const calmItems = (calm.items ?? []).map((i) => `
@@ -310,6 +311,7 @@ export function lighthousePanel(sheet, { content, onRecords, onCalm }) {
         sheet.close();
         onRecords?.();
       });
+      root.querySelector('[data-go="booking"]')?.addEventListener('click', () => onBook?.());
       for (const el of root.querySelectorAll('[data-calm]')) {
         el.addEventListener('click', () => onCalm?.(el.dataset.calm));
       }
@@ -439,6 +441,198 @@ export function noisePanel(sheet) {
 
   const prev = sheet.onClose;
   sheet.onClose = () => { stop(); sheet.onClose = prev; prev?.(); };
+}
+
+/* ──────────────── 轉介預約登記 ──────────────── */
+
+/**
+ * 依職護設定的每週固定在廠半天，算出可預約的日期與 30 分鐘時段。
+ *
+ * 為什麼不做成「挑日期再查有沒有空」：那會讓人撞到一堆沒開放的日子，
+ * 每撞一次就多一個放棄的理由。直接只列開放的，選項少但每個都能按。
+ */
+export function bookingSlots(cfg) {
+  const out = [];
+  const today = new Date(new Date().toDateString());
+  for (let d = cfg.lead_days ?? 1; d <= (cfg.horizon_days ?? 21); d++) {
+    const day = new Date(today);
+    day.setDate(day.getDate() + d);
+    const open = cfg.weekly?.[String(day.getDay())] ?? 'off';
+    if (open === 'off') continue;
+    const times = [
+      ...(open === 'morning' || open === 'full' ? cfg.morning ?? [] : []),
+      ...(open === 'afternoon' || open === 'full' ? cfg.afternoon ?? [] : []),
+    ];
+    if (!times.length) continue;
+    const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    out.push({
+      date: iso,
+      label: `${day.getMonth() + 1}/${day.getDate()}（${'日一二三四五六'[day.getDay()]}）`,
+      times,
+    });
+  }
+  return out;
+}
+
+/**
+ * 轉介預約登記。
+ *
+ * 做在系統內，不導去外部平台——欄位與選項對齊職護平台的實際表單
+ * （轉介對象、會談方式、壓力來源分類、30 分鐘時段、聯絡管道）。
+ *
+ * 這是整座島上唯一會留下稱呼與聯絡方式的地方，所以隱私說明放兩次：
+ * 最上面一次（決定要不要往下看），送出鍵旁邊一次（真的要送出之前）。
+ * 中間不再重複——重複太多次反而像在強調風險。
+ */
+export function bookingPanel(sheet, { content, onDone }) {
+  const b = content.dailyWeekly.safety.booking;
+  const days = bookingSlots(b.slots ?? {});
+  const pick = { target: b.targets?.[0]?.id, mode: 'onsite', category: 'private', date: null, slot: null };
+
+  const opts = (list, key) => list.map((o) => `
+    <button type="button" class="pickbox${pick[key] === o.id ? ' is-on' : ''}"
+            data-k="${key}" data-v="${esc(o.id)}">
+      <span class="pickbox__name">${esc(o.name)}</span>
+      <span class="pickbox__desc">${esc(o.desc)}</span>
+      ${o.note ? `<span class="pickbox__note">${esc(o.note)}</span>` : ''}
+    </button>`).join('');
+
+  const el = sheet.open({
+    title: '預約一次面談',
+    subtitle: '每場 30 分鐘',
+    body: `
+      <div class="exit">
+        <p class="exit__lead" style="margin:0">${esc(b.lead ?? '')}</p>
+        <ul class="exit__promise">${(b.promise ?? []).map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+      </div>
+
+      <div class="section-label">想找誰談</div>
+      <div class="picks">${opts(b.targets ?? [], 'target')}</div>
+
+      <div class="section-label">在哪裡談</div>
+      <div class="picks picks--row">${opts(b.modes ?? [], 'mode')}</div>
+
+      <div class="section-label">時間</div>
+      ${days.length ? `
+        <div class="slots" id="bk-days">
+          ${days.map((d) => `<button type="button" class="chip-day" data-date="${d.date}">${esc(d.label)}</button>`).join('')}
+        </div>
+        <div class="slots" id="bk-times"></div>`
+      : '<p class="tiny">最近沒有開放的時段。直接打下面的分機比較快。</p>'}
+
+      <div class="section-label">想談的方向</div>
+      <div class="picks">${opts(b.categories ?? [], 'category')}</div>
+
+      <div class="section-label">怎麼聯絡你</div>
+      <input class="field" id="bk-name" maxlength="40" placeholder="${esc(b.name_hint ?? '')}">
+      <input class="field" id="bk-contact" maxlength="60" placeholder="${esc(b.contact_hint ?? '')}" style="margin-top:8px">
+      <textarea class="field" id="bk-note" rows="3" maxlength="500"
+                placeholder="想先讓對方知道的事（可留空）" style="margin-top:8px"></textarea>
+
+      <p class="tiny" style="margin-top:14px">${esc(b.note ?? '')}</p>
+      <p class="tiny">等不到預約的時候，直接打 ${esc(b.urgent?.label ?? '')} ${esc(b.urgent?.ext ?? '')}；
+        想完全不透過公司，上一頁的 1925 專線 24 小時都有人。</p>
+      <div id="bk-result"></div>`,
+    actions: [{ label: '送出預約', onClick: submit }],
+  });
+
+  const btn = el.querySelector('.sheet__foot .btn');
+  const timesEl = el.querySelector('#bk-times');
+  const result = el.querySelector('#bk-result');
+
+  const sync = () => {
+    btn.disabled = !(pick.date && pick.slot
+      && el.querySelector('#bk-name').value.trim()
+      && el.querySelector('#bk-contact').value.trim());
+  };
+
+  for (const el2 of el.querySelectorAll('[data-k]')) {
+    el2.addEventListener('click', () => {
+      pick[el2.dataset.k] = el2.dataset.v;
+      for (const sib of el.querySelectorAll(`[data-k="${el2.dataset.k}"]`)) {
+        sib.classList.toggle('is-on', sib === el2);
+      }
+    });
+  }
+  for (const d of el.querySelectorAll('[data-date]')) {
+    d.addEventListener('click', () => {
+      pick.date = d.dataset.date;
+      pick.slot = null;
+      for (const sib of el.querySelectorAll('[data-date]')) sib.classList.toggle('is-on', sib === d);
+      const day = days.find((x) => x.date === pick.date);
+      timesEl.innerHTML = day.times.map((t) =>
+        `<button type="button" class="chip-day" data-time="${t}">${t}</button>`).join('');
+      for (const tb of timesEl.querySelectorAll('[data-time]')) {
+        tb.addEventListener('click', () => {
+          pick.slot = tb.dataset.time;
+          for (const sib of timesEl.querySelectorAll('[data-time]')) sib.classList.toggle('is-on', sib === tb);
+          sync();
+        });
+      }
+      sync();
+    });
+  }
+  for (const f of ['#bk-name', '#bk-contact']) el.querySelector(f).addEventListener('input', sync);
+  sync();
+
+  async function submit() {
+    btn.disabled = true;
+    btn.textContent = '送出中…';
+    const payload = {
+      ...pick,
+      name: el.querySelector('#bk-name').value.trim(),
+      contact: el.querySelector('#bk-contact').value.trim(),
+      note: el.querySelector('#bk-note').value.trim(),
+    };
+    try {
+      // 逾時與「回來的不是 JSON」都要自己接。
+      // 後者實際會發生：函式沒跑起來時 /api 會回一頁 HTML 404，
+      // res.json() 當場丟 SyntaxError，而那串英文會原封不動顯示給使用者看。
+      // 在這一頁尤其不行——人已經決定要求助了，不該在這裡被一句亂碼擋回去。
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      let res, text;
+      try {
+        res = await fetch('/api/v1/bookings', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload), signal: ctrl.signal,
+        });
+        text = await res.text();
+      } catch (err) {
+        throw new Error(err.name === 'AbortError' ? '伺服器沒有回應' : '連不上伺服器');
+      } finally {
+        clearTimeout(timer);
+      }
+      let data;
+      try { data = text ? JSON.parse(text) : {}; } catch { data = null; }
+      // 沒有 JSON、或有錯卻沒附理由，都是「函式根本沒在跑」（本機 vite、忘了部署）。
+      // 這跟「送出去但被退回」是兩回事，講清楚才知道該等還是該直接打電話。
+      if (!data || (!res.ok && !data.detail && !data.message && res.status >= 404)) {
+        throw new Error('預約服務現在沒開');
+      }
+      if (!res.ok) throw new Error(data.detail ?? data.message ?? '送不出去');
+      sheet.open({
+        title: '登記好了',
+        subtitle: `${payload.date} ${payload.slot}`,
+        body: `
+          <p class="card__text">職護會依你留的聯絡方式跟你確認。這段時間你什麼都不用做。</p>
+          <div class="exit" style="text-align:center">
+            <div class="exit__head">預約代碼</div>
+            <p style="font-size:24px;font-weight:700;letter-spacing:.14em;margin:6px 0">${esc(data.ref)}</p>
+            <p class="tiny" style="margin:0">想查進度或取消時報這組代碼就好。</p>
+          </div>
+          ${data.durable === false
+            ? '<p class="tiny">（目前是測試環境，這筆登記不會真的送到職護那邊。）</p>' : ''}
+          <p class="tiny">這組代碼跟你在島上的紀錄沒有任何關聯——查預約的人看不到你玩過什麼。</p>`,
+        actions: [{ label: '好', onClick: () => { sheet.close(); onDone?.(data); } }],
+      });
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '送出預約';
+      result.innerHTML = `<p class="tiny" style="color:#b05f42">${esc(e.message)}。
+        也可以直接打 ${esc(b.urgent?.label ?? '')} ${esc(b.urgent?.ext ?? '')}。</p>`;
+    }
+  }
 }
 
 /* ──────────────── 時光郵局（E5） ──────────────── */
