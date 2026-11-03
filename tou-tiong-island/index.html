@@ -40,6 +40,12 @@
           </svg>
           <span class="rail__text">登入</span>
         </button>
+        <button type="button" class="pill" data-action="index" aria-label="島嶼索引" aria-expanded="false">
+          <svg class="pill__icon" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M7 5h10M7 10h10M7 15h7M3.5 5h.01M3.5 10h.01M3.5 15h.01"/>
+          </svg>
+          <span class="rail__text">清單</span>
+        </button>
         <button type="button" class="pill" data-action="about" aria-label="關於這款遊戲">
           <svg class="pill__icon" viewBox="0 0 20 20" aria-hidden="true">
             <circle cx="10" cy="10" r="7.4"/>
@@ -52,6 +58,7 @@
 
     <div class="hud__hint" id="hint">拖曳可以轉動群島，雙指縮放。點文字就能進去。</div>
 
+    <aside id="index" class="index" aria-label="島嶼索引"></aside>
     <div id="overlay" class="overlay" hidden></div>
     <div id="toast" class="toast" hidden></div>
   </div>

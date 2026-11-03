@@ -18,6 +18,7 @@ import {
 } from './panels.js';
 import * as vaultClient from '../core/vaultClient.js';
 import { buildDemoSave } from '../core/demoData.js';
+import { IndexPanel } from './indexPanel.js';
 
 const WEATHER_LINE = { sunny: '今天島上出太陽', cloudy: '今天島上多雲', rainy: '今天島上下雨' };
 
@@ -60,6 +61,14 @@ export class App {
       onDone: (outcome) => this.afterStory(outcome),
     });
 
+    // 島嶼索引。寬螢幕常駐右側，窄螢幕由主選單的「清單」滑出。
+    this.indexPanel = new IndexPanel({
+      root: document.getElementById('index'),
+      content,
+      onPick: (id) => { this._closeIndexOnNarrow(); this.selectIsland(id); },
+      onSpot: (id) => { this._closeIndexOnNarrow(); this.openInteraction(id); },
+    });
+
     this._wireHud();
     this.applyWeather(this.state.todayWeather, { animate: false });
     this.refreshWorld();
@@ -90,6 +99,11 @@ export class App {
       .addEventListener('click', () => this.openInteraction('login'));
     document.querySelector('[data-action="about"]')
       .addEventListener('click', () => aboutPanel(this.sheet, { content: this.content }));
+    const indexBtn = document.querySelector('[data-action="index"]');
+    indexBtn.addEventListener('click', () => {
+      const open = this.indexPanel.toggle();
+      indexBtn.setAttribute('aria-expanded', String(open));
+    });
   }
 
   _fadeHint() {
@@ -145,6 +159,20 @@ export class App {
       count: this.state.wishes().length,
       board: this.content.wishBoard,
     });
+    // 索引要跟著解鎖狀態與命名走，不然會顯示舊的「未探索」
+    this.indexPanel?.update(this.islands);
+  }
+
+  /**
+   * 窄螢幕上索引是蓋在地圖上的，選完一座島要讓開——不然使用者點了
+   * 之後只看到同一塊面板，不知道鏡頭已經飛過去了。
+   * 寬螢幕的索引是常駐在側邊、不擋地圖，所以不收。
+   */
+  _closeIndexOnNarrow() {
+    if (window.matchMedia('(max-width: 1039px)').matches) {
+      this.indexPanel?.toggle(false);
+      document.querySelector('[data-action="index"]')?.setAttribute('aria-expanded', 'false');
+    }
   }
 
   /** 這週的溫度計還沒做時，雲朵上多一個小提示；不打斷任何事。 */

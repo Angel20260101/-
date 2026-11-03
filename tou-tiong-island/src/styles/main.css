@@ -618,3 +618,84 @@ body {
   /* 開了「減少動態」的人不該被一個一直脹縮的圓追著跑 */
   .breathe__ring, .breathe__dot { animation: none; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   島嶼索引
+   ────────────────────────────────────────────────────────────
+   參考 puma.taipei 右側的 THE POLICY INDEX。借的是結構不是內容：
+   標籤、標題、數量、搜尋框、編號清單。
+
+   地圖上要找一座島只能用眼睛掃，而島會愈來愈多。索引讓人可以用
+   「我想練習拒絕」找到界線島，而不是先認得島的長相。
+
+   寬螢幕常駐右側；窄螢幕收起來，由主選單的「清單」滑出——
+   手機上地圖本來就小，不能再被一塊面板吃掉三分之一。
+   ════════════════════════════════════════════════════════════ */
+.index {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(330px, 86vw);
+  padding: calc(16px + var(--safe-top)) 0 calc(16px + var(--safe-bottom));
+  background: rgba(252, 248, 239, .9);
+  border-left: 1px solid var(--hairline);
+  backdrop-filter: blur(10px);
+  overflow-y: auto; overscroll-behavior: contain;
+  z-index: 6;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.22, .8, .3, 1);
+}
+.index.is-open { transform: none; }
+.index__inner { padding: 0 18px; display: grid; gap: 2px; }
+
+.index__label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .18em;
+  color: var(--muted); text-transform: uppercase;
+}
+.index__label--sub { margin-top: 20px; margin-bottom: 6px; letter-spacing: .12em; }
+.index__title { margin: 6px 0 4px; font-size: 21px; line-height: 1.35; color: var(--ink-strong); }
+.index__sub { margin: 0 0 12px; font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+
+.index__search {
+  font: inherit; font-size: 13px; width: 100%;
+  padding: 9px 12px; margin-bottom: 10px;
+  background: var(--paper2);
+  border: 1px solid var(--hairline); border-radius: 12px;
+  color: var(--ink-strong);
+}
+.index__search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.index__list, .index__spots { display: grid; gap: 2px; }
+.index__row {
+  font: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  padding: 11px 10px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--hairline);
+  transition: background .14s ease;
+}
+.index__row:hover { background: rgba(255, 255, 255, .7); }
+.index__row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.index__row--spot { grid-template-columns: 1fr auto; }
+
+.index__no {
+  font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--coral); min-width: 22px;
+}
+.index__main { display: grid; gap: 2px; min-width: 0; }
+.index__name {
+  font-size: 14px; font-weight: 700; color: var(--ink-strong);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.index__meta {
+  font-size: 11.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.index__go { color: var(--muted); font-size: 13px; }
+/* 未破關：編號與名稱都降一階，但仍然可以點——點了會聚焦過去看 */
+.index__row.is-locked .index__no { color: var(--faint); }
+.index__row.is-locked .index__name { color: var(--muted); font-weight: 400; }
+.index__empty { font-size: 12.5px; color: var(--muted); padding: 14px 10px; line-height: 1.7; }
+
+/* 寬螢幕：常駐展開，並把地圖的 HUD 往左讓開 */
+@media (min-width: 1040px) {
+  .index { transform: none; }
+  .hud { right: min(330px, 86vw); }
+}
