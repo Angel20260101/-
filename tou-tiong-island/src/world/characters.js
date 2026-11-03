@@ -230,7 +230,7 @@ export const HELD = {
 /* ══════════════════════════════════════════════════════════
    組裝
    ══════════════════════════════════════════════════════════ */
-export function buildCharacter({ species = 'rabbit', seed = 0, held = 'none' } = {}) {
+export function buildCharacter({ species = 'rabbit', seed = 0, held = 'none', heldColor = null } = {}) {
   const sp = SPECIES[species] ?? SPECIES.rabbit;
   const h = BASE_HEIGHT * sp.size;
   const parts = sp.rig === 'bird' ? buildBird(sp, h)
@@ -244,7 +244,9 @@ export function buildCharacter({ species = 'rabbit', seed = 0, held = 'none' } =
     const ch = sp.rig === 'bird' ? 'wingR' : sp.rig === 'pinniped' ? 'flipR' : 'legFR';
     parts.push({
       kind: item.kind, pos: [h * 0.2, h * 0.42, h * 0.3], scale: item.scale,
-      color: item.color, channel: 'held', follow: ch, pivot: [0, h * 0.2, -h * 0.2],
+      // heldColor 讓旅人帶的東西染上來源島的顏色——不用文字就看得出
+      // 「這個人從哪座島來」，跟 puma 用 carry 物件表示協作內容是同一招。
+      color: heldColor ?? item.color, channel: 'held', follow: ch, pivot: [0, h * 0.2, -h * 0.2],
     });
   }
   return { parts, species, rig: sp.rig, height: h, held };

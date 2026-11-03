@@ -60,13 +60,14 @@ const RAIN_AREA = 26;
 const RAIN_TOP = 9;
 
 export class SceneManager {
-  constructor({ canvas, labelLayer, skyLayer, veilLayer, map, residents, onSelectIsland, onSelectInteraction }) {
+  constructor({ canvas, labelLayer, skyLayer, veilLayer, map, residents, practiceCards, onSelectIsland, onSelectInteraction }) {
     this.canvas = canvas;
     this.labelLayer = labelLayer;
     this.skyLayer = skyLayer;
     this.veilLayer = veilLayer ?? null;
     this.map = map;
     this.residentData = residents ?? null;
+    this.practiceCards = practiceCards ?? null;
     this.onSelectIsland = onSelectIsland;
     this.onSelectInteraction = onSelectInteraction;
 
@@ -302,8 +303,9 @@ export class SceneManager {
   // ── 建立／重建世界 ───────────────────────────────────────
   rebuild(progress, wish = {}) {
     this._clearWorld();
-    const { islands, props, animals, boats, residents } = buildWorld(this.map, progress, wish, this.residentData);
+    const { islands, props, animals, boats, residents, travellers } = buildWorld(this.map, progress, wish, this.residentData, this.practiceCards);
     this._residents = residents ?? [];
+    this._travellers = travellers ?? [];
     this.islandsById.clear();
 
     for (const island of islands) {
@@ -409,7 +411,7 @@ export class SceneManager {
 
     // 美術文件的 60 隻居民走角色系統；island_map.json 裡原本的 animal_*
     // （鳥、雨天替身那些）維持舊的整塊道具路徑，兩邊並存。
-    this._buildCast(this._residents ?? []);
+    this._buildCast(this._residents ?? [], this._travellers ?? []);
 
     const byType = new Map();
     for (const a of resolved) {
@@ -459,7 +461,12 @@ export class SceneManager {
    * 所有身體進另一個。所以種類固定 4 個 draw call，角色數量不影響預算——
    * 這是「把島填滿」而不撞到 BUDGET.maxDrawCalls 的前提。
    */
-  _buildCast(list) {
+  /**
+   * @param list        島上的居民（美術文件那 60 隻）
+   * @param travellers  在島與島之間往來的人。路徑就是橋的折線——
+   *                    走的人與畫出來的線共用同一條，不會各走各的。
+   */
+  _buildCast(list, travellers = []) {
     const slots = new Map(CHARACTER_KINDS.map((k) => [k, 0]));
     const actors = [];
 
@@ -527,6 +534,24 @@ export class SceneManager {
         speed: a.speed,
         phase: a.phase,
         meta: { island: a.island_id, no: a.no, species: a.species, greet: a.greet, spot: a.spot },
+      });
+    }
+
+    // 往來的人。跟居民同一套骨架與批次，差別只在：路徑是橋、動作固定是搬運、
+    // 手上的東西染成來源島的顏色。
+    for (const t of travellers) {
+      const held = t.kind === 'wish' ? 'mail' : 'box';
+      const character = buildCharacter({ species: t.species, held, heldColor: t.tint, seed: t.phase });
+      for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
+      actors.push({
+        character,
+        activity: 'carry',
+        route: makeRoute(t.path, { loop: false, smooth: true }),
+        base: t.path[0],
+        rot: 0,
+        speed: t.speed,
+        phase: t.phase,
+        meta: { kind: t.kind, from: t.from, card: t.card, species: t.species },
       });
     }
 
@@ -1054,7 +1079,11 @@ export class SceneManager {
       );
       extent = Math.max(extent, reach + 1.3);
     }
-    const tanH = Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect;
+    // aspect 萬一還是壞的（例如別處算壞了），用 1 當退路而不是把 NaN 傳下去。
+    // NaN 會一路傳到相機位置，而且不會丟任何錯誤。
+    const aspect = Number.isFinite(this.camera.aspect) && this.camera.aspect > 0
+      ? this.camera.aspect : 1;
+    const tanH = Math.tan((this.camera.fov * Math.PI) / 360) * aspect;
     const distance = THREE.MathUtils.clamp(
       extent / Math.max(tanH, 0.12), this.controls.minDistance, this.controls.maxDistance,
     );
@@ -1292,6 +1321,12 @@ export class SceneManager {
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
+    // 分頁切到背景、視窗最小化、面板收合的瞬間，clientWidth 與 innerWidth
+    // 可能同時是 0。0/0 會讓 camera.aspect 變成 NaN，接著 focusHome 與
+    // fitToWorld 算出的 distance 也是 NaN，相機位置整個壞掉——而且畫面會
+    // **永遠**空白，因為之後沒有人會重算 distance。
+    // 寧可這一次不處理，等真的有尺寸時再來。
+    if (!(w > 0) || !(h > 0)) return;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.fov = this.camera.aspect < 0.78 ? 46 : 34;

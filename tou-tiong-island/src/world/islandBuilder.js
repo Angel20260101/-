@@ -37,13 +37,31 @@ const matrixOf = (x, y, z, rotY = 0, scale = 1) =>
  * @param {object} progress  { [island_id]: { unlocked, name, routes: string[] } }
  * @param {object} wish      { count: number, board: content/wish_board.json }
  */
-export function buildWorld(map, progress = {}, wish = {}, residentData = null) {
+/**
+ * 每座島的代表色。旅人帶的東西用來源島的顏色，所以「這個人從哪裡來」
+ * 不用文字就看得出來——跟 puma 用 carry 物件表示協作關係的內容是同一招。
+ */
+const ISLAND_TINT = {
+  island_boundary: '#c98a5e',   // 界線：陶土紅
+  island_voice: '#6f9fb0',      // 委屈：運河藍
+  island_night: '#8e9bb5',      // 求援：雪夜藍灰
+  island_credit: '#b4794a',     // 公平：陶窯赭
+  island_kin: '#c9a94e',        // 家庭：金穗黃
+  island_rest: '#9a8fb5',       // 休息：月岩紫
+};
+
+export function buildWorld(map, progress = {}, wish = {}, residentData = null, practiceCards = null) {
+  // route_id → 練習卡標題。旅人帶的是那座島教的技巧，這是 C 的語意來源。
+  const cardsByRoute = practiceCards
+    ? new Map(practiceCards.cards.map((c) => [c.route_id, c.title]))
+    : null;
   const cfg = map.hex;
   const islands = [];
   const props = new Map();   // type -> Matrix4[]（靜態道具）
   const animals = [];        // 會動的島民，交給 sceneManager 逐幀更新
   const boats = [];          // 停在願望島的小船，會隨海浪上下
   const residents = [];      // 動物居民：每島 10 隻，照美術文件的配置表
+  const travellers = [];     // 在島與島之間往來的人：島民互訪與願望運送
   const addProp = (type, matrix) => {
     if (!props.has(type)) props.set(type, []);
     props.get(type).push(matrix);
@@ -571,28 +589,83 @@ function heldFromLoop(text) {
     });
   }
 
-  // ── 島間步道 ─────────────────────────────────────────────
+  // ── 島間步道與往來的人 ───────────────────────────────────
   // 本島是樞紐：每一座島都有一條橋通回本島，所以主角從哪裡出發都走得到。
   // 橋對所有島都鋪，包含還沒破關的——「走得過去」是邀請，
   // 把橋藏起來等於又回到那張看不出能去哪裡的空地圖。
+  //
+  // 但「橋上有沒有人」要看進度。這是整個系統裡唯一會隨玩家成長的視覺變化：
+  // 破關愈多島，群島就愈熱鬧。puma 與桃園島都沒有這一層，因為它們沒有進度。
+  //
+  // 關鍵原則取自 puma 的 people.js：走的人與畫出來的線共用同一條路徑
+  // （「people never walk a different path from the one shown」）。
+  // 所以旅人就在鋪橋的這裡生成，吃同一組折線——不可能各走各的。
   {
     const w = (q, r) => {
       const { x, z } = axialToWorld(q, r, cfg.size);
       return [x, z];
     };
     const homePt = w(map.home.origin.q, map.home.origin.r);
+
+    /**
+     * 在一條步道上放往來的人。
+     *
+     * @param kind  'skill' 島民互訪（把技巧送回本島）／'wish' 願望運送
+     * @param n     幾個人。puma 是每條連線 3 人；這裡的島少、橋短，用 2。
+     */
+    const placeTravellers = (pts, { kind, n, tint, from, cards = [] }) => {
+      if (n <= 0 || pts.length < 2) return;
+      const rand = seeded(`${from}-${kind}-travellers`);
+      const pool = residentData?.islands?.[from]?.residents ?? [];
+      for (let k = 0; k < n; k++) {
+        // 旅人長得像他來的那座島上的居民——牠是從那裡出發的
+        const zh = pool.length ? pool[Math.floor(rand() * pool.length)].animal : '兔子';
+        const species = SPECIES_BY_ZH[zh] ?? 'rabbit';
+        travellers.push({
+          kind,
+          from,
+          species,
+          tint,
+          // 帶的是那座島教的練習卡。名字先存著，之後點擊或 hover 用得上
+          card: cards.length ? cards[Math.floor(rand() * cards.length)] : null,
+          path: pts.map(([x, z]) => ({ x, y: 0.06, z })),
+          // 相位錯開，兩個人不會黏在一起走
+          phase: (k / n) * 10 + rand() * 2,
+          speed: 0.22 + rand() * 0.1,
+        });
+      }
+    };
+
     // 本島 7 格、中型島 5 格、故事島 3 格，半徑依序約 2 / 1.7 / 1.4
     for (const [key, trimTo] of [['post_island', 1.7], ['wish_island', 1.7]]) {
       const isl = map[key];
       if (!isl) continue;
-      placeBridge([homePt, w(isl.origin.q, isl.origin.r)], { trimFrom: 2.0, trimTo });
+      const pts = [homePt, w(isl.origin.q, isl.origin.r)];
+      placeBridge(pts, { trimFrom: 2.0, trimTo });
+      // 願望運送：放出的願望愈多，路上搬運的人愈多（上限 3，不然會塞車）
+      if (key === 'wish_island') {
+        placeTravellers(pts, {
+          kind: 'wish', n: Math.min(3, Math.ceil((wish.count ?? 0) / 2)),
+          tint: '#d9a05b', from: 'island_home',
+        });
+      }
     }
+
     for (const island of map.islands) {
       const via = (island.sea_route_from_home ?? []).map(([q, r]) => w(q, r));
-      placeBridge([homePt, ...via, w(island.origin.q, island.origin.r)],
-        { trimFrom: 2.0, trimTo: 1.4 });
+      const pts = [homePt, ...via, w(island.origin.q, island.origin.r)];
+      placeBridge(pts, { trimFrom: 2.0, trimTo: 1.4 });
+      // 島民互訪：只有破關的島才有人往來
+      const state = progress[island.island_id];
+      if (!state?.unlocked) continue;
+      const cards = (state.routes ?? []).map((rid) =>
+        cardsByRoute?.get(rid)).filter(Boolean);
+      placeTravellers(pts, {
+        kind: 'skill', n: 2, tint: ISLAND_TINT[island.island_id] ?? '#8aa88f',
+        from: island.island_id, cards,
+      });
     }
   }
 
-  return { islands, props, animals, boats, residents };
+  return { islands, props, animals, boats, residents, travellers };
 }

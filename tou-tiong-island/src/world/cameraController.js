@@ -152,6 +152,15 @@ export class CameraController {
   }
 
   apply() {
+    // 最後一道防線。distance / polar / azimuth 任何一個變成 NaN，
+    // 相機位置就會是 NaN，畫面全空而且不丟任何錯誤——這種故障最難查，
+    // 因為看起來像「渲染壞了」而不是「某個數字壞了」。
+    if (!Number.isFinite(this.distance)) this.distance = this.maxDistance * 0.6;
+    if (!Number.isFinite(this.polar)) this.polar = (this.minPolar + this.maxPolar) / 2;
+    if (!Number.isFinite(this.azimuth)) this.azimuth = 0;
+    if (!Number.isFinite(this.target.x) || !Number.isFinite(this.target.y)
+      || !Number.isFinite(this.target.z)) this.target.set(0, 0, 0);
+
     const sinPolar = Math.sin(this.polar);
     this.camera.position.set(
       this.target.x + this.distance * sinPolar * Math.sin(this.azimuth),

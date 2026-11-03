@@ -38,6 +38,7 @@ export class App {
       veilLayer: document.getElementById('veil'),
       map: content.islandMap,
       residents: content.residents,
+      practiceCards: content.practiceCards,
       onSelectIsland: (id) => this.selectIsland(id),
       onSelectInteraction: (id) => this.openInteraction(id),
     });
