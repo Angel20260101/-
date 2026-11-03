@@ -468,16 +468,55 @@ export class SceneManager {
       const character = buildCharacter({ species: a.species, held: a.held, seed: a.phase });
       for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
 
-      // 會移動的動作要有一條真的路徑可走，否則原地踏步會比不動還怪。
-      // 文件給的是「沿兩個停靠點走動」「沿彎曲路線緩走」這類描述，
-      // 場景還沒建之前先用居民自己位置附近的一段短路徑代替。
+      // 路線的形狀來自美術文件的原文（「沿三槽慢走」「由出餐檯走到固定桌，
+      // 再返程」），在 islandBuilder 推成 { stops, span, curved }。
+      // 停靠點的實際座標還是算出來的——出餐檯那些場景元素排在凍結後才建。
       let route = null;
       if (MOVING.has(a.activity)) {
-        const len = 0.5 + (a.phase % 1) * 0.7;
+        const { stops = 2, span = 0.7, curved = false } = a.route ?? {};
         const ang = a.rot;
-        const from = { x: a.base.x - Math.sin(ang) * len, y: a.base.y, z: a.base.z - Math.cos(ang) * len };
-        const to = { x: a.base.x + Math.sin(ang) * len, y: a.base.y, z: a.base.z + Math.cos(ang) * len };
-        route = makeRoute([from, to], { loop: false, smooth: false });
+        const ux = Math.sin(ang), uz = Math.cos(ang);
+        const nx = -uz, nz = ux;                       // 法線：彎曲路線往側邊鼓出去
+        const shape = [];
+        for (let k = 0; k < stops; k++) {
+          const t = (k / (stops - 1) - 0.5) * 2;        // -1 → +1
+          // 彎曲的用半個正弦把中段推出去，走起來才是弧線不是折線
+          const bow = curved ? Math.sin((k / (stops - 1)) * Math.PI) * 0.45 : 0;
+          shape.push([ux * t + nx * bow, uz * t + nz * bow]);
+        }
+
+        // 整條路線往基準點收縮，直到完全落在島上。
+        //
+        // 夾主軸方向是不夠的：彎曲路線會往側邊鼓出去，平滑化又會再動一次點。
+        // 與其逐項補償，不如建好形狀之後整條等比縮小——形狀不變，只是變小，
+        // 而且不管之後加什麼路線型別都還成立。
+        //
+        // 文件為好幾種都寫了「不跨越主要道路」「不進入階梯或一般細步道」
+        // 這類限制；場景建好之前，「留在島上」是這些限制的最低版本。
+        // a 是來自 residents.json 的原始資料，島的欄位叫 island_id；
+        // meta 是下面組 actor 時才建的，這裡還讀不到——第一版寫成 a.meta.island，
+        // 結果永遠是 undefined，整段收縮被安靜地跳過。
+        const b = this.islandsById.get(a.island_id ?? '')?.bounds;
+        let scale = span;
+        if (b) {
+          const inset = 0.3;                            // 不貼著懸崖邊走
+          for (let guard = 0; guard < 12; guard++) {
+            const bad = shape.some(([sx, sz]) => {
+              const x = a.base.x + sx * scale, z = a.base.z + sz * scale;
+              return x < b.minX + inset || x > b.maxX - inset
+                  || z < b.minZ + inset || z > b.maxZ - inset;
+            });
+            if (!bad) break;
+            scale *= 0.75;
+            if (scale < 0.1) { scale = 0; break; }      // 真的沒地方走就讓牠待著
+          }
+        }
+        if (scale > 0.08) {
+          const pts = shape.map(([sx, sz]) => ({
+            x: a.base.x + sx * scale, y: a.base.y, z: a.base.z + sz * scale,
+          }));
+          route = makeRoute(pts, { loop: false, smooth: curved || stops > 2 });
+        }
       }
       actors.push({
         character,

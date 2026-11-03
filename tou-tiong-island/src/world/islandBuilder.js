@@ -189,6 +189,38 @@ export function buildWorld(map, progress = {}, wish = {}, residentData = null) {
   };
 
 /**
+ * 從原文推導巡迴路線的形狀。
+ *
+ * 文件寫的是「沿三槽慢走」「由出餐檯走到固定桌，再返程」「沿兩個停靠點走動」
+ * 「跳兩段短路線」——每一條都隱含了停靠點數與距離。這裡把那些描述轉成
+ * { stops, span, curved }，跟動作一樣直接吃原文，不另外維護對照表。
+ *
+ * 場景元素（出餐檯、三個種植槽）還沒建，所以停靠點的實際座標先用居民
+ * 自己位置附近的等分點。等場景建好，換成讀真正的座標就行，形狀不用改。
+ */
+const ROUTE_RULES = [
+  // 明確講了三個點的
+  [/三槽|三個涉水點|三個|三段/, { stops: 3, span: 0.95 }],
+  // 枝架之間的短跳（松鼠、貓頭鷹）：距離很短，而且不該跨過主要道路
+  [/短跳|跳兩段/, { stops: 2, span: 0.42 }],
+  // 兩個定點之間
+  [/兩個[^，。]*間|兩停靠點|兩個停靠點|兩枝架|兩個平坦岩台/, { stops: 2, span: 0.85 }],
+  // 由 A 到 B 再回來——文件裡最常見的一類（送托盤、搬箱、推車）
+  [/由[^，。]*到|從[^，。]*送到|返程|返回|再回|走回|轉身回/, { stops: 2, span: 1.0 }],
+  // 沿著某個邊緣走：外圈、水路、圍欄、田埂、步道
+  [/沿[^，。]*(外圈|外緣|水路|水段|圍欄|田埂|步道|石路|低坡|彎路|圓弧|S形)/, { stops: 4, span: 1.3, curved: true }],
+  // 其餘的「沿…走」：沿槽、沿架前、沿窗台
+  [/沿[^，。]*(緩走|慢走|慢行|緩行|走動|巡看|慢游|划行|前走)/, { stops: 3, span: 0.9, curved: true }],
+  // 只走幾步
+  [/走兩步|走至|走到/, { stops: 2, span: 0.5 }],
+];
+/** 推不出來就給一段很短的往返——總比讓牠在原地滑動好。 */
+function routeSpecFromLoop(text) {
+  for (const [re, spec] of ROUTE_RULES) if (re.test(text)) return spec;
+  return { stops: 2, span: 0.55 };
+}
+
+/**
  * 從美術文件的中文描述推導動作。
  *
  * 文件的「日常動作與路線」是給人看的散文，不是列舉型別。與其另外維護一份
@@ -283,6 +315,7 @@ function heldFromLoop(text) {
         held: heldFromLoop(r.loop),
         greet: r.greet,
         spot: r.spot,
+        route: routeSpecFromLoop(r.loop),
         base: { x, y: base.y, z },
         // 面向大致朝鏡頭，前景的更正對一點，中後景隨機一些才不會像列隊
         rot: front ? (rand() - 0.5) * 0.9 : rand() * Math.PI * 2,
