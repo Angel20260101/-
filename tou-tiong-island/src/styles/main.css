@@ -833,3 +833,50 @@ body {
        會讓搖桿追不上手指，推起來像有延遲 */
   }
 }
+
+/* 心情打卡裡「今天」與「這一週」之間的分隔。兩段是不同尺度的事，
+   中間要有一刀，不然量表看起來像天氣的附屬問題。 */
+.rule {
+  border: 0; height: 1px; margin: 18px 0 14px;
+  background: var(--hairline-strong);
+}
+
+/* ════════════════════════════════════════════════════════════
+   我的紀錄：身心健康儀表板
+   ────────────────────────────────────────────────────────────
+   結構參考心情AED 平台的「身心健康儀表板」：指標卡、趨勢圖、逐筆紀錄。
+   借的是結構，不是顏色——那邊是紫藍漸層，我們是暖奶油＋苔綠。
+   ════════════════════════════════════════════════════════════ */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.stat {
+  padding: 10px 12px 11px;
+  background: var(--paper2);
+  border: 1px solid var(--hairline);
+  border-radius: 13px;
+}
+.stat__head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.stat__label { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.stat__target { font-size: 10.5px; color: var(--muted); }
+/* 數字刻意放大：儀表板的重點是「一眼看到現在怎樣」，不是讀句子 */
+.stat__value { font-size: 21px; font-weight: 700; color: var(--ink-strong); line-height: 1.25; margin: 2px 0 7px; }
+.stat__bar { height: 4px; border-radius: 999px; background: var(--hairline); overflow: hidden; }
+.stat__bar i { display: block; height: 100%; border-radius: 999px; }
+
+/* 趨勢：一週一根柱子。用柱不用折線——級距是四個離散狀態，
+   折線會暗示中間有連續的值，而我們連分數都不給看。 */
+.trend {
+  display: flex; align-items: flex-end; gap: 6px;
+  height: 92px; padding: 8px 2px 0;
+}
+.trend__col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.trend__bar { width: 100%; max-width: 26px; border-radius: 5px 5px 2px 2px; min-height: 6px; }
+.trend__tick { font-size: 10px; color: var(--muted); margin-top: 5px; }
+.trend__key { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 2px; font-size: 11px; color: var(--muted); }
+.trend__key i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* 逐週紀錄 */
+.hist { display: grid; gap: 2px; }
+.hist__row { display: flex; align-items: center; gap: 9px; padding: 8px 2px; border-bottom: 1px solid var(--hairline); }
+.hist__row:last-child { border-bottom: 0; }
+.hist__main { flex: 1; font-size: 13px; display: flex; gap: 9px; align-items: baseline; }
+.hist__note { font-size: 11px; color: var(--accent-d); }

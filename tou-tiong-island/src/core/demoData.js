@@ -56,8 +56,11 @@ export function buildDemoSave(content) {
   for (let i = 41; i >= 0; i--) {
     if (SKIP.has(i)) continue;
     const d = daysAgo(i);
+    // 今天固定晴天。示範資料是用來展示的，一打開就下雨會讓整座島偏暗，
+    // 而雨天的氛圍要等使用者自己選了才有意義。歷史仍然有陰有雨。
     // 近兩週晴天多一點：看得出「最近比較撐得住」，但不是一路向好
-    const bias = i < 14 && rand() < 0.45 ? 0 : Math.floor(rand() * MOOD.length);
+    const bias = i === 0 ? 0
+      : (i < 14 && rand() < 0.45 ? 0 : Math.floor(rand() * MOOD.length));
     save.daily[dateKey(d)] = {
       mood_id: MOOD[bias],
       energy: null,

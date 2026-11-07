@@ -239,7 +239,9 @@ export class App {
             this.applyWeather(moodId);
             this.toast(WEATHER_LINE[moodId] + '了');
           },
-          onWeekly: () => this.openInteraction('weekly'),
+          // 量表現在就在這張面板裡，不再跳去雲朵那一頁
+          onSafety: () => this.openInteraction('lighthouse-now'),
+          onSaved: () => { this.toast('燈塔的紀錄本上多了一頁'); this.refreshCloudLabel(); },
           onClose: () => this.refreshCloudLabel(),
         });
       case 'weekly':

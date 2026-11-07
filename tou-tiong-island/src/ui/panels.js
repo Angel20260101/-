@@ -111,9 +111,23 @@ export function trustPanel(sheet, { onDone }) {
 }
 
 /* ──────────────── 每日：天氣打卡（一鍵） ──────────────── */
-export function dailyPanel(sheet, { content, state, onPick, onWeekly }) {
+/**
+ * 心情打卡。
+ *
+ * 一個地方記兩個尺度：今天（一鍵天氣）與這一週（BSRS-5 心情溫度計）。
+ * 量表原本只掛在雲朵上，等於要知道它在那裡才找得到；而「今天怎麼樣」跟
+ * 「這一週怎麼樣」本來就是同一件事的兩個尺度，拆成兩個入口只會讓人做一半。
+ *
+ * 排版刻意讓天氣在上面、而且仍然是一鍵就完成：daily 的設計是 5 秒鐘的事，
+ * 不該因為下面多了一份 60 秒的量表就變得沉重。量表是**這一週還沒做才出現**，
+ * 做過了就只顯示那一週的顏色。
+ */
+export function dailyPanel(sheet, { content, state, onPick, onSafety, onSaved }) {
   const cfg = content.dailyWeekly.daily;
+  const weekly = content.dailyWeekly.weekly;
+  const inst = weekly.instrument;
   const today = state.todayCheckin();
+  const thisWeek = state.thisWeekEntry();
   const ICON = { sun: '☀️', cloud: '☁️', rain: '🌧️' };
 
   const buttons = cfg.options.map((o) => `
@@ -123,16 +137,40 @@ export function dailyPanel(sheet, { content, state, onPick, onWeekly }) {
       <span class="weather__desc">${esc(o.description)}</span>
     </button>`).join('');
 
-  const pendingWeekly = !state.thisWeekEntry();
+  // 這週做過了就不再問一次，只把顏色亮出來——重複作答沒有臨床意義，
+  // 而且會讓人覺得這個東西在催他。
+  const doneBand = thisWeek
+    ? inst.bands.find((b) => b.band_id === thisWeek.band_id)
+    : null;
+
+  const weeklySection = thisWeek
+    ? `<div class="section-label">這一週的心情溫度計</div>
+       <div class="band">
+         <span class="band__dot" style="background:${doneBand?.color ?? '#ccc'}"></span>
+         <span class="band__label">${esc(doneBand?.label ?? '')}</span>
+       </div>
+       <p class="tiny">這週已經記過了。下一週會再問一次。</p>`
+    : `<div class="section-label">${esc(weekly.title)}</div>
+       <p class="tiny">${esc(weekly.subtitle)}</p>
+       ${thermometerBody(content, { compact: true })}`;
+
   const el = sheet.open({
     title: cfg.title,
     subtitle: `${cfg.prompt}${cfg.sub_prompt}`,
-    mini: true,
     body: `<div class="weather">${buttons}</div>
            ${today ? '<p class="tiny" style="margin-top:14px;text-align:center">今天記過了，再點一次可以改。</p>' : ''}
-           ${pendingWeekly ? '<p style="text-align:center;margin-top:16px"><button type="button" class="btn btn--quiet" id="go-weekly">這週的心情溫度計還沒做　›</button></p>' : ''}`,
+           <hr class="rule">
+           ${weeklySection}`,
+    actions: thisWeek ? [] : [{ label: '完成這一週', onClick: () => api?.submit() }],
   });
-  el.querySelector('#go-weekly')?.addEventListener('click', () => onWeekly?.());
+
+  let api = null;
+  if (!thisWeek) {
+    api = attachThermometer(el, {
+      content, state, sheet, onSafety, onSaved,
+      submitBtn: el.querySelector('.sheet__foot .btn'),
+    });
+  }
 
   el.querySelectorAll('[data-mood]').forEach((btn) => btn.addEventListener('click', () => {
     const moodId = btn.dataset.mood;
@@ -140,27 +178,37 @@ export function dailyPanel(sheet, { content, state, onPick, onWeekly }) {
     state.saveCheckin({ moodId });
     onPick?.(moodId);                       // 島上的天氣立刻變
 
-    // 打卡是每天都要做的事，所以做完就讓它自己收掉——不追問、不加步驟
-    sheet.open({
-      title: '記下來了',
-      mini: true,
-      body: `
-        <div class="weather__after">
-          <span class="weather__icon" aria-hidden="true">${ICON[option.icon]}</span>
-          <b>${esc(option.island_line)}</b>
-          <span class="muted">${esc(cfg.closing_lines[moodId] ?? '')}</span>
-        </div>`,
-    });
-    sheet.autoClose(1700);
+    // 選了天氣之後不把整張面板收掉——下面可能還有沒做完的量表。
+    // 只把被選到的那顆標起來，再用一行字回應，這樣一鍵仍然是一鍵。
+    el.querySelectorAll('[data-mood]').forEach((x) => x.classList.toggle('is-on', x === btn));
+    let line = el.querySelector('[data-weather-line]');
+    if (!line) {
+      line = document.createElement('p');
+      line.className = 'tiny';
+      line.setAttribute('data-weather-line', '');
+      line.style.cssText = 'margin-top:12px;text-align:center';
+      el.querySelector('.weather').after(line);
+    }
+    line.innerHTML = `<b>${esc(option.island_line)}</b><br>${esc(cfg.closing_lines[moodId] ?? '')}`;
   }));
 }
 
-/* ──────────────── 每週：心情溫度計（BSRS-5） ──────────────── */
-export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
+/* ──────────────── 心情溫度計（BSRS-5） ──────────────── */
+
+/**
+ * 量表本體。抽出來給兩個地方共用：
+ *   1. 心情打卡（dailyPanel）——主要入口。記「今天」跟記「這一週」是同一件事
+ *      的兩個尺度，拆成兩個地方會讓人只做到一半。
+ *   2. 雲朵（weeklyPanel）——原本的入口，保留。
+ *
+ * 回傳 html 與一個 attach()，讓呼叫端決定要放進哪個面板、送出鍵長在哪裡。
+ * 不回傳分數給畫面：官方說明要求只呈現顏色與一段文字，show_score_to_player
+ * 是 false，所以 submit 之後顯示的是級距的顏色與說明，不是 0–20 的數字。
+ */
+function thermometerBody(content, { compact = false } = {}) {
   const cfg = content.dailyWeekly.weekly;
   const inst = cfg.instrument;
   const safety = cfg.safety_item;
-  const done = state.thisWeekEntry();
 
   const scaleRow = (itemId, options) => `<div class="scale">${options.map((s) =>
     `<button type="button" class="scale__btn" data-item="${itemId}" data-value="${s.value}">${s.value}<br>${esc(s.label)}</button>`).join('')}</div>`;
@@ -168,24 +216,31 @@ export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
   const items = inst.items.map((it, i) => `
     <div class="q"><div class="q__text">${i + 1}. ${esc(it.text)}</div>${scaleRow(it.item_id, inst.scale)}</div>`).join('');
 
-  const el = sheet.open({
-    title: cfg.title,
-    subtitle: `${cfg.subtitle}　・　${inst.recall_period}`,
-    body: `
-      <p class="muted">${esc(inst.stem)}</p>
-      ${done ? '<p class="tiny">這週做過了，再做一次會蓋掉原本的紀錄。</p>' : ''}
-      ${items}
-      <div class="q q--star"><div class="q__text">${esc(safety.text)}</div>${scaleRow(safety.item_id, safety.options)}</div>
-      <p class="tiny">${esc(safety.note)}</p>
-      <p class="tiny">${esc(inst.origin)}</p>
-      <div id="weekly-safety"></div>`,
-    actions: [{ label: '完成', onClick: submit }],
-  });
+  return `
+    ${compact ? '' : `<p class="muted">${esc(inst.stem)}</p>`}
+    ${compact ? `<p class="tiny">${esc(inst.stem)}</p>` : ''}
+    ${items}
+    <div class="q q--star"><div class="q__text">${esc(safety.text)}</div>${scaleRow(safety.item_id, safety.options)}</div>
+    <p class="tiny">${esc(safety.note)}</p>
+    <p class="tiny">${esc(inst.origin)}</p>
+    <div data-thermo-safety></div>`;
+}
+
+/**
+ * 把量表接上事件。
+ * @param submitBtn  送出鍵。五題與安全題都答完才會啟用——半套的分數沒有意義
+ * @returns { submit } 呼叫端自己決定什麼時候送
+ */
+function attachThermometer(el, { content, state, submitBtn, onSafety, onSaved, sheet }) {
+  const cfg = content.dailyWeekly.weekly;
+  const inst = cfg.instrument;
+  const safety = cfg.safety_item;
 
   const answers = {};
   let safetyValue = null;
-  const btn = el.querySelector('.sheet__foot .btn');
-  const sync = () => { btn.disabled = Object.keys(answers).length < inst.items.length || safetyValue === null; };
+  const sync = () => {
+    if (submitBtn) submitBtn.disabled = Object.keys(answers).length < inst.items.length || safetyValue === null;
+  };
   sync();
 
   el.querySelectorAll('[data-item]').forEach((b) => b.addEventListener('click', () => {
@@ -194,9 +249,11 @@ export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
     el.querySelectorAll(`[data-item="${item}"]`).forEach((x) => x.classList.toggle('is-on', x === b));
     if (item === safety.item_id) {
       safetyValue = value;
-      el.querySelector('#weekly-safety').innerHTML =
-        value >= safety.trigger_threshold
+      const slot = el.querySelector('[data-thermo-safety]');
+      if (slot) {
+        slot.innerHTML = value >= safety.trigger_threshold
           ? '<p class="tiny" style="color:#c2604a">完成後會直接帶你到燈塔，那裡有可以馬上打的電話。</p>' : '';
+      }
     } else {
       answers[item] = value;
     }
@@ -204,8 +261,8 @@ export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
   }));
 
   function submit() {
-    const score = inst.items.reduce((s, i) => s + answers[i.item_id], 0);
-    const band = inst.bands.find((b) => score >= b.min && score <= b.max);
+    const score = inst.items.reduce((sum, i) => sum + answers[i.item_id], 0);
+    const band = inst.bands.find((x) => score >= x.min && score <= x.max);
     const { keepsake } = state.saveThermometer({ answers, score, bandId: band.band_id, safetyValue });
     const flagged = safetyValue >= safety.trigger_threshold;
 
@@ -233,6 +290,27 @@ export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
     });
     if (!flagged) onSaved?.();
   }
+
+  return { submit };
+}
+
+/** 雲朵上的入口。量表本身跟心情打卡那邊是同一份。 */
+export function weeklyPanel(sheet, { content, state, onSafety, onSaved }) {
+  const cfg = content.dailyWeekly.weekly;
+  const done = state.thisWeekEntry();
+  let api = null;
+
+  const el = sheet.open({
+    title: cfg.title,
+    subtitle: `${cfg.subtitle}　・　${cfg.instrument.recall_period}`,
+    body: `${done ? '<p class="tiny">這週做過了，再做一次會蓋掉原本的紀錄。</p>' : ''}
+           ${thermometerBody(content)}`,
+    actions: [{ label: '完成', onClick: () => api?.submit() }],
+  });
+  api = attachThermometer(el, {
+    content, state, sheet, onSafety, onSaved,
+    submitBtn: el.querySelector('.sheet__foot .btn'),
+  });
 }
 
 /* ──────────────── 燈塔：求助資源 ──────────────── */
@@ -822,26 +900,76 @@ export function wishBoardPanel(sheet, { state, content, onWish }) {
 }
 
 /* ──────────────── 我的紀錄（E9） ──────────────── */
+/**
+ * 我的紀錄：身心健康儀表板。
+ *
+ * 版面參考心情AED 平台的「身心健康儀表板」——三段：上面幾張大數字的
+ * 指標卡、中間一張歷史趨勢圖、下面一份逐筆的紀錄表，外加沒有資料時的
+ * 空狀態與一個開始的入口。借的是這個結構，不是他們的內容。
+ *
+ * 一個關鍵差異：**我們不顯示分數**。平台把 0–20 的壓力指數直接印出來，
+ * 但 BSRS-5 的官方說明要求只呈現級距與建議，content 裡的
+ * show_score_to_player 也是 false。所以趨勢圖畫的是顏色的高低，不是數字，
+ * 軸上也不標刻度——看得出「這幾週比較重」，但看不到自己被打了幾分。
+ */
 export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onBackup, onDemo, onClearDemo }) {
   const COLOR = { sunny: '#f3d08c', cloudy: '#b9c4c2', rainy: '#8fadb4' };
+  const inst = content.dailyWeekly.weekly.instrument;
+  const bands = inst.bands;
+  const bandOf = (id) => bands.find((b) => b.band_id === id);
+
   const days = state.recentCheckins(28);
-  const cells = days.map(({ date, entry }) =>
-    `<div class="cal__cell" title="${date}" style="${entry ? `background:${COLOR[entry.mood_id]}` : ''}"></div>`).join('');
-
-  const bands = content.dailyWeekly.weekly.instrument.bands;
-  const weekly = state.data.weekly.slice(-6);
-  const weekRows = weekly.length ? weekly.map((w) => {
-    const b = bands.find((x) => x.band_id === w.band_id);
-    return `<div class="band"><span class="band__dot" style="background:${b?.color ?? '#ccc'}"></span>
-      <span><b>${esc(w.week)}</b>　<span class="muted">${esc(b?.label ?? '')}</span></span></div>`;
-  }).join('') : '<p class="muted">還沒有紀錄。每週一次，自願。</p>';
-
   const counted = days.filter((d) => d.entry).length;
+  const weekly = state.data.weekly.slice(-8);
   const wishes = state.wishes().length;
   const letters = state.letters().length;
+  const islandsDone = Object.keys(state.data.islands).length;
   const demo = Boolean(state.data.demo);
-  const empty = !counted && !state.data.weekly.length && !wishes && !letters
-    && !Object.keys(state.data.islands).length;
+  const empty = !counted && !state.data.weekly.length && !wishes && !letters && !islandsDone;
+
+  /** 指標卡：標籤、大數字、右上角的分母、底下一條進度。 */
+  const stat = (label, value, target, ratio, tint) => `
+    <div class="stat">
+      <div class="stat__head"><span class="stat__label">${esc(label)}</span>
+        <span class="stat__target">${esc(target)}</span></div>
+      <div class="stat__value">${esc(value)}</div>
+      <div class="stat__bar"><i style="width:${Math.round(Math.max(0, Math.min(1, ratio)) * 100)}%;background:${tint}"></i></div>
+    </div>`;
+
+  /*
+   * 趨勢圖：每一週一根柱子，高度是級距（良好最矮、重度最高），顏色是級距色。
+   * 用柱子不用折線，因為級距是四個離散的狀態，折線會暗示中間有連續的值。
+   * 沒有 y 軸刻度——那會變成在給分數。
+   */
+  const rank = { good: 1, mild: 2, moderate: 3, severe: 4 };
+  const trend = weekly.length
+    ? `<div class="trend">${weekly.map((w) => {
+      const b = bandOf(w.band_id);
+      const h = (rank[w.band_id] ?? 1) / 4 * 100;
+      return `<div class="trend__col" title="${esc(w.week)}　${esc(b?.label ?? '')}">
+        <div class="trend__bar" style="height:${h}%;background:${b?.color ?? '#ccc'}"></div>
+        <span class="trend__tick">${esc(String(w.week).slice(-3))}</span>
+      </div>`;
+    }).join('')}</div>
+      <div class="trend__key">${bands.map((b) =>
+    `<span><i style="background:${b.color}"></i>${esc(b.label)}</span>`).join('')}</div>`
+    : '<p class="muted">還沒有紀錄。每週一次，自願。</p>';
+
+  /** 歷史表：逐筆列出，最新在上。 */
+  const history = weekly.length
+    ? `<div class="hist">${[...weekly].reverse().map((w) => {
+      const b = bandOf(w.band_id);
+      return `<div class="hist__row">
+        <span class="band__dot" style="background:${b?.color ?? '#ccc'}"></span>
+        <span class="hist__main"><b>${esc(w.week)}</b>
+          <span class="muted">${esc(b?.label ?? '')}</span></span>
+        <span class="hist__note">${w.safety_flagged ? '已提醒求助' : ''}</span>
+      </div>`;
+    }).join('')}</div>`
+    : '';
+
+  const cells = days.map(({ date, entry }) =>
+    `<div class="cal__cell" title="${date}" style="${entry ? `background:${COLOR[entry.mood_id]}` : ''}"></div>`).join('');
 
   sheet.open({
     title: '我的紀錄',
@@ -851,6 +979,20 @@ export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onB
         <p class="card__text"><b>這些是示範資料</b>，不是你記的。用來看這些畫面長大之後的樣子。</p>
         <p class="tiny">清掉之後會回到一座全新的島，你原本的紀錄已經在載入示範資料時被換掉了。</p>
       </div>` : ''}
+
+      <div class="stats">
+        ${stat('這四週來過', `${counted} 天`, '共 28 天', counted / 28, '#8fbf86')}
+        ${stat('走完的島', `${islandsDone} 座`, '共 6 座', islandsDone / 6, '#e8c86a')}
+        ${stat('放出去的小船', `${wishes} 艘`, '不限', wishes ? 1 : 0, '#8fadb4')}
+        ${stat('郵局裡的信', `${letters} 封`, '不限', letters ? 1 : 0, '#e39a62')}
+      </div>
+
+      <div class="section-label">心情溫度計趨勢</div>
+      ${trend}
+      <p class="tiny">只顯示級距的顏色，不顯示分數——${esc(inst.disclaimer)}</p>
+
+      ${history ? '<div class="section-label">逐週紀錄</div>' + history : ''}
+
       <div class="section-label">最近四週的天氣</div>
       <div class="cal">${cells}</div>
       <div class="cal__legend">
@@ -859,12 +1001,8 @@ export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onB
         <span><i class="cal__key" style="background:${COLOR.rainy}"></i>雨</span>
         <span><i class="cal__key" style="background:var(--line)"></i>沒來</span>
       </div>
-      <p class="tiny">28 天裡來了 ${counted} 天。沒來的日子不代表什麼，島上也沒有任何東西因此消失。</p>
-      <div class="section-label">每週心情溫度計</div>
-      ${weekRows}
-      <p class="tiny">只顯示顏色，不顯示分數。</p>
-      <div class="section-label">其他</div>
-      <p class="muted">放出去的小船 ${wishes} 艘　・　郵局裡的信 ${letters} 封</p>
+      <p class="tiny">沒來的日子不代表什麼，島上也沒有任何東西因此消失。</p>
+
       <div class="section-label">換手機也要留著</div>
       <p class="tiny">以上這些只存在這台裝置的瀏覽器裡。清快取或換手機就會不見。</p>
       ${empty ? `<div class="section-label">還沒有東西可以看</div>
