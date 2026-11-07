@@ -884,11 +884,15 @@ export function recordsPanel(sheet, { state, content, onAtlas, onCollection, onB
 }
 
 /* ──────────────── 島嶼 ──────────────── */
-export function islandPanel(sheet, { island, state, content, onPlay }) {
+export function islandPanel(sheet, { island, state, content, onPlay, onVisit }) {
   const st = state.islandState(island.island_id);
   const meta = content.islandById(island.island_id);
   if (!meta) return;
   const story = content.storyIndex.find((s) => s.story_id === meta.story_id);
+  const biome = content.islandMap.biomes?.[meta.biome];
+  const climate = biome
+    ? `<p class="climate"><span class="climate__tag">${esc(biome.name)}</span>${esc(biome.line ?? '')}</p>`
+    : '';
   const routes = meta.growth.map((g) => {
     const found = (st.routes ?? []).includes(g.route_id);
     return `<li>${found ? `<b>${esc(g.label)}</b>　<span class="tiny">已長出</span>`
@@ -905,10 +909,14 @@ export function islandPanel(sheet, { island, state, content, onPlay }) {
           <h3 class="card__title">《${esc(story.title)}》</h3>
           <p class="card__text">${esc(story.logline)}</p>
           <p class="card__note">約 ${story.estimated_minutes} 分鐘　・　${story.endings} 個結局　・　3 條航線</p>
+          ${climate}
           ${story.content_notes?.length ? `<p class="tiny">內容提醒：${story.content_notes.map(esc).join('、')}</p>` : ''}
         </div>
         <p class="muted">走完一次就會解鎖這座島，然後你可以替它取名字。中途離開也沒關係，進度會留著。</p>`,
-      actions: [{ label: '出航', onClick: () => onPlay(meta.story_id) }],
+      actions: [
+        { label: '出航', onClick: () => onPlay(meta.story_id) },
+        ...(onVisit ? [{ label: '先看看島上', className: 'btn btn--ghost', onClick: () => onVisit() }] : []),
+      ],
     });
     return;
   }
@@ -920,14 +928,17 @@ export function islandPanel(sheet, { island, state, content, onPlay }) {
       <div class="card">
         <div class="card__kicker">${esc(story.theme)}</div>
         <p class="card__text">${esc(story.logline)}</p>
+        ${climate}
       </div>
       <div class="section-label">島上的地景</div>
       <ul>${routes}</ul>
       <p class="tiny">重走已經發現的航線不會重複長出地景，也沒有任何懲罰。島嶼只會長大，不會因為你沒來而退化。</p>`,
     actions: [
-      { label: '再走一次', onClick: () => onPlay(meta.story_id) },
+      ...(onVisit ? [{ label: '走進島上看看', onClick: () => onVisit() }] : []),
+      { label: '再走一次', className: onVisit ? 'btn btn--ghost' : 'btn',
+        onClick: () => onPlay(meta.story_id) },
       { label: '改名字', className: 'btn btn--ghost',
-        onClick: () => renamePanel(sheet, { state, meta, onDone: () => islandPanel(sheet, { island, state, content, onPlay }) }) },
+        onClick: () => renamePanel(sheet, { state, meta, onDone: () => islandPanel(sheet, { island, state, content, onPlay, onVisit }) }) },
     ],
   });
 }
@@ -960,6 +971,7 @@ export function atlasPanel(sheet, { state, onPlay }) {
       <div class="atlas__main">
         <div class="atlas__name">${esc(a.unlocked ? a.name : '還沒探索')}</div>
         <div class="atlas__story">《${esc(a.title)}》${a.unlocked ? `　・　走過 ${a.plays} 次` : ''}</div>
+        ${a.biome ? `<div class="atlas__biome">${esc(a.biome)}</div>` : ''}
         <div class="atlas__routes">${pips}</div>
       </div>
       <button type="button" class="pill-btn" data-story="${a.story_id}">${a.unlocked ? '再走' : '出航'}</button>

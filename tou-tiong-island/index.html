@@ -10,7 +10,14 @@
 </head>
 <body>
   <div id="app">
-    <div id="sky" class="sky"><div class="sky__sun" data-weather="sunny"></div></div>
+    <div id="sky" class="sky" data-weather="sunny">
+      <div class="sky__sun" data-weather="sunny"></div>
+      <div class="sky__clouds" aria-hidden="true">
+        <i style="--t:0s;--y:14%;--s:1"></i><i style="--t:-22s;--y:9%;--s:.74"></i>
+        <i style="--t:-41s;--y:19%;--s:1.15"></i><i style="--t:-58s;--y:6%;--s:.62"></i>
+        <i style="--t:-73s;--y:23%;--s:.88"></i><i style="--t:-95s;--y:12%;--s:1.3"></i>
+      </div>
+    </div>
     <canvas id="map" aria-label="透中島群島地圖"></canvas>
     <div id="veil" class="veil"></div>
     <div id="labels" class="label-layer"></div>

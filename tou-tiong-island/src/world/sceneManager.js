@@ -136,11 +136,12 @@ export class SceneManager {
     this.propMaterial = new THREE.MeshStandardMaterial({
       vertexColors: true, flatShading: true, roughness: 0.82, metalness: 0,
     });
+    // 雲幾乎不透明又是奶油色時，俯視角下投到海面上會被看成一坨擱淺的沙。
+    // 壓低不透明度並關掉深度寫入，它才讀得出來是天上的東西而不是地上的東西。
     this.cloudMaterial = new THREE.MeshStandardMaterial({
       vertexColors: true, flatShading: true, roughness: 1, metalness: 0,
-      transparent: true, opacity: 0.95,
-    });
-    this.rainMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.foam, transparent: true, opacity: 0.55 });
+      transparent: true, opacity: 0.7, depthWrite: false,
+    });    this.rainMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.foam, transparent: true, opacity: 0.55 });
     this.pickMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
     // 角色材質。不開 flatShading——角色是圓的，塊面感留給地形與建築，
@@ -209,7 +210,9 @@ export class SceneManager {
   _paintSky(w) {
     this.skyLayer.style.background =
       `linear-gradient(170deg, ${w.skyTop} 0%, ${w.skyTop} 26%, ${w.skyBottom} 100%)`;
-    // 太陽畫在 CSS 圖層上：晴天整顆亮、陰天只剩一團光暈、雨天收起來
+    // 太陽與雲都畫在 CSS 圖層上：晴天整顆太陽、兩朵雲；
+    // 陰天太陽剩一團光暈、雲變多變灰；雨天太陽收起來、雲壓滿整片天。
+    this.skyLayer.dataset.weather = w.id;
     const sun = this.skyLayer.querySelector('.sky__sun');
     if (sun) sun.dataset.weather = w.id;
   }
@@ -272,13 +275,9 @@ export class SceneManager {
     this._colourTarget = this._targetsFor(w);
     this._lightTarget = { hemi: w.hemiIntensity * HEMI_GAIN, dir: w.dirIntensity * SUN_GAIN };
     if (this.clouds) {
-      this.clouds.count = Math.min(w.clouds, MAX_CLOUDS);
-      // 雲高跟著天氣走：晴天高而少，陰雨天低而密，低下來才進得了鏡頭
-      const [lo, hi] = w.cloudY ?? [3.4, 6.8];
-      for (let i = 1; i < MAX_CLOUDS; i++) {
-        const c = this._cloudState?.[i];
-        if (c) c.y = lo + ((i * 0.37) % 1) * (hi - lo);
-      }
+      // 只留打卡用的那一朵（它在主島正上方、上面掛著標籤，讀得出來是雲）。
+      // 會飄的雲已經搬到 CSS 天空層了。
+      this.clouds.count = 1;
     }
     if (this.rain) this.rain.count = this.reducedMotion ? 0 : Math.min(w.rain, MAX_RAIN);
     if (changed && this._animalSource) this._buildAnimals();   // 島民換上這個天氣該做的事
@@ -685,9 +684,13 @@ export class SceneManager {
       if (i === 0 && this.skyAnchor) {
         return { x: this.skyAnchor.x, y: this.skyAnchor.y, z: this.skyAnchor.z, drift: 0, scale: 1.15, isAnchor: true };
       }
+      // 繞著群島外圍散開，不要正好生在島的上方——鏡頭俯視時那個位置最容易
+      // 讓雲看起來像貼在海面上
+      const a = Math.random() * Math.PI * 2;
+      const r = 11 + Math.random() * 9;
       return {
-        x: (Math.random() - 0.5) * 24, y: 3.4 + Math.random() * 3.4,
-        z: (Math.random() - 0.5) * 22, drift: 0.16 + Math.random() * 0.3,
+        x: Math.cos(a) * r, y: 5 + Math.random() * 3.4,
+        z: Math.sin(a) * r, drift: 0.16 + Math.random() * 0.3,
         scale: 0.65 + Math.random() * 0.7, isAnchor: false,
       };
     });
@@ -887,9 +890,12 @@ export class SceneManager {
     };
     // 鏡頭拉近是為了看島上的細節，這時候五個名牌壓在上面最礙事。
     // 近了就淡掉、縮小，但還是可以點；滑過或鍵盤聚焦會回到全不透明（CSS 處理）。
-    const near = THREE.MathUtils.clamp((this.controls.distance - 10) / 7, 0, 1);
+    const d = this.controls.distance;
+    const near = THREE.MathUtils.clamp((d - 10) / 7, 0, 1);
     const fade = 0.34 + near * 0.66;
-    const shrink = 0.8 + near * 0.2;
+    // 太近要讓位給細節，太遠則是島擠在一起、名牌會疊成一排。兩頭都縮小。
+    const far = THREE.MathUtils.clamp((d - 34) / 14, 0, 1);
+    const shrink = (0.8 + near * 0.2) * (1 - far * 0.26);
 
     // HUD 的標題卡與右側選單會蓋住標籤，所以把它們當成禁區：
     // 撞到就往下讓開，而不是讓標籤躲在按鈕後面點不到。
@@ -974,6 +980,9 @@ export class SceneManager {
       let y = Math.max(p.y, top + h);
       let fits = false;
       let down = false;     // 一旦被迫往下，就一路往下，免得上下來回彈跳永遠喬不定
+      // 讓位也有極限：名牌離自己的島超過這個距離就沒有意義了，
+      // 全覽時六座島擠在一起，一路往上讓會排成一整列浮在天上的字。
+      const MAX_SHIFT = 110;
       for (let guard = 0; guard < 16; guard++) {
         const box = { l: cx - w / 2, r: cx + w / 2, t: y - h, b: y };
         const hit = taken.find((t) => !(box.r < t.l || box.l > t.r || box.b < t.t || box.t > t.b));
@@ -983,7 +992,7 @@ export class SceneManager {
         // 否則讓完又鑽回按鈕底下，等於沒讓。
         if (!down && up - h >= top) y = up;
         else { down = true; y = hit.b + h + 6; }
-        if (y > rect.height - 8) break;
+        if (y > rect.height - 8 || Math.abs(y - p.y) > MAX_SHIFT) break;
       }
       // 喬不出位置就藏起來。疊在一起會點錯島，那比少一個名牌糟糕得多；
       // 島本身還是點得到，轉一下或縮放一下它就會回來。
@@ -1019,7 +1028,7 @@ export class SceneManager {
     this.controls.flyTo({ target: island.center, distance: distance ?? (island.kind === 'home' ? 16 : 13) }, 700);
   }
 
-  fitToWorld({ padding = 1.02, animate = false } = {}) {
+  fitToWorld({ padding = 1.0, animate = false } = {}) {
     const b = this.worldBounds;
     if (!b || !Number.isFinite(b.minX)) return;
     const cx = (b.minX + b.maxX) / 2;
@@ -1036,7 +1045,10 @@ export class SceneManager {
     const tanH = tanV * this.camera.aspect;
     let need = this.controls.minDistance;
     const w = new THREE.Vector3();
-    const pad = 3.2;   // 海域的邊緣
+    // 直向手機的水平視角很窄，群島又接近正方形，所以「把寬度塞進畫面」本來就得退得很遠。
+    // 邊緣每多留 1 單位，鏡頭就要再退好幾單位——原本留 3.2 會把距離推到 106，
+    // 島只剩畫面的三分之一。留一點點就好。
+    const pad = 1.1;
     for (const x of [b.minX - pad, b.maxX + pad]) {
       for (const z of [b.minZ - pad, b.maxZ + pad]) {
         for (const y of [0, 1.6]) {

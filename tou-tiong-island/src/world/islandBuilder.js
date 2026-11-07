@@ -81,6 +81,21 @@ export function buildWorld(map, progress = {}, wish = {}, residentData = null, p
    * 佔位半徑。散佈時用「兩者半徑相加」判斷太不太近，所以大東西讓得多、
    * 小東西可以擠在一起——地面細節本來就該密。
    */
+  /**
+   * 氣候區：決定一座島的地表配色、植被與地面細節。
+   * 沒寫到的部分沿用全域設定，所以加一個新氣候區只要在 biomes 裡多一筆。
+   */
+  const biomeOf = (id) => {
+    const b = map.biomes?.[id] ?? {};
+    return {
+      id: id ?? 'oasis',
+      name: b.name ?? '',
+      surfaces: b.surfaces ?? {},
+      flora: b.flora ?? 'temperate',
+      clutterFor: (surface) => b.clutter?.[surface] ?? map.ground_clutter?.[surface],
+    };
+  };
+
   const R = { landmark: 0.40, flora: 0.26, clutter: 0.085 };
   const clashes = (occupied, x, z, r) =>
     occupied.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < (p.r + r) ** 2);
@@ -116,12 +131,10 @@ export function buildWorld(map, progress = {}, wish = {}, residentData = null, p
    * 這一道照 hex 的 surface 鋪，所以連 flora 設成 none 的空地也有東西看。
    * 跟著同一組種子亂數，位置每次重建都一樣。
    */
-  const scatterClutter = (hexes, origin, seedKey, occupied) => {
-    const table = map.ground_clutter;
-    if (!table) return;
+  const scatterClutter = (hexes, origin, seedKey, occupied, biome) => {
     const rand = seeded(seedKey);
     for (const hex of hexes) {
-      const spec = table[hex.surface];
+      const spec = biome.clutterFor(hex.surface);
       if (!spec?.count || !spec.types?.length) continue;
       const base = hexTopPosition(hex, cfg, origin);
       // 亂丟點會越丟越容易撞到已經放好的東西，丟 count 次大概只會成功一半。
@@ -356,13 +369,14 @@ function heldFromLoop(text) {
   {
     const home = map.home;
     const origin = home.origin;
+    const biome = biomeOf(home.biome);
     const hexes = home.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     const landmarks = home.landmarks;
     placeLandmarks(landmarks, home.hexes, origin);
     const homeOccupied = occupiedOf(landmarks, home.hexes, origin);
-    scatterFlora(home.hexes, origin, home.flora, `${home.island_id}-flora`, homeOccupied);
-    scatterClutter(home.hexes, origin, `${home.island_id}-clutter`, homeOccupied);
+    scatterFlora(home.hexes, origin, biome.flora, `${home.island_id}-flora`, homeOccupied);
+    scatterClutter(home.hexes, origin, `${home.island_id}-clutter`, homeOccupied, biome);
 
     const anchors = {};
     for (const lm of landmarks) {
@@ -379,6 +393,8 @@ function heldFromLoop(text) {
     islands.push({
       island_id: home.island_id,
       kind: 'home',
+      biome: biome.id,
+      biome_name: biome.name,
       sky_anchor: home.sky_anchor ?? null,
       name: home.name,
       tagline: home.tagline,
@@ -398,12 +414,15 @@ function heldFromLoop(text) {
   if (map.post_island) {
     const pi = map.post_island;
     const origin = pi.origin;
+    // 郵局島在 island_map.json 裡沒有指定 biome。biomeOf() 對未知 id 會回全域
+    // 預設值，所以這裡接得起來，配色也跟加入氣候區之前一樣，不會偷偷變色。
+    const biome = biomeOf(pi.biome);
     const hexes = pi.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     placeLandmarks(pi.landmarks, pi.hexes, origin);
     const occupied = occupiedOf(pi.landmarks, pi.hexes, origin);
     scatterFlora(pi.hexes, origin, pi.flora, `${pi.island_id}-flora`, occupied);
-    scatterClutter(pi.hexes, origin, `${pi.island_id}-clutter`, occupied);
+    scatterClutter(pi.hexes, origin, `${pi.island_id}-clutter`, occupied, biome);
     const centre = axialToWorld(origin.q, origin.r, cfg.size);
     placeAnimals(pi.animals, pi.hexes, origin, centre);
 
@@ -435,8 +454,9 @@ function heldFromLoop(text) {
   if (map.wish_island) {
     const w = map.wish_island;
     const origin = w.origin;
+    const biome = biomeOf(w.biome);
     const hexes = w.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     placeLandmarks(w.landmarks, w.hexes, origin);
 
     const statusOf = new Map((wish.board?.themes ?? []).map((t) => [t.theme, t.status]));
@@ -455,8 +475,8 @@ function heldFromLoop(text) {
       occupied.push({ x: base.x + dx, z: base.z + dz });
       trees++;
     }
-    scatterFlora(w.hexes, origin, w.flora, `${w.island_id}-flora`, occupied);
-    scatterClutter(w.hexes, origin, `${w.island_id}-clutter`, occupied);
+    scatterFlora(w.hexes, origin, biome.flora, `${w.island_id}-flora`, occupied);
+    scatterClutter(w.hexes, origin, `${w.island_id}-clutter`, occupied, biome);
 
     const centre = axialToWorld(origin.q, origin.r, cfg.size);
     placeAnimals(w.animals, w.hexes, origin, centre);
@@ -485,6 +505,8 @@ function heldFromLoop(text) {
     islands.push({
       island_id: w.island_id,
       kind: 'wish',
+      biome: biome.id,
+      biome_name: biome.name,
       name: w.name,
       tagline: w.tagline,
       geometry,
@@ -527,7 +549,13 @@ function heldFromLoop(text) {
        */
       const localHexes = [...island.base.hexes];
       const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-      const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { dormant: true });
+      // 未破關的島也要吃自己的氣候色票再褪色，不然破關前後會換成另一個色系，
+      // 看起來像「換了一座島」而不是「同一座島醒過來」。
+      // 這裡要自己取一次 biome：下面那個 const biome 在同一個區塊，
+      // 直接用會踩到暫時性死區而丟 ReferenceError。
+      const dormantBiome = biomeOf(island.biome);
+      const { geometry, bounds } = buildTerrainGeometry(hexes, cfg,
+        { dormant: true, surfaces: dormantBiome.surfaces });
       // 不放地標。道具是跨島依型別分批的 InstancedMesh，沒辦法只把某幾座島上的
       // 屋頂調色——結果會是褪色的地配上全彩的橘屋頂，比沒有建築更突兀。
       // 剛好「建築長出來」也可以當成破關的獎勵之一。
@@ -561,12 +589,13 @@ function heldFromLoop(text) {
       grown.push(growth);
     }
 
+    const biome = biomeOf(island.biome);
     const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
-    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg);
+    const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     placeLandmarks(localLandmarks, localHexes, origin);
     const occupied = occupiedOf(localLandmarks, localHexes, origin);
-    scatterFlora(localHexes, origin, island.flora, `${island.island_id}-flora-${grown.length}`, occupied);
-    scatterClutter(localHexes, origin, `${island.island_id}-clutter-${grown.length}`, occupied);
+    scatterFlora(localHexes, origin, biome.flora, `${island.island_id}-flora-${grown.length}`, occupied);
+    scatterClutter(localHexes, origin, `${island.island_id}-clutter-${grown.length}`, occupied, biome);
     placeAnimals(island.animals, localHexes, origin, axialToWorld(origin.q, origin.r, cfg.size));
     // 美術文件的十隻居民。只有破關的島才有人——未破關的島是褪色、無人的，
     // 「住進居民」本來就是破關的獎勵之一。
@@ -578,6 +607,8 @@ function heldFromLoop(text) {
       kind: 'story',
       story_id: island.story_id,
       order: island.order,
+      biome: biome.id,
+      biome_name: biome.name,
       name: state.name || island.default_name,
       default_name: island.default_name,
       unlocked: true,

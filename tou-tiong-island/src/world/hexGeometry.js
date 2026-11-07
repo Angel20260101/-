@@ -49,6 +49,7 @@ function paintHex(geo, topColor, sideColor) {
  * 產生一座島的地形幾何（已合併）。
  * @param {Array} hexes content/island_map.json 的 hexes 陣列
  * @param {object} cfg  { size, level_height, base_depth }
+ * @param {object} surfaces 氣候區的地表配色覆寫；沒寫到的地表沿用 SURFACE_COLORS
  * @returns {{ geometry: THREE.BufferGeometry, bounds: {minX,maxX,minZ,maxZ,maxY} }}
  */
 /**
@@ -73,10 +74,12 @@ function fade(color, amount = 0.6, lift = 0.08) {
 }
 
 /**
- * @param opts.dormant  未破關的島：地形照蓋，但整塊褪成霧色
+ * @param opts.dormant   未破關的島：地形照蓋，但整塊褪成霧色
+ * @param opts.surfaces  這座島專屬的地表色票，覆寫 SURFACE_COLORS。
+ *                       島嶼分氣候區用的——同樣是 sand，沙漠島與海島不該同一個黃。
  */
 export function buildTerrainGeometry(hexes, cfg, opts = {}) {
-  const { dormant = false } = opts;
+  const { dormant = false, surfaces = {} } = opts;
   const { size = 1, level_height: levelH = 0.42, base_depth: depth = 0.55 } = cfg;
   const parts = [];
   const bounds = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity, maxY: 0 };
@@ -88,7 +91,9 @@ export function buildTerrainGeometry(hexes, cfg, opts = {}) {
 
     // radialSegments = 6，半徑略縮讓地塊之間留一道海水的縫
     const geo = new THREE.CylinderGeometry(size * 0.985, size * 0.985, height, 6, 1);
-    const colors = SURFACE_COLORS[hex.surface] ?? SURFACE_COLORS.sand;
+    // 先讓島自己的氣候色票覆寫，再套褪色。順序反過來的話，
+    // 未破關的氣候島會先褪色、又被覆寫回彩色，褪色等於白做。
+    const colors = surfaces[hex.surface] ?? SURFACE_COLORS[hex.surface] ?? SURFACE_COLORS.sand;
     paintHex(geo,
       dormant ? fade(colors.top) : colors.top,
       dormant ? fade(colors.side) : colors.side);
