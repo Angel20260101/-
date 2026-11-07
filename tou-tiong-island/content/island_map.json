@@ -4,7 +4,8 @@
   "hex": {
     "size": 1.0,
     "orientation": "flat-top",
-    "level_height": 0.42,
+    "_level_height_note": "0 = 全島同高。原本是 0.42（三層梯田），但主角走路時 0.42 的落差等於一道牆：走下去像飄下去、走上去像穿牆而上。改回 0.42 梯田就會回來，資料裡每塊地的 level 都還留著。",
+    "level_height": 0,
     "base_depth": 0.55
   },
   "camera": {
