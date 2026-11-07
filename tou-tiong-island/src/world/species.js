@@ -41,6 +41,7 @@ export const SPECIES = {
     belly: '#4a5d6b',    // 褲子與領口
     inner: '#e8c9a8',    // 膚色
     hair: '#3b2f2a',
+    hat: 'bucket',        // 預設漁夫帽。寬邊，從上往下看頭頂不會露
     ear: ['none'], tail: 'none', muzzle: 0,
     note: '主角。島上唯一的人。',
   },

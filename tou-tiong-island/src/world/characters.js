@@ -305,8 +305,20 @@ function buildBiped(sp, h) {
 
   // 頭。沒有 muzzle——那是動物的辨識點，人臉是平的
   parts.push(P('sphere', [0, headY, 0], [r, r * 1.02, r * 0.95], skin, 'head'));
-  // 頭髮：蓋住顱頂後方的一塊，比頭略大
-  parts.push(P('sphere', [0, headY + r * 0.2, -r * 0.1], [r * 1.04, r * 0.78, r * 1.0], sp.hair ?? '#3b2f2a', 'head'));
+  /*
+   * 頭髮。
+   *
+   * 第一版壓得太扁（y 0.78）又往後擺（z -0.1），結果從走路鏡頭那個 47° 的
+   * 俯角看下去，頭頂正中央露出一大片膚色——看起來是禿的。而那個角度剛好
+   * 是走路時最常看到的角度，比正面還常看到。
+   * 現在把它擺正、蓋滿顱頂，再往前留一道瀏海的厚度。
+   */
+  parts.push(P('sphere', [0, headY + r * 0.18, -r * 0.04], [r * 1.06, r * 0.80, r * 1.04], sp.hair ?? '#3b2f2a', 'head'));
+
+  // 帽子。島上風大日頭大，戴帽本來就合理；更實際的理由是從上往下看時，
+  // 帽子是唯一能讓「頭頂」有造型的東西——那是走路時最常看到的一塊。
+  const hat = HATS[sp.hat] ?? null;
+  if (hat) hat(parts, { r, headY, hair: sp.hair ?? '#3b2f2a', cloth, h });
   // 眼睛。低多邊形下這是唯一的表情來源，要夠大，遠看才不會只是一顆球
   for (const s of [-1, 1]) {
     parts.push(P('sphere', [s * r * 0.36, headY + r * 0.02, r * 0.84], [r * 0.13, r * 0.17, r * 0.08], '#2a2320', 'head'));
@@ -315,8 +327,43 @@ function buildBiped(sp, h) {
   return parts;
 }
 
-export function buildCharacter({ species = 'rabbit', seed = 0, held = 'none', heldColor = null } = {}) {
-  const sp = SPECIES[species] ?? SPECIES.rabbit;
+/**
+ * 帽子。做成一張表而不是寫死，是為了之後能接「角色選單」——
+ * 桃園島的小企鵝可以換圍巾與帽子，我們遲早也要讓人挑。
+ * 每頂都只用兩三個部件：在這個尺寸下，帽子讀的是剪影，不是細節。
+ */
+/*
+ * 尺寸換算：sphere 的 scale 是**半徑**，cyl／cone 的 scale.y 是**全高**。
+ * 混淆這兩個，帽子就會比頭矮——第一版頭髮頂在 headY+1.18r，帽冠頂只有
+ * headY+0.95r，於是一撮頭髮從帽頂戳出來，從上往下看像破了一個洞。
+ * 下面每頂帽子都標出帽頂的高度，要蓋過頭髮的 headY+0.98r。
+ */
+const HATS = {
+  /** 漁夫帽：寬邊，從上往下看是一個完整的圓，頭頂絕對不會露。 */
+  bucket: (parts, { r, headY, cloth }) => {
+    const band = shade(cloth, -0.18);
+    parts.push(P('cyl', [0, headY + r * 0.55, 0], [r * 1.5, r * 0.12, r * 1.5], band, 'head'));
+    // 帽冠：中心 0.88r、全高 0.66r → 頂在 1.21r，蓋過頭髮的 0.98r。
+    // 半徑 1.03r 比頭球的 r 稍寬，頭才不會從側邊擠出來。
+    parts.push(P('cyl', [0, headY + r * 0.88, 0], [r * 1.03, r * 0.66, r * 1.03], cloth, 'head'));
+  },
+  /** 棒球帽：前面有帽舌，所以側面看得出朝向——走路時幫忙指出他面向哪。 */
+  cap: (parts, { r, headY, cloth }) => {
+    const peak = shade(cloth, -0.22);
+    // 帽殼是半球：中心 0.32r、半徑 0.78r → 頂在 1.10r
+    parts.push(P('sphere', [0, headY + r * 0.32, 0], [r * 1.07, r * 0.78, r * 1.07], cloth, 'head'));
+    parts.push(P('rbox', [0, headY + r * 0.34, r * 1.0], [r * 1.1, r * 0.1, r * 0.9], peak, 'head'));
+  },
+  /** 斗笠：圓錐，最像「在島上幹活的人」。 */
+  straw: (parts, { r, headY }) => {
+    // cone 的 scale.y 也是全高：中心 0.82r、全高 0.9r → 頂在 1.27r
+    parts.push(P('cone', [0, headY + r * 0.82, 0], [r * 1.7, r * 0.9, r * 1.7], '#d9bb7e', 'head'));
+  },
+};
+
+export function buildCharacter({ species = 'rabbit', seed = 0, held = 'none', heldColor = null, hat = null } = {}) {
+  const base = SPECIES[species] ?? SPECIES.rabbit;
+  const sp = hat === null ? base : { ...base, hat };
   const h = BASE_HEIGHT * sp.size;
   const parts = sp.rig === 'bird' ? buildBird(sp, h)
     : sp.rig === 'pinniped' ? buildPinniped(sp, h)
