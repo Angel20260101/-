@@ -186,8 +186,8 @@ export class App {
   }
 
   /** 上帝視角：玩家選的天氣會套到整座群島——天空、太陽、海水、光線、雲雨與島民在做的事。 */
-  applyWeather(id, { animate = true } = {}) {
-    const w = this.scene.setWeather(id, { animate });
+  applyWeather(id, { animate = true, keepVeil = false } = {}) {
+    const w = this.scene.setWeather(id, { animate, keepVeil });
     this.weatherLine.textContent = WEATHER_LINE[w.id] ?? '中午十二點的島';
     return w;
   }
@@ -367,28 +367,64 @@ export class App {
    * 群島暫停，島內場景接手同一個 renderer 與 canvas。這座島的道具與場景資料
    * 到這一刻才下載（規格：進入單島才載入其完整道具與居民）。
    */
+  /**
+   * 走進島上。
+   *
+   * 島內是另一個 three.js 場景，所以中間一定有一次硬切——這點改不掉。
+   * 能改的是讓硬切發生在「兩邊長得最像」的那一瞬間，人就讀不出來。
+   *
+   * 原本的做法是：暫停群島 → 建立島內場景 → 直接顯示。前後兩幀之間
+   * 鏡頭位置、天空顏色、霧色全部不同，所以會明顯讀成「換了一頁」。
+   *
+   * 現在分成五拍，中間那一拍才是真正的交換：
+   *   1. 先把資料載完——飛到一半才卡住比直接等還糟
+   *   2. 天空先走（CSS 1100ms），讓它領先鏡頭，眼睛先適應新色溫
+   *   3. 群島鏡頭俯衝到那座島，霧色同步推向島內的霧色
+   *   4. 用島內的霧色蓋住 180ms——蓋的是霧色不是黑色，所以不是「黑場」
+   *      而是「霧散開」；交換在這 180ms 裡發生
+   *   5. 揭幕，島內鏡頭把剩下的下降走完
+   */
   async visitIsland(islandId) {
     if (this._visiting) return;
     this._visiting = true;
     this.sheet.close();
-    this.toast('正在走進島上…', 1800);
+    let loaded;
     try {
-      const { IslandScene, data, props } = await loadIslandScene(islandId);
-      this.scene.pause();
+      loaded = await loadIslandScene(islandId);
+    } catch (err) {
+      console.error(err);
+      this.toast('這座島還沒做好，先回群島');
+      this._visiting = false;
+      return;
+    }
+    const { IslandScene, data, props } = loaded;
+    const fog = data.sky?.fog ?? '#f2e6cd';
+    try {
       document.getElementById('hint')?.classList.add('is-hidden');
+      this._paintIslandSky(data);                       // 2
+      const apparent = await this.scene.diveTo(islandId, { fog });   // 3
+      // 回來時要放回這個位置。不記的話 resize() 會在 autoFit 下重新取景，
+      // 揭幕第一幀就從「貼著島」跳成「整個群島」。
+      this._returnCam = this.scene.cameraState();
+      await this._veil(fog, 180);                       // 4
+      this.scene.pause();
       this.islandScene = new IslandScene({
         renderer: this.scene.renderer,
         canvas: this.scene.canvas,
         skyLayer: this.scene.skyLayer,
         labelLayer: this.scene.labelLayer,
         data, props,
+        entry: { apparent },
         onPickResident: (id) => this._residentCard(data, id),
       });
-      this._paintIslandSky(data);
       this.islandScene.start();
+      this._visitedFrom = islandId;
       this._showVisitHud(data);
+      await this._veil(null, 420);                      // 5
+      this.islandScene.settle(760);
     } catch (err) {
       console.error(err);
+      this._veil(null, 200);
       this.scene.resume();
       this.toast('這座島還沒做好，先回群島');
     } finally {
@@ -396,15 +432,59 @@ export class App {
     }
   }
 
-  leaveIsland() {
-    if (!this.islandScene) return;
-    this.islandScene.dispose();
-    this.islandScene = null;
-    document.getElementById('visit-hud')?.remove();
-    this.app.classList.remove('is-visiting');
-    this.scene.resume();
-    this.applyWeather(this.state.todayWeather, { animate: false });
-    this.scene.resize();
+  /**
+   * 把遮罩推到某個顏色，或推回透明（color = null）。
+   *
+   * 故意不用黑色：黑場是「這一段結束了」的語彙，而走進島上並沒有結束什麼。
+   * 推到目的地的霧色，讀起來是霧湧上來又散開，前後是同一個世界。
+   */
+  _veil(color, ms) {
+    const el = this.scene.veilLayer;
+    if (!el) return Promise.resolve();
+    el.style.transition = `background ${ms}ms ease`;
+    el.style.background = color ?? 'transparent';
+    return new Promise((r) => setTimeout(() => {
+      // 還原成 CSS 裡的 1100ms：天氣的遮罩本來就該慢慢換，
+      // 不該沿用這裡為了換場臨時調短的秒數。
+      if (!color) el.style.transition = '';
+      r();
+    }, ms));
+  }
+
+  /**
+   * 回群島——把進來那五拍倒著放一次。
+   *
+   * 關鍵是群島的鏡頭「還停在剛才俯衝下去的位置」：整趟沒有人動過它，
+   * 所以揭幕的第一幀，看到的就是當初離開群島的最後一幀。接著才往上拉回
+   * 看得到全局的高度，讀起來是從島上浮起來，不是跳回地圖。
+   */
+  async leaveIsland() {
+    if (!this.islandScene || this._leaving) return;
+    this._leaving = true;
+    const fog = this.islandScene.data?.sky?.fog ?? '#f2e6cd';
+    try {
+      await this._veil(fog, 180);
+      this.islandScene.dispose();
+      this.islandScene = null;
+      document.getElementById('visit-hud')?.remove();
+      this.app.classList.remove('is-visiting');
+      this.scene.resume();
+      this.scene.resize();
+      this.scene.restoreCamera(this._returnCam);   // 蓋著的時候放回去，看不到這一下
+      // 天空與霧色在還被遮著的時候就開始換回今天的天氣（各自 1100ms），
+      // 揭幕之後才慢慢走完——顏色比鏡頭慢，人會先認出地形再認出天色。
+      // keepVeil：不讓天氣去寫遮罩，不然還沒揭幕就先被換掉。
+      this.applyWeather(this.state.todayWeather, { animate: true, keepVeil: true });
+      const weatherVeil = this.scene.weatherVeil();
+      // 揭幕是「收回天氣的遮罩」而不是「收到全透明」——雨天本來就有一層灰，
+      // 收到透明會讓雨天的群島在回去的瞬間亮一下，再暗回來。
+      await this._veil(weatherVeil === 'transparent' ? null : weatherVeil, 300);
+      // 揭幕之後才往上拉。俯仰角一起回到預設，不然會停在俯衝時的低角度。
+      if (this._visitedFrom) this.scene.focus(this._visitedFrom, { distance: 20, polar: 42 * Math.PI / 180 });
+      document.getElementById('hint')?.classList.remove('is-hidden');
+    } finally {
+      this._leaving = false;
+    }
   }
 
   _paintIslandSky(data) {

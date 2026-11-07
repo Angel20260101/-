@@ -30,7 +30,7 @@ export class IslandScene {
    *   props      這座島的道具工廠 { name: () => BufferGeometry }
    *   onPickResident(id)
    */
-  constructor({ renderer, canvas, skyLayer, labelLayer, data, props, onPickResident }) {
+  constructor({ renderer, canvas, skyLayer, labelLayer, data, props, onPickResident, entry = null }) {
     this.renderer = renderer;
     this.canvas = canvas;
     this.skyLayer = skyLayer;
@@ -38,6 +38,7 @@ export class IslandScene {
     this.data = data;
     this.propFactories = props;
     this.onPickResident = onPickResident;
+    this.entry = entry;
 
     this.tier = detectTier();
     this.profile = profileFor(this.tier);
@@ -80,6 +81,29 @@ export class IslandScene {
       this.camera, canvas, data.camera ?? {},
       () => {}, (pos) => this._handleTap(pos),
     );
+    /*
+     * 從群島俯衝進來時，進場的第一幀要跟群島的最後一幀「一樣大」。
+     *
+     * 這裡最早寫成「從更遠的地方降下來」，方向是錯的：群島那一段結束在
+     * 貼著島的距離，島在畫面上佔 1.08；若島內從預設的 1.75 倍距離開始，
+     * 同一座島會在切換的瞬間縮成 0.35——切換點反而被放大成「跳出去」。
+     *
+     * 正解是反過來：用群島交棒過來的視角大小（entry.apparent）反推起始
+     * 距離，讓兩幀一樣大，再由 settle() 往外退到島內的預設視角。讀起來是
+     * 「走到島上，然後站直了環顧」——鏡頭一路往同一個方向走，沒有折返。
+     */
+    if (entry?.apparent > 0) {
+      const land = (data.land ?? [])[0] ?? {};
+      const span = Math.max(land.rx ?? 0, land.rz ?? 0) * 2;
+      if (span > 0) {
+        this._settleTo = { distance: this.controls.distance, polar: this.controls.polar };
+        this.controls.distance = THREE.MathUtils.clamp(
+          span / entry.apparent, this.controls.minDistance, this.controls.maxDistance);
+        // 俯仰角也從群島那頭接過來，再一起回到島內的預設
+        this.controls.polar = this.controls.maxPolar;
+        this.controls.apply();
+      }
+    }
     this.resize();
     this._tick = this._tick.bind(this);
     this._onResize = () => this.resize();
@@ -312,6 +336,21 @@ export class IslandScene {
   }
 
   // ── 生命週期 ────────────────────────────────────────────
+  /**
+   * 把進場剩下的那段鏡頭降完。entry 不是 'descend' 時什麼也不做。
+   * 回傳 Promise，呼叫端可以等它結束再把操作權交還給使用者。
+   */
+  settle(duration = 760) {
+    if (!this._settleTo) return Promise.resolve();
+    const to = this._settleTo;
+    this._settleTo = null;
+    return this.controls.flyTo(
+      { target: this.controls.target, distance: to.distance, polar: to.polar },
+      duration,
+      () => { this._dirty = true; },
+    );
+  }
+
   start() {
     if (this._running) return;
     this._running = true;

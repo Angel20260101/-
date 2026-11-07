@@ -171,22 +171,36 @@ export class CameraController {
     this.onChange?.();
   }
 
-  /** 平滑地把鏡頭移到某個位置（只有這個動作會短暫開啟連續渲染）。 */
-  flyTo({ target, distance }, duration = 650, onFrame) {
-    const from = { t: this.target.clone(), d: this.distance };
-    const to = { t: new THREE.Vector3(target.x, target.y ?? 0, target.z), d: distance ?? this.distance };
+  /**
+   * 平滑地把鏡頭移到某個位置（只有這個動作會短暫開啟連續渲染）。
+   *
+   * polar 可選。走進島內的俯衝要壓低俯仰角，不然鏡頭只是「變近」而不是
+   * 「降下去」——距離變化單獨存在時讀起來像拉 zoom，加上角度才像人走近。
+   * 回傳 Promise，讓呼叫端可以把好幾段動作串成一條連續的運鏡。
+   */
+  flyTo({ target, distance, polar }, duration = 650, onFrame) {
+    const from = { t: this.target.clone(), d: this.distance, p: this.polar };
+    const to = {
+      t: new THREE.Vector3(target.x, target.y ?? 0, target.z),
+      d: distance ?? this.distance,
+      p: polar == null ? this.polar : THREE.MathUtils.clamp(polar, this.minPolar, this.maxPolar),
+    };
     const start = performance.now();
     const ease = (x) => 1 - Math.pow(1 - x, 3);
-    const step = () => {
-      const k = Math.min((performance.now() - start) / duration, 1);
-      const e = ease(k);
-      this.target.lerpVectors(from.t, to.t, e);
-      this.distance = from.d + (to.d - from.d) * e;
-      this.apply();
-      onFrame?.();
-      if (k < 1) requestAnimationFrame(step);
-    };
-    step();
+    return new Promise((resolve) => {
+      const step = () => {
+        const k = Math.min((performance.now() - start) / duration, 1);
+        const e = ease(k);
+        this.target.lerpVectors(from.t, to.t, e);
+        this.distance = from.d + (to.d - from.d) * e;
+        this.polar = from.p + (to.p - from.p) * e;
+        this.apply();
+        onFrame?.();
+        if (k < 1) requestAnimationFrame(step);
+        else resolve();
+      };
+      step();
+    });
   }
 
   dispose() {

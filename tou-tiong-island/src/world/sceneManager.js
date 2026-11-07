@@ -266,12 +266,17 @@ export class SceneManager {
     };
   }
 
-  setWeather(id, { animate = true } = {}) {
+  /**
+   * @param keepVeil  換場途中用。天氣的遮罩與換場的遮罩是同一個元素，
+   *                  這時候讓天氣去寫它，會在揭幕前就把遮罩換掉而破功。
+   *                  呼叫端自己負責把遮罩收回天氣值（weatherVeil()）。
+   */
+  setWeather(id, { animate = true, keepVeil = false } = {}) {
     const w = WEATHER[id] ?? WEATHER.sunny;
     const changed = this.weather?.id !== w.id;
     this.weather = w;
     this._paintSky(w);
-    if (this.veilLayer) this.veilLayer.style.background = w.veil ?? 'transparent';
+    if (this.veilLayer && !keepVeil) this.veilLayer.style.background = w.veil ?? 'transparent';
     this._colourTarget = this._targetsFor(w);
     this._lightTarget = { hemi: w.hemiIntensity * HEMI_GAIN, dir: w.dirIntensity * SUN_GAIN };
     if (this.clouds) {
@@ -1022,10 +1027,68 @@ export class SceneManager {
     this.invalidate();
   }
 
-  focus(islandId, { distance } = {}) {
+  focus(islandId, { distance, polar } = {}) {
     const island = this.islandsById.get(islandId);
     if (!island) return;
-    this.controls.flyTo({ target: island.center, distance: distance ?? (island.kind === 'home' ? 16 : 13) }, 700);
+    return this.controls.flyTo(
+      { target: island.center, distance: distance ?? (island.kind === 'home' ? 16 : 13), polar }, 700);
+  }
+
+  /**
+   * 記下／還原鏡頭狀態。走進島上再回來時用：
+   * resize() 在 autoFit 開著的時候會把鏡頭重新取景成全景，揭幕第一幀就會
+   * 從「貼著島」跳成「整個群島」。所以回來時要在遮罩底下把它放回去。
+   */
+  cameraState() {
+    return { target: this.controls.target.clone(), distance: this.controls.distance, polar: this.controls.polar };
+  }
+  restoreCamera(st) {
+    if (!st) return;
+    this.controls.target.copy(st.target);
+    this.controls.distance = st.distance;
+    this.controls.polar = st.polar;
+    this.controls.apply();
+  }
+
+  /** 目前天氣該有的遮罩值。換場揭幕時要收回這個值，而不是 transparent。 */
+  weatherVeil() { return this.weather?.veil ?? 'transparent'; }
+
+  /**
+   * 俯衝進一座島——「走進島上」的前半段。
+   *
+   * 島內是另一個場景，換場本身無論如何都是硬切。能做的是讓硬切發生在
+   * 「鏡頭已經貼到那座島上、而且顏色已經換成島內的顏色」的那一刻：
+   * 前後兩幀愈像，切換就愈讀不出來。
+   *
+   * 所以這裡同時做三件事，而不是只飛鏡頭：
+   *   1. 目標移到島上、距離縮到最近、俯仰角壓低——是「降下去」不是「拉 zoom」
+   *   2. 場景霧色推到島內的霧色，遠景稜線跟著換色
+   *   3. 回傳 Promise，讓呼叫端把後半段接上去
+   *
+   * @param fog  島內的霧色，用來讓兩個場景在交接的那一幀顏色一致
+   * @returns 結束時這座島在畫面上的視角大小（寬度 / 距離）。島內場景用它
+   *          決定要從多遠開始，兩邊的島才會在交接的那一幀一樣大。
+   */
+  async diveTo(islandId, { fog, duration = 620 } = {}) {
+    const island = this.islandsById.get(islandId);
+    if (!island) return;
+    // 停掉天氣的顏色補間，不然它會一邊把霧色拉回群島的天氣色
+    this._colourTarget = null;
+    const target = fog ? new THREE.Color(fog) : null;
+    const from = this.scene.fog.color.clone();
+    const start = performance.now();
+    await this.controls.flyTo(
+      { target: island.center, distance: this.controls.minDistance, polar: this.controls.maxPolar },
+      duration,
+      target ? (() => {
+        // flyTo 的 ease 是三次方，顏色跟著同一條曲線才不會「鏡頭到了顏色還沒到」
+        const k = Math.min((performance.now() - start) / duration, 1);
+        this.scene.fog.color.copy(from).lerp(target, 1 - Math.pow(1 - k, 3));
+        this.ridges?.setHorizon(this.scene.fog.color);
+      }) : undefined,
+    );
+    const w = island.bounds ? island.bounds.maxX - island.bounds.minX : 0;
+    return w > 0 ? w / this.controls.distance : null;
   }
 
   fitToWorld({ padding = 1.0, animate = false } = {}) {
@@ -1239,6 +1302,9 @@ export class SceneManager {
   _stepColours(dt) {
     const k = Math.min(1, dt * 2.4);
     const t = this._colourTarget;
+    // null 是合法狀態：俯衝進島的時候由 diveTo 自己接管霧色，
+    // 天氣不該在旁邊把它拉回去。沒有目標就什麼都不做。
+    if (!t) return;
     this.water.material.color.lerp(t.water, k);
     if (this.shallows) this.shallows.material.color.lerp(t.foam, k);
     this.scene.fog.color.lerp(t.fog, k);
