@@ -25,7 +25,7 @@ import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
 import { buildCharacter } from './characters.js';
 import { buildCast, stepCast } from './cast.js';
 import { makeWalkable } from './walkable.js';
-import { Protagonist, keyboardPush } from './protagonist.js';
+import { Protagonist, keyboardPush, joystickPush } from './protagonist.js';
 import { makeRoute } from './routes.js';
 import { createRidges } from './ridges.js';
 
@@ -479,6 +479,8 @@ export class SceneManager {
     this.player = new Protagonist({ walkable: this.walkable, start });
     this.player.heading = heading;
     this.keys ??= keyboardPush();
+    const stickEl = document.getElementById('stick');
+    if (stickEl && !this.stick) this.stick = joystickPush(stickEl);
   }
 
   _buildCast(list, travellers = []) {
@@ -608,6 +610,26 @@ export class SceneManager {
   }
 
   /**
+   * 開／關「自己走走看」。
+   *
+   * 不能只是把 followPlayer 設成 true：主角在全景下只有 12 像素，開了跟隨
+   * 還是找不到人。所以開啟時一併把鏡頭帶到他身邊——這也是政策島的
+   * 「回到小企鵝」在做的事。關閉時回到看得見全局的高度。
+   */
+  setWalkMode(on) {
+    this.followPlayer = on;
+    this.autoFit = false;          // 走路時 resize 不要把鏡頭拉回全景
+    if (on && this.player) {
+      this.controls.flyTo(
+        { target: { x: this.player.x, y: 0, z: this.player.z }, distance: 4.2, polar: 1.15 }, 620);
+    } else {
+      this.fitToWorld({ animate: true });
+    }
+    this.invalidate();
+    return on;
+  }
+
+  /**
    * 主角這一幀走到哪。
    *
    * 鍵盤的推力是相對鏡頭的：按 W 是「往畫面上方走」而不是「往世界 -Z 走」，
@@ -618,7 +640,9 @@ export class SceneManager {
    */
   _stepPlayer(dt) {
     if (!this.player || !this.playerActor) return false;
-    const push = this.keys?.read(this.controls.azimuth) ?? null;
+    // 鍵盤與搖桿擇一。兩個同時有值的機率趨近於零，真的發生就以搖桿為準——
+    // 手指正在推的時候，鍵盤多半是卡住沒送到 keyup 的殘留。
+    const push = this.stick?.read(this.controls.azimuth) ?? this.keys?.read(this.controls.azimuth) ?? null;
     const moved = this.player.step(dt, push);
     if (!moved) return false;
 

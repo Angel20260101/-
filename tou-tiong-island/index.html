@@ -34,6 +34,12 @@
           </svg>
           <span class="rail__text" data-label-view>全景</span>
         </button>
+        <button type="button" class="pill" data-action="walk" aria-label="自己走走看" aria-pressed="false">
+          <svg class="pill__icon" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M11 3.2a1 1 0 100 .01M10.5 7l-2.2 3.4L6 17M10.5 7l2.6 1.6L14 12M10.5 7L7.8 8.2 6 11M8.3 10.4L11 13l-.6 4"/>
+          </svg>
+          <span class="rail__text" data-label-walk>走走看</span>
+        </button>
         <button type="button" class="pill" data-action="records" aria-label="我的紀錄">
           <svg class="pill__icon" viewBox="0 0 20 20" aria-hidden="true">
             <path d="M3 5h14M3 10h14M3 15h9"/>
@@ -61,7 +67,16 @@
           <span class="rail__text">關於</span>
         </button>
       </nav>
+
     </header>
+
+    <!--
+        手機搖桿。桌機用 WASD，但手機沒有鍵盤，而點地面只能一次走一段——
+        要連續控制方向就得有這個。只在觸控裝置顯示（CSS 的 pointer: coarse）。
+      -->
+    <div class="stick" id="stick" aria-hidden="true">
+      <i class="stick__knob"></i>
+    </div>
 
     <div class="hud__hint" id="hint">拖曳可以轉動群島，雙指縮放。點文字就能進去。</div>
 

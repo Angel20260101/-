@@ -23,6 +23,14 @@ import { SPECIES, BASE_HEIGHT } from './species.js';
 /** 這個系統用到的幾何種類。sceneManager 依這份清單各開一個 InstancedMesh。 */
 export const CHARACTER_KINDS = ['rbox', 'cyl', 'cone', 'sphere'];
 
+/** 把色票調深（k<0）或調亮（k>0）一階。用來讓相鄰的同色部件分得出來。 */
+function shade(hex, k) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  if (!Number.isFinite(n)) return hex;
+  const f = (c) => Math.max(0, Math.min(255, Math.round(c + (k < 0 ? c * k : (255 - c) * k))));
+  return `#${((f((n >> 16) & 255) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).padStart(6, '0')}`;
+}
+
 const P = (kind, pos, scale, color, channel, extra = {}) =>
   ({ kind, pos, scale, color, channel, ...extra });
 
@@ -261,7 +269,7 @@ function buildBiped(sp, h) {
   const trouser = sp.belly ?? '#5c6b78';
 
   // 兩條腿。pivot 在髖，腿才會繞關節擺而不是繞自己中心翻轉
-  const legR = h * 0.075, legX = h * 0.105;
+  const legR = h * 0.072, legX = h * 0.115;   // 兩腿之間留一點縫，下半身才不是一整塊
   for (const [s, ch] of [[-1, 'legL'], [1, 'legR']]) {
     parts.push(P('cyl', [s * legX, legH / 2, 0], [legR, legH, legR], trouser, ch, { pivot: [0, legH / 2, 0] }));
     // 鞋：一塊前伸的扁方塊。走路時腳尖的方向是「人在往哪走」最強的訊號
@@ -274,15 +282,22 @@ function buildBiped(sp, h) {
   // 領口／衣襬的一條淺色，讓單色的軀幹有個斷點
   parts.push(P('rbox', [0, hipY + torsoH * 0.12, 0], [h * 0.31, h * 0.06, h * 0.2], trouser, 'body'));
 
-  // 手臂。pivot 在肩：舉手是繞肩膀畫弧，手上的東西才會跟著到嘴邊。
-  // HELD 掛在 armR，跟四足掛在 legFR 是同一個位置概念。
-  const armR_ = h * 0.055, armH = h * 0.30, armX = h * 0.185;
+  /*
+   * 手臂。pivot 在肩：舉手是繞肩膀畫弧，手上的東西才會跟著到嘴邊。
+   * HELD 掛在 armR，跟四足掛在 legFR 是同一個位置概念。
+   *
+   * 第一版手臂貼著軀幹、而且跟上衣同色，正面看整個融進側影裡——
+   * 遠看只剩一個方塊，看不出有手。所以往外挪開一點、袖子比上衣深一階，
+   * 手掌也放大：在 12px 的尺寸下，能不能看出「有手臂」靠的是輪廓缺口，
+   * 不是細節。
+   */
+  const armR_ = h * 0.058, armH = h * 0.30, armX = h * 0.215;
+  const sleeve = shade(cloth, -0.12);
   for (const [s, ch] of [[-1, 'armL'], [1, 'armR']]) {
-    parts.push(P('cyl', [s * armX, shoulderY - armH / 2, 0], [armR_, armH, armR_], cloth, ch,
+    parts.push(P('cyl', [s * armX, shoulderY - armH / 2, 0], [armR_, armH, armR_], sleeve, ch,
       { pivot: [0, armH / 2, 0] }));
-    // 手：袖口外露出來的一小塊膚色，手臂才有端點
-    parts.push(P('sphere', [s * armX, shoulderY - armH + h * 0.02, 0], [h * 0.065, h * 0.07, h * 0.065], skin, ch,
-      { pivot: [0, armH - h * 0.02, 0] }));
+    parts.push(P('sphere', [s * armX, shoulderY - armH + h * 0.015, 0], [h * 0.075, h * 0.08, h * 0.075], skin, ch,
+      { pivot: [0, armH - h * 0.015, 0] }));
   }
 
   // 脖子

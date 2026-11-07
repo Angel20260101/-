@@ -94,6 +94,25 @@ export class App {
       viewBtn.setAttribute('aria-label', wide ? '回到透中島' : '看整座群島');
       this.scene.select(null);
     });
+    /*
+     * 自己走走看。
+     *
+     * 開啟時鏡頭會飛到主角身邊——光是打開跟隨不夠，他在全景下只有 12 像素，
+     * 開了還是找不到人。手機同時亮出左下角的搖桿；桌機沒有搖桿，用 WASD。
+     */
+    const walkBtn = document.querySelector('[data-action="walk"]');
+    const walkLabel = walkBtn.querySelector('[data-label-walk]');
+    const stick = document.getElementById('stick');
+    walkBtn.addEventListener('click', () => {
+      const on = this.scene.setWalkMode(!this.scene.followPlayer);
+      walkBtn.setAttribute('aria-pressed', String(on));
+      walkLabel.textContent = on ? '看全島' : '走走看';
+      walkBtn.setAttribute('aria-label', on ? '離開走路模式，看整座群島' : '自己走走看');
+      stick?.classList.toggle('is-on', on);
+      stick?.setAttribute('aria-hidden', String(!on));
+      if (on) this.toast('用 WASD 或方向鍵走，點地面也可以', 2600);
+    });
+
     document.querySelector('[data-action="records"]')
       .addEventListener('click', () => this.openInteraction('records'));
     document.querySelector('[data-action="login"]')

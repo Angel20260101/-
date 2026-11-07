@@ -796,3 +796,40 @@ body {
 }
 .visit-hud__title b { display: block; font-size: 15px; letter-spacing: .06em; }
 .visit-hud__title span { display: block; font-size: 11px; color: var(--muted); }
+
+/* ════════════════════════════════════════════════════════════
+   自己走走看：虛擬搖桿
+   ────────────────────────────────────────────────────────────
+   桌機用 WASD，手機沒有鍵盤。點地面雖然也能走，但那是「一次走一段」，
+   要貼著島緣繞、要停在某個居民旁邊，都得能連續控制方向。
+
+   只在觸控裝置出現（pointer: coarse）。桌機就算把視窗縮到手機寬度也不該
+   冒出來——那是滑鼠環境，搖桿只會擋住畫面。
+   ════════════════════════════════════════════════════════════ */
+.stick { display: none; }
+
+@media (pointer: coarse) {
+  .stick.is-on {
+    display: block;
+    position: absolute;
+    left: calc(env(safe-area-inset-left, 0px) + 18px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+    width: 112px; height: 112px;
+    border-radius: 50%;
+    background: rgba(252, 248, 239, .42);
+    border: 1px solid var(--hairline-strong);
+    backdrop-filter: blur(6px);
+    touch-action: none;
+    z-index: 6;
+  }
+  .stick__knob {
+    position: absolute; left: 50%; top: 50%;
+    width: 46px; height: 46px; margin: -23px 0 0 -23px;
+    border-radius: 50%;
+    background: rgba(252, 248, 239, .92);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-s);
+    /* transform 由 JS 直接寫，這裡不要放 transition——
+       會讓搖桿追不上手指，推起來像有延遲 */
+  }
+}

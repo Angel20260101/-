@@ -162,3 +162,52 @@ const KEYS = {
   a: [0, -1], arrowleft: [0, -1],
   d: [0, 1], arrowright: [0, 1],
 };
+
+/**
+ * 虛擬搖桿。
+ *
+ * 跟鍵盤一樣回傳「相對鏡頭」的推力，所以兩者可以直接換——上層不需要
+ * 知道人是用手指還是鍵盤在走。
+ *
+ * 用 pointer 事件而不是 touch：同一份程式在手寫筆、觸控螢幕筆電上也成立，
+ * 而且 setPointerCapture 能保證手指滑出搖桿範圍之後還收得到事件——
+ * 少了它，推到底的時候手指一離開圓圈就會卡住不動。
+ */
+export function joystickPush(el, { radius = 44 } = {}) {
+  const knob = el.querySelector('.stick__knob');
+  let vec = null;
+
+  const place = (dx, dy) => {
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+  const onMove = (e) => {
+    const r = el.getBoundingClientRect();
+    let dx = e.clientX - r.left - r.width / 2;
+    let dy = e.clientY - r.top - r.height / 2;
+    const len = Math.hypot(dx, dy);
+    if (len > radius) { dx *= radius / len; dy *= radius / len; }
+    place(dx, dy);
+    vec = { x: dx / radius, y: dy / radius };
+  };
+  const onDown = (e) => { el.setPointerCapture(e.pointerId); vec = { x: 0, y: 0 }; onMove(e); };
+  const onUp = (e) => {
+    try { el.releasePointerCapture(e.pointerId); } catch { /* 已經放開了 */ }
+    vec = null; place(0, 0);
+  };
+
+  el.addEventListener('pointerdown', onDown);
+  el.addEventListener('pointermove', (e) => { if (vec) onMove(e); });
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
+
+  return {
+    read(azimuth) {
+      if (!vec || (!vec.x && !vec.y)) return null;
+      // 搖桿的 y 往下是正，但「往上推」要等於「往前走」，所以取負
+      const fwd = -vec.y, side = vec.x;
+      const sin = Math.sin(azimuth), cos = Math.cos(azimuth);
+      return { x: side * cos - fwd * sin, z: -side * sin - fwd * cos };
+    },
+    get active() { return vec !== null; },
+  };
+}
