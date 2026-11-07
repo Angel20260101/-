@@ -50,6 +50,36 @@ export const ACTIVITIES = {
     tail: { rot: [0, Math.sin(t * 0.4) * 0.12, 0] },
   }),
 
+  /**
+   * 人走路。
+   *
+   * 不能沿用鳥的 waddle：那是左右搖的，因為鳥的重心在兩腿之間晃。
+   * 人是前後擺——手臂與同側的腿反相（右腳前進時左手前擺），這是人走路
+   * 最好認的特徵，少了它會變成殭屍。身體的起伏是每一步兩次，不是一次。
+   */
+  stride: (t, speed = 1) => {
+    const p = t * 5.2 * speed;
+    const s = Math.sin(p);
+    return {
+      legL: { rot: [s * 0.62, 0, 0] },
+      legR: { rot: [-s * 0.62, 0, 0] },
+      // 手臂與同側的腿反相，而且擺幅小一點——走路不是行軍
+      armL: { rot: [-s * 0.42, 0, 0.06] },
+      armR: { rot: [s * 0.42, 0, -0.06] },
+      // 兩次起伏：每一步踩實的時候下沉一次
+      body: { pos: [0, Math.abs(s) * 0.008, 0], rot: [0, 0, s * 0.03] },
+      head: { rot: [0, 0, -s * 0.04] },
+    };
+  },
+
+  /** 人站著。重心微微換腳，不是立正。 */
+  stand: (t) => ({
+    body: { pos: [0, breathe(t, 0.45) * 0.005, 0], rot: [0, Math.sin(t * 0.21) * 0.05, 0] },
+    head: { rot: [Math.sin(t * 0.3) * 0.05, Math.sin(t * 0.17) * 0.2, 0] },
+    armL: { rot: [Math.sin(t * 0.4) * 0.05, 0, 0.1] },
+    armR: { rot: [Math.sin(t * 0.4 + 1) * 0.05, 0, -0.1] },
+  }),
+
   /** 四足行走。身體隨步伐輕微起伏，頭跟著反向微擺。 */
   walk: (t, speed = 1) => {
     const p = t * 6 * speed;
@@ -248,7 +278,7 @@ export const ACTIVITIES = {
 };
 
 /** 每種骨架的預設移動動作——同一個「走」在三種身體上是不同的事。 */
-export const MOVE_BY_RIG = { quad: 'walk', bird: 'waddle', pinniped: 'bask' };
+export const MOVE_BY_RIG = { quad: 'walk', bird: 'waddle', pinniped: 'bask', biped: 'stride' };
 
 /**
  * 算出某個角色每個部件的最終變換。

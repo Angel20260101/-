@@ -192,8 +192,21 @@ export function buildWorld(map, progress = {}, wish = {}, residentData = null, p
    *
    * 兩端各退一個島半徑，橋才會從岸邊開始、不會插進島裡。
    */
+  /*
+   * 主角能站的地方。
+   *
+   * 地塊與橋原本只以「畫出來的幾何」存在，畫完就丟——誰也不知道某個座標
+   * 上有沒有地。主角要能走，就得有一份「可以站哪裡」的資料，所以在蓋的
+   * 同時順手記起來：地塊記世界軸座標，橋記折線（跟畫出來的是同一條，
+   * 不會各走各的）。
+   */
+  const walkHexes = new Set();
+  const walkBridges = [];
+  const noteHexes = (hexes) => { for (const h of hexes) walkHexes.add(`${h.q},${h.r}`); };
+
   const BRIDGE_SPAN = 2.0;      // rope_bridge 的幾何跨距，沿 X 軸
   const placeBridge = (points, { trimFrom = 2.0, trimTo = 1.5 } = {}) => {
+    walkBridges.push(points.map(([x, z]) => ({ x, z })));   // pts 是 [x, z] 配對，不是物件
     // 把折線切成等長段，每段放一座橋
     for (let i = 0; i < points.length - 1; i++) {
       let [ax, az] = points[i];
@@ -371,6 +384,7 @@ function heldFromLoop(text) {
     const origin = home.origin;
     const biome = biomeOf(home.biome);
     const hexes = home.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    noteHexes(hexes);
     const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     const landmarks = home.landmarks;
     placeLandmarks(landmarks, home.hexes, origin);
@@ -418,6 +432,7 @@ function heldFromLoop(text) {
     // 預設值，所以這裡接得起來，配色也跟加入氣候區之前一樣，不會偷偷變色。
     const biome = biomeOf(pi.biome);
     const hexes = pi.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    noteHexes(hexes);
     const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     placeLandmarks(pi.landmarks, pi.hexes, origin);
     const occupied = occupiedOf(pi.landmarks, pi.hexes, origin);
@@ -456,6 +471,7 @@ function heldFromLoop(text) {
     const origin = w.origin;
     const biome = biomeOf(w.biome);
     const hexes = w.hexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    noteHexes(hexes);
     const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     placeLandmarks(w.landmarks, w.hexes, origin);
 
@@ -549,6 +565,8 @@ function heldFromLoop(text) {
        */
       const localHexes = [...island.base.hexes];
       const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    noteHexes(hexes);
+      noteHexes(hexes);
       // 未破關的島也要吃自己的氣候色票再褪色，不然破關前後會換成另一個色系，
       // 看起來像「換了一座島」而不是「同一座島醒過來」。
       // 這裡要自己取一次 biome：下面那個 const biome 在同一個區塊，
@@ -591,6 +609,7 @@ function heldFromLoop(text) {
 
     const biome = biomeOf(island.biome);
     const hexes = localHexes.map((h) => ({ ...h, q: h.q + origin.q, r: h.r + origin.r }));
+    noteHexes(hexes);
     const { geometry, bounds } = buildTerrainGeometry(hexes, cfg, { surfaces: biome.surfaces });
     placeLandmarks(localLandmarks, localHexes, origin);
     const occupied = occupiedOf(localLandmarks, localHexes, origin);
@@ -698,5 +717,6 @@ function heldFromLoop(text) {
     }
   }
 
-  return { islands, props, animals, boats, residents, travellers };
+  return { islands, props, animals, boats, residents, travellers,
+    walkable: { hexes: walkHexes, bridges: walkBridges, size: cfg.size } };
 }

@@ -8,6 +8,7 @@
  *   quad      四足。身體水平、頭在前、四條腿走對角步
  *   bird      直立鳥類。兩腿撐住梨形身體，翅膀代替前肢
  *   pinniped  鰭足。沒有腿，靠前鰭推動
+ *   biped     人。只有主角用——島上唯一的人，其餘全是動物
  *
  * 身體是自然的動物，但做的是人的事——這是美術文件的路線：
  * 兔子坐著舉杯、棕熊繫圍裙用工具、浣熊洗杯擦拭。所以四足骨架要能「坐起來」，
@@ -230,18 +231,91 @@ export const HELD = {
 /* ══════════════════════════════════════════════════════════
    組裝
    ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   人（主角）
+   ══════════════════════════════════════════════════════════
+   島上只有這一個人，其餘六十席全是動物。這個對比是設計上刻意的，
+   所以人形不能只是「站起來的四足」——要一眼就分得出不是同一類。
+
+   分出來的三件事：
+     1. 直立的比例    腿佔身高四成、軀幹是縱向的長方體，不是水平的身體
+     2. 沒有口鼻      動物的辨識幾乎全靠突出的 muzzle，人臉是平的
+     3. 有手          五指做不出來也不需要，但「手」要在身體兩側、能舉起來
+
+   頭身比刻意偏 Q（頭約身高的四分之一）：這座島的動物都是圓的，
+   寫實比例的人站進去會像走錯棚。
+   ══════════════════════════════════════════════════════════ */
+function buildBiped(sp, h) {
+  const parts = [];
+  const legH = h * 0.40;                     // 腿佔身高四成，站著才像人
+  const hipY = legH;
+  const torsoH = h * 0.34;
+  const torsoY = hipY + torsoH / 2;
+  const shoulderY = hipY + torsoH;
+  const r = h * 0.21;                        // 頭半徑
+  const headY = shoulderY + r * 0.92;
+
+  const skin = sp.inner ?? '#e8c9a8';
+  const cloth = sp.fur;
+  const trouser = sp.belly ?? '#5c6b78';
+
+  // 兩條腿。pivot 在髖，腿才會繞關節擺而不是繞自己中心翻轉
+  const legR = h * 0.075, legX = h * 0.105;
+  for (const [s, ch] of [[-1, 'legL'], [1, 'legR']]) {
+    parts.push(P('cyl', [s * legX, legH / 2, 0], [legR, legH, legR], trouser, ch, { pivot: [0, legH / 2, 0] }));
+    // 鞋：一塊前伸的扁方塊。走路時腳尖的方向是「人在往哪走」最強的訊號
+    parts.push(P('rbox', [s * legX, h * 0.035, h * 0.035], [h * 0.1, h * 0.07, h * 0.17], '#4a3b32', ch,
+      { pivot: [0, legH - h * 0.035, 0] }));
+  }
+
+  // 軀幹：縱向的圓角方塊。四足是橫的，這裡是直的——側影就分得出來
+  parts.push(P('rbox', [0, torsoY, 0], [h * 0.30, torsoH, h * 0.19], cloth, 'body'));
+  // 領口／衣襬的一條淺色，讓單色的軀幹有個斷點
+  parts.push(P('rbox', [0, hipY + torsoH * 0.12, 0], [h * 0.31, h * 0.06, h * 0.2], trouser, 'body'));
+
+  // 手臂。pivot 在肩：舉手是繞肩膀畫弧，手上的東西才會跟著到嘴邊。
+  // HELD 掛在 armR，跟四足掛在 legFR 是同一個位置概念。
+  const armR_ = h * 0.055, armH = h * 0.30, armX = h * 0.185;
+  for (const [s, ch] of [[-1, 'armL'], [1, 'armR']]) {
+    parts.push(P('cyl', [s * armX, shoulderY - armH / 2, 0], [armR_, armH, armR_], cloth, ch,
+      { pivot: [0, armH / 2, 0] }));
+    // 手：袖口外露出來的一小塊膚色，手臂才有端點
+    parts.push(P('sphere', [s * armX, shoulderY - armH + h * 0.02, 0], [h * 0.065, h * 0.07, h * 0.065], skin, ch,
+      { pivot: [0, armH - h * 0.02, 0] }));
+  }
+
+  // 脖子
+  parts.push(P('cyl', [0, shoulderY + h * 0.03, 0], [h * 0.055, h * 0.07, h * 0.055], skin, 'body'));
+
+  // 頭。沒有 muzzle——那是動物的辨識點，人臉是平的
+  parts.push(P('sphere', [0, headY, 0], [r, r * 1.02, r * 0.95], skin, 'head'));
+  // 頭髮：蓋住顱頂後方的一塊，比頭略大
+  parts.push(P('sphere', [0, headY + r * 0.2, -r * 0.1], [r * 1.04, r * 0.78, r * 1.0], sp.hair ?? '#3b2f2a', 'head'));
+  // 眼睛。低多邊形下這是唯一的表情來源，要夠大，遠看才不會只是一顆球
+  for (const s of [-1, 1]) {
+    parts.push(P('sphere', [s * r * 0.36, headY + r * 0.02, r * 0.84], [r * 0.13, r * 0.17, r * 0.08], '#2a2320', 'head'));
+  }
+
+  return parts;
+}
+
 export function buildCharacter({ species = 'rabbit', seed = 0, held = 'none', heldColor = null } = {}) {
   const sp = SPECIES[species] ?? SPECIES.rabbit;
   const h = BASE_HEIGHT * sp.size;
   const parts = sp.rig === 'bird' ? buildBird(sp, h)
     : sp.rig === 'pinniped' ? buildPinniped(sp, h)
-      : buildQuad(sp, h);
+      : sp.rig === 'biped' ? buildBiped(sp, h)
+        : buildQuad(sp, h);
 
   const item = HELD[held];
   if (item) {
     // 掛在右前肢上，pivot 設在肩——手抬起來時東西跟著畫弧到嘴邊，
     // 而不是留在原地。四足的「手」是前腿，所以坐姿時才拿得住。
-    const ch = sp.rig === 'bird' ? 'wingR' : sp.rig === 'pinniped' ? 'flipR' : 'legFR';
+    const ch = sp.rig === 'bird' ? 'wingR'
+      : sp.rig === 'pinniped' ? 'flipR'
+        : sp.rig === 'biped' ? 'armR'      // 人有手，拿東西本來就該掛在手上
+          : 'legFR';
     parts.push({
       kind: item.kind, pos: [h * 0.2, h * 0.42, h * 0.3], scale: item.scale,
       // heldColor 讓旅人帶的東西染上來源島的顏色——不用文字就看得出

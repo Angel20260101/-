@@ -30,6 +30,21 @@ export const BASE_HEIGHT = 0.22;
  * note     文件裡那一條最關鍵的辨識提醒，寫進來免得日後調壞
  */
 export const SPECIES = {
+  /*
+   * 主角。放進同一張物種表，是為了讓 buildCharacter／cast 不必為他開特例——
+   * 他就是第 21 個「物種」，只是骨架是 biped 而且全島只有一個。
+   * size 比動物大一截：人站在兔子旁邊本來就高，而且主角要在畫面上找得到。
+   */
+  human: {
+    rig: 'biped', size: 1.9,
+    fur: '#6f8f86',      // 上衣
+    belly: '#4a5d6b',    // 褲子與領口
+    inner: '#e8c9a8',    // 膚色
+    hair: '#3b2f2a',
+    ear: ['none'], tail: 'none', muzzle: 0,
+    note: '主角。島上唯一的人。',
+  },
+
   rabbit: {
     rig: 'quad', size: 1.00, fur: '#e8dcc8', belly: '#f6efe2', inner: '#e3b7b0',
     ear: ['leaf', 2.4], tail: ['puff', 0.5], muzzle: 0.35,

@@ -24,6 +24,8 @@ import { CameraController } from './cameraController.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
 import { buildCharacter } from './characters.js';
 import { buildCast, stepCast } from './cast.js';
+import { makeWalkable } from './walkable.js';
+import { Protagonist, keyboardPush } from './protagonist.js';
 import { makeRoute } from './routes.js';
 import { createRidges } from './ridges.js';
 
@@ -52,6 +54,9 @@ const FILL_INTENSITY = 0.21;
 const MOVING_SHADOW = { cast: false, receive: true };
 /** 雲與雨：兩者都不要。 */
 const NO_SHADOW = { cast: false, receive: false };
+
+// 點地面用的水平面。地形是合併幾何，打它會打到斜面；打平面才換算得準。
+const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
 const MAX_CLOUDS = 10;
 const MAX_RAIN = 90;
@@ -185,6 +190,9 @@ export class SceneManager {
     this._beamUntil = 0;
     this._tick = this._tick.bind(this);
     this.animating = !this.reducedMotion;
+    // 預設不跟隨：一打開應該先看到整個群島，而不是貼著主角的後腦杓。
+    // 使用者開始走（按鍵或點地面）之後才由 app 打開。
+    this.followPlayer = false;
     // 一開始由程式決定取景；使用者一碰鏡頭就交還給他
     this.autoFit = true;
 
@@ -306,7 +314,9 @@ export class SceneManager {
   // ── 建立／重建世界 ───────────────────────────────────────
   rebuild(progress, wish = {}) {
     this._clearWorld();
-    const { islands, props, animals, boats, residents, travellers } = buildWorld(this.map, progress, wish, this.residentData, this.practiceCards);
+    const { islands, props, animals, boats, residents, travellers, walkable } = buildWorld(this.map, progress, wish, this.residentData, this.practiceCards);
+    // 可走範圍跟著世界一起重建：解鎖一座島、長出一條航線，能走的地方就變了
+    this.walkable = makeWalkable(walkable);
     this._residents = residents ?? [];
     this._travellers = travellers ?? [];
     this.islandsById.clear();
@@ -414,6 +424,7 @@ export class SceneManager {
 
     // 美術文件的 60 隻居民走角色系統；island_map.json 裡原本的 animal_*
     // （鳥、雨天替身那些）維持舊的整塊道具路徑，兩邊並存。
+    this._buildPlayer();
     this._buildCast(this._residents ?? [], this._travellers ?? []);
 
     const byType = new Map();
@@ -454,6 +465,22 @@ export class SceneManager {
    * @param travellers  在島與島之間往來的人。路徑就是橋的折線——
    *                    走的人與畫出來的線共用同一條，不會各走各的。
    */
+  /**
+   * 主角。
+   *
+   * 世界會重建（解鎖、長航線、還原存檔），但主角不該因此被傳送回原點——
+   * 所以重建時沿用現在的座標，只是換一份新的可走範圍重新確認站不站得住。
+   */
+  _buildPlayer() {
+    const keep = this.player ? { x: this.player.x, z: this.player.z } : null;
+    const home = this.islandsById.get(this.map.home?.island_id);
+    const start = keep ?? (home?.center ? { x: home.center.x, z: home.center.z } : { x: 0, z: 0 });
+    const heading = this.player?.heading ?? 0;
+    this.player = new Protagonist({ walkable: this.walkable, start });
+    this.player.heading = heading;
+    this.keys ??= keyboardPush();
+  }
+
   _buildCast(list, travellers = []) {
     const actors = [];
 
@@ -540,6 +567,19 @@ export class SceneManager {
       });
     }
 
+    // 主角也走同一套批次——他只是一個骨架不同的角色，不值得為他多開 draw call
+    if (this.player) {
+      this.playerActor = {
+        character: buildCharacter({ species: 'human', seed: 1 }),
+        base: { x: this.player.x, y: 0, z: this.player.z },
+        rot: this.player.heading,
+        activity: 'stand',
+        phase: 0,
+        speed: 1,
+      };
+      actors.push(this.playerActor);
+    }
+
     this._castMeshes = [];      // 全部角色相關批次，重建時要清掉
     this._castPartMeshes = [];  // 只有會動的部件批次，每幀才需要重傳矩陣
     const { meshes } = buildCast(actors, {
@@ -565,6 +605,38 @@ export class SceneManager {
    */
   _stepCast(t) {
     stepCast(this.cast, t, this._castPartMeshes);
+  }
+
+  /**
+   * 主角這一幀走到哪。
+   *
+   * 鍵盤的推力是相對鏡頭的：按 W 是「往畫面上方走」而不是「往世界 -Z 走」，
+   * 所以要把鏡頭的方位角一起算進去。轉了視角之後同一個鍵的意思跟著轉，
+   * 不然每轉一次鏡頭就要重新想該按哪個鍵。
+   *
+   * @returns true 代表有動過，呼叫端據此決定要不要重畫
+   */
+  _stepPlayer(dt) {
+    if (!this.player || !this.playerActor) return false;
+    const push = this.keys?.read(this.controls.azimuth) ?? null;
+    const moved = this.player.step(dt, push);
+    if (!moved) return false;
+
+    this.playerActor.base.x = this.player.x;
+    this.playerActor.base.z = this.player.z;
+    this.playerActor.rot = this.player.heading;
+    this.playerActor.activity = this.player.moving ? 'stride' : 'stand';
+
+    // 跟隨鏡頭：只搬移鏡頭的目標點，距離與角度仍然完全由使用者掌握。
+    // 整組接管的話，拖曳旋轉會在走路時被拉回去，那比不跟隨更難用。
+    if (this.followPlayer) {
+      this._tmpFollow ??= new THREE.Vector3();
+      this._tmpFollow.set(this.player.x, 0, this.player.z);
+      // lerp 而不是直接設：鏡頭稍微落後一點，走路才不會像鏡頭被釘在頭上
+      this.controls.target.lerp(this._tmpFollow, Math.min(1, dt * 6));
+      this.controls.apply();
+    }
+    return true;
   }
 
   /**
@@ -943,7 +1015,15 @@ export class SceneManager {
     );
     this._raycaster.setFromCamera(ndc, this.camera);
     const hits = this._raycaster.intersectObjects(this.pickTargets, false);
-    if (hits.length) this.onSelectIsland?.(hits[0].object.userData.islandId);
+    if (hits.length) { this.onSelectIsland?.(hits[0].object.userData.islandId); return; }
+
+    // 沒點到島的名牌，就當成「走過去」。
+    // 打的是 y=0 的水平面而不是地形幾何：地形是合併過的 mesh，射線打中的點
+    // 會落在斜面上，換算回平面座標會偏；而且點到島外的海面時本來就沒有幾何，
+    // 那種情況要能「走到最近的岸邊」，不是沒反應。
+    if (!this.player) return;
+    const hit = this._raycaster.ray.intersectPlane(GROUND_PLANE, this._tmpHit ??= new THREE.Vector3());
+    if (hit) { this.player.goTo(hit.x, hit.z); this.invalidate(); }
   }
 
   select(islandId) {
@@ -1276,6 +1356,7 @@ export class SceneManager {
       this._clock += dt;
       this._stepAnimals(this._clock);
       this._stepCast(this._clock);
+      if (this._stepPlayer(dt)) this._dirty = true;
       this._stepBoats(this._clock);
       this._stepClouds(dt);
       this._stepRain(dt);
