@@ -22,10 +22,9 @@ import { PROP_FACTORIES } from './props.js';
 import { buildWorld } from './islandBuilder.js';
 import { CameraController } from './cameraController.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { CHARACTER_KINDS, buildCharacter } from './characters.js';
-import { poseCharacter } from './activities.js';
-import { makeRoute, sampleRoute } from './routes.js';
+import { buildCharacter } from './characters.js';
+import { buildCast, stepCast } from './cast.js';
+import { makeRoute } from './routes.js';
 import { createRidges } from './ridges.js';
 
 /**
@@ -442,21 +441,6 @@ export class SceneManager {
    * 的 instanceColor 是「乘」上去的。沒有這條白色底，缺少的頂點屬性會被當成
    * 黑色，整群角色會變成黑影。
    */
-  _charGeometry(kind) {
-    if (!this._charGeo) this._charGeo = new Map();
-    if (this._charGeo.has(kind)) return this._charGeo.get(kind);
-    let g;
-    switch (kind) {
-      case 'rbox': g = new RoundedBoxGeometry(1, 1, 1, 2, 0.14); break;
-      case 'cyl': g = new THREE.CylinderGeometry(1, 1, 1, 10); break;
-      case 'cone': g = new THREE.ConeGeometry(1, 1, 8); break;
-      default: g = new THREE.IcosahedronGeometry(1, 1); break;
-    }
-    const n = g.attributes.position.count;
-    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
-    this._charGeo.set(kind, g);
-    return g;
-  }
 
   /**
    * 建立角色。
@@ -471,13 +455,11 @@ export class SceneManager {
    *                    走的人與畫出來的線共用同一條，不會各走各的。
    */
   _buildCast(list, travellers = []) {
-    const slots = new Map(CHARACTER_KINDS.map((k) => [k, 0]));
     const actors = [];
 
     const MOVING = new Set(['walk', 'hop', 'carry', 'waddle', 'paddle']);
     for (const a of list) {
       const character = buildCharacter({ species: a.species, held: a.held, seed: a.phase });
-      for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
 
       // 路線的形狀來自美術文件的原文（「沿三槽慢走」「由出餐檯走到固定桌，
       // 再返程」），在 islandBuilder 推成 { stops, span, curved }。
@@ -546,7 +528,6 @@ export class SceneManager {
     for (const t of travellers) {
       const held = t.kind === 'wish' ? 'mail' : 'box';
       const character = buildCharacter({ species: t.species, held, heldColor: t.tint, seed: t.phase });
-      for (const p of character.parts) slots.set(p.kind, (slots.get(p.kind) ?? 0) + 1);
       actors.push({
         character,
         activity: 'carry',
@@ -561,32 +542,16 @@ export class SceneManager {
 
     this._castMeshes = [];      // 全部角色相關批次，重建時要清掉
     this._castPartMeshes = [];  // 只有會動的部件批次，每幀才需要重傳矩陣
-    const meshByKind = new Map();
-    for (const [kind, count] of slots) {
-      if (!count) continue;
-      const mesh = new THREE.InstancedMesh(this._charGeometry(kind), this.characterMaterial, count);
-      mesh.frustumCulled = false;
-      mesh.castShadow = false;      // 會動，投影會卡住——理由見 _instanced 的說明
-      mesh.receiveShadow = true;
-      this.worldGroup.add(mesh);
-      this.instancedMeshes.push(mesh);
-      this._castMeshes.push(mesh);
-      this._castPartMeshes.push(mesh);
-      meshByKind.set(kind, { mesh, next: 0 });
-    }
-
-    // 配位：每個部件拿到自己在該種類批次裡的索引，之後每幀只更新矩陣
-    for (const actor of actors) {
-      actor.slots = actor.character.parts.map((p) => {
-        const b = meshByKind.get(p.kind);
-        const i = b.next++;
-        b.mesh.setColorAt(i, this._tmpColor.set(p.color));
-        return { mesh: b.mesh, index: i };
-      });
-    }
-    for (const { mesh } of meshByKind.values()) {
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    }
+    const { meshes } = buildCast(actors, {
+      material: this.characterMaterial,
+      parent: this.worldGroup,
+      onMesh: (mesh) => {
+        this.instancedMeshes.push(mesh);
+        this._castMeshes.push(mesh);
+        this._castPartMeshes.push(mesh);
+      },
+    });
+    void meshes;
     this.cast = actors;
 
   }
@@ -599,44 +564,7 @@ export class SceneManager {
    * 不是繞自己的中心翻轉。
    */
   _stepCast(t) {
-    if (!this.cast?.length) return;
-    const m = new THREE.Matrix4();
-    const mWorld = new THREE.Matrix4();
-    const mPart = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const e = new THREE.Euler();
-    const v = new THREE.Vector3();
-    const one = new THREE.Vector3(1, 1, 1);
-
-    for (const actor of this.cast) {
-      let x = actor.base.x, y = actor.base.y, z = actor.base.z, heading = actor.rot;
-      if (actor.route) {
-        // 等速前進：距離 = 速度 × 時間。不用 sin()，所以沒有兩端變慢的滑冰感。
-        const s = sampleRoute(actor.route, (t + actor.phase) * actor.speed);
-        x = s.x; y = s.y; z = s.z;
-        heading = s.heading;      // 朝向直接取路徑切線，轉彎自然跟著轉
-      }
-      mWorld.compose(v.set(x, y, z), q.setFromEuler(e.set(0, heading, 0)), one);
-
-      const pose = poseCharacter(actor.character, actor.activity, t, actor.phase, actor.speed);
-      for (let i = 0; i < pose.length; i++) {
-        const p = pose[i];
-        const slot = actor.slots[i];
-        const [px, py, pz] = p.pos;
-        if (p.pivot) {
-          const [ax, ay, az] = p.pivot;
-          mPart.makeTranslation(px + ax, py + ay, pz + az);
-          mPart.multiply(m.makeRotationFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2])));
-          mPart.multiply(m.makeTranslation(-ax, -ay, -az));
-        } else {
-          mPart.makeTranslation(px, py, pz);
-          mPart.multiply(m.makeRotationFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2])));
-        }
-        mPart.multiply(m.makeScale(p.scale[0], p.scale[1], p.scale[2]));
-        slot.mesh.setMatrixAt(slot.index, m.multiplyMatrices(mWorld, mPart));
-      }
-    }
-    for (const mesh of this._castPartMeshes ?? []) mesh.instanceMatrix.needsUpdate = true;
+    stepCast(this.cast, t, this._castPartMeshes);
   }
 
   /**

@@ -14,10 +14,63 @@
  */
 import * as THREE from 'three';
 import { CameraController } from './cameraController.js';
+import { buildCharacter } from './characters.js';
+import { SPECIES_BY_ZH } from './species.js';
+import { buildCast, stepCast } from './cast.js';
+import { MOVE_BY_RIG } from './activities.js';
 import { layer, slab, scaleOutline, ribbon, blobOutline } from './landmass.js';
 import { detectTier, profileFor, prefersReducedMotion } from './perf.js';
 
 const MAX_FPS = { 'mobile-low': 24, mobile: 30, desktop: 36 };
+
+/**
+ * 從美術文件寫的動作原文推出動作通道。
+ *
+ * 資料裡寫的是「坐姿舉杯、放杯、轉耳」「泡腳、轉耳、拿杯喝水」這種人話，
+ * 不是動作代號。與其另外維護一張對照表（會跟文件走散），不如直接從原文
+ * 抓關鍵字——文件改了字，動作跟著改，不用兩邊同步。
+ * 認不出來就退回該骨架的靜止動作，不會變成沒有動作的雕像。
+ */
+const ACTION_WORDS = [
+  [/澆水|傾壺|水壺/, 'water'],
+  [/泡腳|泡水|浸/, 'soak'],
+  [/舉杯|喝水|喝茶|茶杯/, 'sip'],
+  [/整理|翻土|種子|修/, 'work'],
+  [/送|搬|推車|布袋|草籃|盆/, 'carry'],
+  // 只認「坐下」。「坐姿舉杯」的坐姿是姿勢修飾，真正的動作是舉杯，
+  // 而 sip 本來就是建在 sit 上面的，挑 sit 反而把杯子弄丟了。
+  [/坐下/, 'sit'],
+  [/換腳|短跳|棲/, 'perch'],
+  [/走|踱|巡/, 'walk'],
+];
+function activityFor(action, rig) {
+  const text = String(action ?? '');
+  // 比的是「誰在句子裡先出現」，不是我這張表誰先寫。
+  // 文件的寫法是主要動作擺第一個（「泡腳、轉耳、拿杯喝水」的重點是泡腳），
+  // 照表的順序挑會被後段的詞搶走——實測棕熊被「草籃」勾成搬運、
+  // 水豚被「喝水」勾成喝水，兩隻的主要動作都丟了。
+  let best = null;
+  for (const [re, id] of ACTION_WORDS) {
+    // walk 不列入：走路由 _stepResidents 依「現在有沒有在移動」自己切換。
+    // 這裡要的是「停下來的時候在做什麼」——「沿三槽慢走，停靠時傾壺澆水」
+    // 的重點是停下來澆水，挑 walk 會讓牠停著的時候變成站著發呆。
+    if (id === 'walk') continue;
+    const m = text.match(re);
+    if (m && (best === null || m.index < best.at)) best = { at: m.index, id };
+  }
+  if (best) return best.id;
+  return rig === 'bird' ? 'perch' : rig === 'pinniped' ? 'bask' : 'idle';
+}
+
+/**
+ * 島內居民該有多高。
+ *
+ * characters.js 的 BASE_HEIGHT 是照群島的尺度調的，但島內的世界大得多
+ * （同一座島在群島上佔 4.3×3，走進來是 10.2×14.2）。直接套過來的兔子只有
+ * 0.26 高，而這座島原本自己畫的動物道具是 0.47——站在 1.62 高的磚屋旁邊
+ * 會小得像掉在地上的石頭。所以照舊道具的高度把整隻放大。
+ */
+const RESIDENT_HEIGHT = 0.46;
 
 export class IslandScene {
   /**
@@ -201,31 +254,51 @@ export class IslandScene {
    * 現在用群島上既有的動物模型佔位——真正的 20 種模型等匯入。
    * 位置、動作循環與點擊區都照規格先排好，換模型時只要改 species 對應的型別名。
    */
+  /**
+   * 島上的十隻居民。
+   *
+   * 原本是一隻一個 prop 模型，而且 `if (!this.propFactories[type]) continue`
+   * 會把沒有模型的那幾隻**靜默跳過**——實際只畫得出四隻，規格要十隻，
+   * 而且不會有任何錯誤訊息。少掉的是陸龜、狐狸、水豚、刺蝟、山羊、狗。
+   *
+   * 改成走群島那套角色系統：物種用資料裡的中文名查 SPECIES_BY_ZH，
+   * 二十種動物都有骨架，六個洞一次補滿，順便讓島內與群島的同一隻動物
+   * 長得一樣——以前是兩套做法，走進島裡動物會變成另一個樣子。
+   */
   _buildResidents() {
-    const byType = new Map();
-    for (const r of this.data.residents ?? []) {
-      const type = r.model;
-      if (!this.propFactories[type]) continue;
-      if (!byType.has(type)) byType.set(type, []);
-      byType.get(type).push(r);
-    }
-    this.residentMeshes = [];
-    for (const [type, list] of byType) {
-      const geo = this._geometry(type);
-      const mesh = new THREE.InstancedMesh(geo, this.material, list.length);
-      mesh.frustumCulled = false;
-      this.root.add(mesh);
-      this.residentMeshes.push(mesh);
-      list.forEach((r, i) => {
-        this.residents.push({
-          ...r, mesh, index: i,
-          // 動作循環的相位錯開：規格要求「10 隻從不同循環時間點開始」
-          phase: (this.residents.length * 1.37) % (Math.PI * 2),
-          period: r.period ?? (r.rank === 'front' ? 9 : 14),
-          greetUntil: 0,
-        });
+    const list = this.data.residents ?? [];
+    for (const r of list) {
+      const species = SPECIES_BY_ZH[r.species];
+      if (!species) {
+        // 這個要吵。物種名拼錯會安靜地少一隻動物，而那正是舊版的毛病。
+        console.warn(`[islandScene] 不認得的物種「${r.species}」（${r.id}），這隻不會出現`);
+        continue;
+      }
+      const character = buildCharacter({ species, seed: this.residents.length * 7 + 3 });
+      // route 在這份資料裡是原始的 [x,z] 節點陣列，但 cast 的 actor.route
+      // 指的是 makeRoute() 做出來的弧長路徑。同名不同義會讓 stepCast 誤用，
+      // 所以在這裡就改名切開。
+      const { route: waypoints, ...rest } = r;
+      this.residents.push({
+        ...rest, character, waypoints,
+        base: { x: r.at[0], y: r.at[1] ?? 0, z: r.at[2] },
+        rot: r.rot ?? 0,
+        activity: activityFor(r.action, character.rig),
+        restActivity: activityFor(r.action, character.rig),
+        // 動作循環的相位錯開：規格要求「10 隻從不同循環時間點開始」
+        phase: (this.residents.length * 1.37) % (Math.PI * 2),
+        period: r.period ?? (r.rank === 'front' ? 9 : 14),
+        speed: 1,
+        scale: RESIDENT_HEIGHT / character.height,
+        greetUntil: 0,
       });
     }
+    const { meshes } = buildCast(this.residents, {
+      material: this.material,
+      parent: this.root,
+    });
+    this.residentMeshes = meshes;
+
     // 點擊用的隱形代理：動物太小，直接射線打模型很難點中
     for (const r of this.residents) {
       const proxy = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 6), this.pickMaterial);
@@ -239,12 +312,14 @@ export class IslandScene {
   }
 
   // ── 每幀 ────────────────────────────────────────────────
+  /**
+   * 每幀把十隻居民擺好。
+   *
+   * 這裡只負責「人在哪、面向哪」——走到哪一段、停多久、有沒有在打招呼，
+   * 都是這座島自己的節奏。部件要怎麼擺（腿怎麼邁、手怎麼舉）交給 stepCast，
+   * 跟群島共用同一套，所以同一隻動物在兩邊的走法是一樣的。
+   */
   _stepResidents(t) {
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const e = new THREE.Euler();
-    const pos = new THREE.Vector3();
-    const scl = new THREE.Vector3(1, 1, 1);
     for (const r of this.residents) {
       const k = ((t / r.period) + r.phase) % 1;
       const base = r.at;
@@ -252,25 +327,25 @@ export class IslandScene {
       const y = base[1] ?? 0;
       let face = r.rot ?? 0;
       let bob = 0;
+      let moving = false;
 
-      if (r.route && r.route.length > 1) {
+      if (r.waypoints && r.waypoints.length > 1) {
         // 在 2～4 個固定節點之間走，走一段停一段（規格：行走與停靠分段）
-        const n = r.route.length;
+        const n = r.waypoints.length;
         const leg = k * n;
         const i = Math.floor(leg) % n;
         const f = leg - Math.floor(leg);
         const hold = 0.45;                       // 前 45% 停著，後面才移動
         const move = f < hold ? 0 : (f - hold) / (1 - hold);
-        const a = r.route[i];
-        const b = r.route[(i + 1) % n];
+        const a = r.waypoints[i];
+        const b = r.waypoints[(i + 1) % n];
         x = a[0] + (b[0] - a[0]) * ease(move);
         z = a[1] + (b[1] - a[1]) * ease(move);
         if (move > 0) {
           face = Math.atan2(b[0] - a[0], b[1] - a[1]);
-          bob = Math.abs(Math.sin(move * Math.PI * 6)) * 0.035;   // 走路的上下
+          moving = true;
         }
       } else {
-        bob = Math.sin(t * 1.6 + r.phase) * 0.012;                // 坐著也要呼吸
         face += Math.sin(t * 0.6 + r.phase) * 0.18;               // 轉頭張望
       }
 
@@ -281,14 +356,14 @@ export class IslandScene {
         bob += Math.abs(Math.sin(g * 7)) * 0.07;
       }
 
-      pos.set(x, y + bob, z);
-      e.set(0, face, 0);
-      q.setFromEuler(e);
-      m.compose(pos, q, scl);
-      r.mesh.setMatrixAt(r.index, m);
+      // 走動時換成該骨架的移動動作；站定時回到牠自己的事情。
+      // 上下起伏交給 walk 動作本身，不再另外加 bob——兩個疊起來會變成彈跳。
+      r.activity = moving ? (MOVE_BY_RIG[r.character.rig] ?? 'walk') : r.restActivity;
+      r.base.x = x; r.base.y = y + bob; r.base.z = z;
+      r.rot = face;
       if (r.proxy) r.proxy.position.set(x, y + 0.45, z);
     }
-    for (const mesh of this.residentMeshes) mesh.instanceMatrix.needsUpdate = true;
+    stepCast(this.residents, t, this.residentMeshes);
   }
 
   _cameraAzimuth() {
