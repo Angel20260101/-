@@ -40,6 +40,8 @@ export class Protagonist {
     const safe = walkable.nearestStand(start.x, start.z) ?? { x: 0, z: 0 };
     this.x = safe.x;
     this.z = safe.z;
+    // 地面高度。島面在 0 / 0.42 / 0.84 三層，橋在 0.06 左右。
+    this.y = walkable.heightAt(safe.x, safe.z);
     this.heading = 0;
     this.vx = 0;
     this.vz = 0;
@@ -113,6 +115,10 @@ export class Protagonist {
     }
     this.x = moved.x;
     this.z = moved.z;
+    // 跟著地面升降。用 lerp 而不是直接設：上下橋、跨層的落差有 0.3~0.8，
+    // 直接設會變成瞬移，補一下才像走上坡。
+    const ground = this.walkable.heightAt(this.x, this.z);
+    this.y += (ground - this.y) * Math.min(1, dt * 12);
     this.moving = true;
     return true;
   }

@@ -317,6 +317,7 @@ export class SceneManager {
     const { islands, props, animals, boats, residents, travellers, walkable } = buildWorld(this.map, progress, wish, this.residentData, this.practiceCards);
     // 可走範圍跟著世界一起重建：解鎖一座島、長出一條航線，能走的地方就變了
     this.walkable = makeWalkable(walkable);
+    this._spawn = walkable.spawn;
     this._residents = residents ?? [];
     this._travellers = travellers ?? [];
     this.islandsById.clear();
@@ -473,8 +474,9 @@ export class SceneManager {
    */
   _buildPlayer() {
     const keep = this.player ? { x: this.player.x, z: this.player.z } : null;
-    const home = this.islandsById.get(this.map.home?.island_id);
-    const start = keep ?? (home?.center ? { x: home.center.x, z: home.center.z } : { x: 0, z: 0 });
+    // 出生點由 islandBuilder 挑（避開地標）。本島中心是燈塔，站上去會整個人
+    // 埋在塔裡——畫面正中央卻什麼都看不到。
+    const start = keep ?? this._spawn ?? { x: 0, z: 0 };
     const heading = this.player?.heading ?? 0;
     this.player = new Protagonist({ walkable: this.walkable, start });
     this.player.heading = heading;
@@ -573,7 +575,7 @@ export class SceneManager {
     if (this.player) {
       this.playerActor = {
         character: buildCharacter({ species: 'human', seed: 1 }),
-        base: { x: this.player.x, y: 0, z: this.player.z },
+        base: { x: this.player.x, y: this.player.y, z: this.player.z },
         rot: this.player.heading,
         activity: 'stand',
         phase: 0,
@@ -621,7 +623,9 @@ export class SceneManager {
     this.autoFit = false;          // 走路時 resize 不要把鏡頭拉回全景
     if (on && this.player) {
       this.controls.flyTo(
-        { target: { x: this.player.x, y: 0, z: this.player.z }, distance: 4.2, polar: 1.15 }, 620);
+        // 距離 4.2、俯仰 66° 時樹叢會一直擋住人。拉遠一點、角度壓得更俯視，
+        // 才看得過樹冠——走路時看得到人比看得到細節重要。
+        { target: { x: this.player.x, y: this.player.y, z: this.player.z }, distance: 6.0, polar: 0.82 }, 620);
     } else {
       this.fitToWorld({ animate: true });
     }
@@ -647,6 +651,7 @@ export class SceneManager {
     if (!moved) return false;
 
     this.playerActor.base.x = this.player.x;
+    this.playerActor.base.y = this.player.y;
     this.playerActor.base.z = this.player.z;
     this.playerActor.rot = this.player.heading;
     this.playerActor.activity = this.player.moving ? 'stride' : 'stand';
@@ -655,7 +660,7 @@ export class SceneManager {
     // 整組接管的話，拖曳旋轉會在走路時被拉回去，那比不跟隨更難用。
     if (this.followPlayer) {
       this._tmpFollow ??= new THREE.Vector3();
-      this._tmpFollow.set(this.player.x, 0, this.player.z);
+      this._tmpFollow.set(this.player.x, this.player.y, this.player.z);
       // lerp 而不是直接設：鏡頭稍微落後一點，走路才不會像鏡頭被釘在頭上
       this.controls.target.lerp(this._tmpFollow, Math.min(1, dt * 6));
       this.controls.apply();

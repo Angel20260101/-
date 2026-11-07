@@ -200,9 +200,14 @@ export function buildWorld(map, progress = {}, wish = {}, residentData = null, p
    * 同時順手記起來：地塊記世界軸座標，橋記折線（跟畫出來的是同一條，
    * 不會各走各的）。
    */
-  const walkHexes = new Set();
+  // Map 而不是 Set：還要記高度。島面在 level × 0.42 的高度上（0 / 0.42 / 0.84），
+  // 不是 y=0——主角要是固定站在 0，等於整個人陷進地裡。
+  const walkHexes = new Map();
   const walkBridges = [];
-  const noteHexes = (hexes) => { for (const h of hexes) walkHexes.add(`${h.q},${h.r}`); };
+  let walkSpawn = null;
+  const noteHexes = (hexes) => {
+    for (const h of hexes) walkHexes.set(`${h.q},${h.r}`, (h.level ?? 0) * (cfg.level_height ?? 0.42));
+  };
 
   const BRIDGE_SPAN = 2.0;      // rope_bridge 的幾何跨距，沿 X 軸
   const placeBridge = (points, { trimFrom = 2.0, trimTo = 1.5 } = {}) => {
@@ -391,6 +396,37 @@ function heldFromLoop(text) {
     const homeOccupied = occupiedOf(landmarks, home.hexes, origin);
     scatterFlora(home.hexes, origin, biome.flora, `${home.island_id}-flora`, homeOccupied);
     scatterClutter(home.hexes, origin, `${home.island_id}-clutter`, homeOccupied, biome);
+    /*
+     * 主角的出生點。
+     *
+     * 挑在 scatterFlora／scatterClutter 之後：那兩個會把放下去的每一棵樹、
+     * 每一塊石頭都 push 進 occupied，所以這時候 occupied 才是「島上所有
+     * 占位的東西」。先挑只避得開地標——第一版就是這樣，主角埋在燈塔裡；
+     * 只避地標之後又埋進樹叢。
+     *
+     * 而且要在格子**裡面**取樣，不能只看格子中心：地標正好就擺在中心上，
+     * 光比中心的話每一格的空隙都是 0。所以每格撒一圈候選點，挑離所有東西
+     * 最遠的那一個。
+     */
+    {
+      const cands = [];
+      for (const h of home.hexes) {
+        const p = hexTopPosition({ ...h, q: h.q + origin.q, r: h.r + origin.r }, cfg);
+        for (let i = 0; i < 7; i++) {
+          const ang = (i / 6) * Math.PI * 2;
+          const rad = i === 6 ? 0 : 0.55;
+          const x = p.x + Math.cos(ang) * rad;
+          const z = p.z + Math.sin(ang) * rad;
+          const clear = homeOccupied.length
+            ? Math.min(...homeOccupied.map((o) => Math.hypot(x - o.x, z - o.z) - (o.r ?? 0)))
+            : 99;
+          cands.push({ x, y: p.y, z, level: h.level ?? 0, clear });
+        }
+      }
+      // 先求站得開，同樣開闊才挑高的那一層
+      cands.sort((m, n) => (n.clear - m.clear) || (n.level - m.level));
+      walkSpawn = cands[0] ?? null;
+    }
 
     const anchors = {};
     for (const lm of landmarks) {
@@ -718,5 +754,5 @@ function heldFromLoop(text) {
   }
 
   return { islands, props, animals, boats, residents, travellers,
-    walkable: { hexes: walkHexes, bridges: walkBridges, size: cfg.size } };
+    walkable: { hexes: walkHexes, bridges: walkBridges, size: cfg.size, bridgeY: 0.06, spawn: walkSpawn } };
 }

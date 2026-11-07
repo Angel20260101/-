@@ -55,16 +55,17 @@ function distToSegment(px, pz, ax, az, bx, bz) {
 }
 
 /**
- * @param hexes    Set of "q,r"（世界軸座標）
+ * @param hexes    Map of "q,r" → 該地塊頂面的 y
  * @param bridges  折線陣列，每條是 [{x,z}, ...]
  * @param size     六角格大小
  * @param margin   懸崖邊的留白。只在「那一側沒有鄰居」時才內縮——
  *                 有鄰居的那一側是接縫，不能縮，否則兩塊地中間會有一條走不過去的縫。
  * @param bridgeHalf  橋面可走的半寬
  */
-export function makeWalkable({ hexes, bridges = [], size = 1, margin = 0.2, bridgeHalf = 0.42 }) {
+export function makeWalkable({ hexes, bridges = [], size = 1, margin = 0.2, bridgeHalf = 0.42, bridgeY = 0.06 }) {
   const R = size * (SQ3 / 2);          // 內切圓半徑＝中心到邊中點
   const has = (q, r) => hexes.has(`${q},${r}`);
+  const topOf = (q, r) => hexes.get(`${q},${r}`) ?? 0;
 
   // 六個邊的法向量：從中心指向該方向的鄰居。六角形就是這六個半平面的交集，
   // 所以「點在不在格子裡」＝六個方向的投影都不超過 R。
@@ -139,7 +140,22 @@ export function makeWalkable({ hexes, bridges = [], size = 1, margin = 0.2, brid
     return null;
   }
 
-  return { canStand, onBridge, move, nearestStand };
+  /**
+   * 這個座標的地面高度。
+   *
+   * 島面在 level × 0.42 的高度上，不是 y=0——主角要是永遠站在 0，
+   * 在 level 1 的島上就會陷進去 0.42，而他整個人才 0.44 高，等於只剩一顆頭。
+   * 橋低很多（約 0.06，跟旅人走的高度一致），所以上下橋本來就有落差。
+   */
+  function heightAt(x, z) {
+    const a = worldToAxial(x, z, size);
+    const { q, r } = roundAxial(a.q, a.r);
+    if (has(q, r)) return topOf(q, r);
+    if (onBridge(x, z)) return bridgeY;
+    return 0;
+  }
+
+  return { canStand, onBridge, move, nearestStand, heightAt };
 }
 
 // 平頂六角的六個鄰居。不是憑印象寫的——是拿 axialToWorld 量出來的：
